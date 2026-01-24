@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>IPL Mega Auction 2025 | Intro</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700;900&family=Teko:wght@400;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        /* =========================================
+            CINEMATIC INTRO STYLES
+           ========================================= */
+        #introOverlay {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            background: radial-gradient(circle at center, #1a2342 0%, #050508 100%);
+            /* Fade out animation removed here, handled by JS redirect */
+        }
+
+        .spotlight-bg {
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background:
+                conic-gradient(from 0deg at 50% 50%, transparent 0deg, rgba(255, 255, 255, 0.03) 20deg, transparent 40deg),
+                conic-gradient(from 180deg at 50% 50%, transparent 0deg, rgba(255, 255, 255, 0.03) 20deg, transparent 40deg);
+            animation: rotateSpotlights 10s linear infinite;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .intro-content {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            perspective: 800px;
+        }
+
+        .broken-text {
+            font-family: 'Teko', sans-serif;
+            font-size: clamp(3rem, 15vw, 7rem);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            position: relative;
+            display: flex;
+            gap: 5px;
+        }
+
+        .broken-text span {
+            display: inline-block;
+            background: linear-gradient(to bottom, #fff 0%, #ffd700 50%, #b8860b 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.5));
+            animation: textFlickerEntry 1s ease-out forwards, shatterBlast 1s cubic-bezier(0.165, 0.84, 0.44, 1) 1.4s forwards;
+            opacity: 0;
+        }
+
+        .gavel-wrapper {
+            position: absolute;
+            top: -300px;
+            left: 50%;
+            width: 300px;
+            height: 300px;
+            transform-origin: bottom right;
+            filter: drop-shadow(10px 10px 20px rgba(0, 0, 0, 0.8));
+            opacity: 0;
+            z-index: 20;
+            animation: hammerSmashSequence 1.5s ease-out 0.2s forwards;
+        }
+
+        .shockwave {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            width: 100px;
+            height: 100px;
+            border: 5px solid rgba(255, 215, 0, 0.8);
+            border-radius: 50%;
+            box-shadow: 0 0 50px rgba(255, 215, 0, 0.5);
+            opacity: 0;
+            z-index: 5;
+            animation: shockwaveRipple 0.8s ease-out 1.4s forwards;
+        }
+
+        .sold-stamp {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(5);
+            font-family: 'Rajdhani', sans-serif;
+            font-size: clamp(4rem, 20vw, 10rem);
+            font-weight: 900;
+            color: #33ff41;
+            border: 8px solid #33ff41;
+            padding: 10px 40px;
+            border-radius: 15px;
+            text-shadow: 0 0 30px rgba(0, 255, 0, 0.8);
+            box-shadow: 0 0 50px rgba(30, 255, 0, 0.5), inset 0 0 20px rgba(35, 197, 10, 0.5);
+            opacity: 0;
+            z-index: 30;
+            background: rgba(0, 0, 0, 0.3);
+            /* Removed external grunge mask to prevent loading issues */
+            animation: stampSlam 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) 2.2s forwards;
+        }
+
+        .spark {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: #FFD700;
+            border-radius: 50%;
+            pointer-events: none;
+            top: 50%;
+            left: 50%;
+            opacity: 0;
+            z-index: 15;
+            animation: sparkFly 0.8s ease-out forwards;
+        }
+
+        /* KEYFRAMES */
+        @keyframes rotateSpotlights {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes textFlickerEntry {
+            0% {
+                opacity: 0;
+                transform: scale(0.9);
+                filter: blur(10px);
+            }
+
+            20% {
+                opacity: 0.5;
+            }
+
+            40% {
+                opacity: 0.1;
+            }
+
+            60% {
+                opacity: 1;
+                transform: scale(1.05);
+                filter: blur(0);
+            }
+
+            80% {
+                opacity: 0.8;
+            }
+
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        @keyframes hammerSmashSequence {
+            0% {
+                opacity: 0;
+                transform: translateX(-50%) translateY(-100%) rotate(-60deg) scale(1.5);
+            }
+
+            20% {
+                opacity: 1;
+            }
+
+            60% {
+                transform: translateX(-50%) translateY(-80%) rotate(-60deg) scale(1.5);
+            }
+
+            75% {
+                transform: translateX(-50%) translateY(0%) rotate(0deg) scale(1);
+            }
+
+            85% {
+                transform: translateX(-50%) translateY(-10%) rotate(-5deg) scale(1);
+            }
+
+            100% {
+                transform: translateX(-50%) translateY(0%) rotate(0deg) scale(1);
+                opacity: 0;
+            }
+        }
+
+        @keyframes shatterBlast {
+            0% {
+                transform: translate(0, 0) rotate(0);
+                opacity: 1;
+            }
+
+            10% {
+                transform: scale(1.1);
+                color: #fff;
+                text-shadow: 0 0 50px white;
+            }
+
+            100% {
+                transform: translate(var(--tx), var(--ty)) rotate(var(--r));
+                opacity: 0;
+            }
+        }
+
+        @keyframes shockwaveRipple {
+            0% {
+                transform: translate(-50%, -50%) scale(0);
+                opacity: 0.8;
+                border-width: 10px;
+            }
+
+            100% {
+                transform: translate(-50%, -50%) scale(10);
+                opacity: 0;
+                border-width: 0px;
+            }
+        }
+
+        @keyframes stampSlam {
+            0% {
+                transform: translate(-50%, -50%) scale(5) rotate(-15deg);
+                opacity: 0;
+            }
+
+            70% {
+                transform: translate(-50%, -50%) scale(0.9) rotate(-2deg);
+                opacity: 1;
+            }
+
+            100% {
+                transform: translate(-50%, -50%) scale(1) rotate(-5deg);
+                opacity: 1;
+            }
+        }
+
+        @keyframes sparkFly {
+            0% {
+                transform: translate(0, 0) scale(1);
+                opacity: 1;
+            }
+
+            100% {
+                transform: translate(var(--sx), var(--sy)) scale(0);
+                opacity: 0;
+            }
+        }
+
+        @keyframes screenShake {
+
+            0%,
+            100% {
+                transform: translate(0, 0);
+            }
+
+            10%,
+            30%,
+            50%,
+            70%,
+            90% {
+                transform: translate(-10px, -10px);
+            }
+
+            20%,
+            40%,
+            60%,
+            80% {
+                transform: translate(10px, 10px);
+            }
+        }
+
+        .shake-active {
+            animation: screenShake 0.5s ease-in-out;
+        }
+    </style>
+</head>
+
+<body style="background-color: #0b0c15; margin: 0; overflow: hidden;">
+
+    <div id="introOverlay">
+        <div class="spotlight-bg"></div>
+        <div class="intro-content" id="introContent">
+            <div class="broken-text">
+                <span style="--tx:-200px; --ty:-300px; --r:-120deg">I</span>
+                <span style="--tx:-100px; --ty:200px; --r:-45deg">P</span>
+                <span style="--tx:-150px; --ty:-100px; --r:90deg">L</span>
+                &nbsp;
+                <span style="--tx:50px; --ty:350px; --r:180deg">A</span>
+                <span style="--tx:100px; --ty:-300px; --r:-90deg">U</span>
+                <span style="--tx:180px; --ty:200px; --r:45deg">C</span>
+                <span style="--tx:250px; --ty:-150px; --r:-60deg">T</span>
+                <span style="--tx:200px; --ty:250px; --r:130deg">I</span>
+                <span style="--tx:300px; --ty:-50px; --r:-15deg">O</span>
+                <span style="--tx:350px; --ty:150px; --r:80deg">N</span>
+            </div>
+            <div class="shockwave"></div>
+            <div class="gavel-wrapper">
+                <svg viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg" style="width:100%; height:100%;">
+                    <defs>
+                        <linearGradient id="woodGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" style="stop-color:#3E2723" />
+                            <stop offset="40%" style="stop-color:#5D4037" />
+                            <stop offset="60%" style="stop-color:#8D6E63" />
+                            <stop offset="100%" style="stop-color:#3E2723" />
+                        </linearGradient>
+                        <linearGradient id="goldGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" style="stop-color:#FDB931" />
+                            <stop offset="30%" style="stop-color:#FFFFE0" />
+                            <stop offset="60%" style="stop-color:#D4AF37" />
+                            <stop offset="100%" style="stop-color:#8A6E2F" />
+                        </linearGradient>
+                    </defs>
+                    <rect x="90" y="80" width="20" height="200" rx="4" fill="url(#woodGradient)" />
+                    <rect x="90" y="260" width="20" height="10" fill="rgba(0,0,0,0.3)" />
+                    <g transform="translate(0, 0)">
+                        <rect x="20" y="20" width="160" height="70" rx="15" fill="url(#woodGradient)" stroke="#1a1a1a"
+                            stroke-width="1" />
+                        <rect x="10" y="10" width="20" height="90" rx="2" fill="url(#goldGradient)" />
+                        <rect x="170" y="10" width="20" height="90" rx="2" fill="url(#goldGradient)" />
+                    </g>
+                </svg>
+            </div>
+            <div class="sold-stamp">SOLD!</div>
+            <div id="sparkContainer"
+                style="position: absolute; top:0; left:0; width:100%; height:100%; pointer-events:none;"></div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Intro Animation Timing Scripts
+            const introContent = document.getElementById('introContent');
+            const sparkContainer = document.getElementById('sparkContainer');
+
+            // Trigger Shake and Explosion slightly after animation starts (sync with hammer hit)
+            setTimeout(() => {
+                if (introContent) introContent.classList.add('shake-active');
+                createExplosion();
+            }, 1150);
+
+            function createExplosion() {
+                const particleCount = 40;
+                const colors = ['#FFD700', '#FFA500', '#FFFFFF', '#FF4500'];
+
+                for (let i = 0; i < particleCount; i++) {
+                    const spark = document.createElement('div');
+                    spark.className = 'spark';
+
+                    // Random Trajectory
+                    const angle = Math.random() * 360;
+                    const velocity = 100 + Math.random() * 300; // distance
+                    const tx = Math.cos(angle * Math.PI / 180) * velocity;
+                    const ty = Math.sin(angle * Math.PI / 180) * velocity;
+
+                    spark.style.setProperty('--sx', `${tx}px`);
+                    spark.style.setProperty('--sy', `${ty}px`);
+                    spark.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+
+                    if (sparkContainer) sparkContainer.appendChild(spark);
+                }
+            }
+
+            // Redirect to Login Page after animation
+            setTimeout(() => {
+                window.location.href = 'login.html';
+            }, 3500); // 3.5 seconds duration
+        });
+    </script>
+</body>
+
+</html>
