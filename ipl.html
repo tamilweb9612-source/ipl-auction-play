@@ -1,0 +1,1157 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>IPL Mega Auction 2025 | Multiplayer</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700;900&family=Teko:wght@400;600;700&display=swap"
+        rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.1/font/bootstrap-icons.min.css">
+
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        /* =========================================
+            CINEMATIC INTRO STYLES
+           ========================================= */
+        #introOverlay {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            background: radial-gradient(circle at center, #1a2342 0%, #050508 100%);
+            animation: overlayFadeOut 1s ease-out 4.5s forwards;
+        }
+
+        .spotlight-bg {
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background:
+                conic-gradient(from 0deg at 50% 50%, transparent 0deg, rgba(255, 255, 255, 0.03) 20deg, transparent 40deg),
+                conic-gradient(from 180deg at 50% 50%, transparent 0deg, rgba(255, 255, 255, 0.03) 20deg, transparent 40deg);
+            animation: rotateSpotlights 10s linear infinite;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .intro-content {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            perspective: 800px;
+        }
+
+        .broken-text {
+            font-family: 'Teko', sans-serif;
+            font-size: clamp(3rem, 15vw, 7rem);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            position: relative;
+            display: flex;
+            gap: 5px;
+        }
+
+        .broken-text span {
+            display: inline-block;
+            background: linear-gradient(to bottom, #fff 0%, #ffd700 50%, #b8860b 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.5));
+            animation: textFlickerEntry 1s ease-out forwards, shatterBlast 1s cubic-bezier(0.165, 0.84, 0.44, 1) 1.4s forwards;
+            opacity: 0;
+        }
+
+        .gavel-wrapper {
+            position: absolute;
+            top: -300px;
+            left: 50%;
+            width: 300px;
+            height: 300px;
+            transform-origin: bottom right;
+            filter: drop-shadow(10px 10px 20px rgba(0, 0, 0, 0.8));
+            opacity: 0;
+            z-index: 20;
+            animation: hammerSmashSequence 1.5s ease-out 0.2s forwards;
+        }
+
+        .shockwave {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            width: 100px;
+            height: 100px;
+            border: 5px solid rgba(255, 215, 0, 0.8);
+            border-radius: 50%;
+            box-shadow: 0 0 50px rgba(255, 215, 0, 0.5);
+            opacity: 0;
+            z-index: 5;
+            animation: shockwaveRipple 0.8s ease-out 1.4s forwards;
+        }
+
+        .sold-stamp {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(5);
+            font-family: 'Rajdhani', sans-serif;
+            font-size: clamp(4rem, 20vw, 10rem);
+            font-weight: 900;
+            color: #33ff41;
+            border: 8px solid #33ff41;
+            padding: 10px 40px;
+            border-radius: 15px;
+            text-shadow: 0 0 30px rgba(0, 255, 0, 0.8);
+            box-shadow: 0 0 50px rgba(30, 255, 0, 0.5), inset 0 0 20px rgba(35, 197, 10, 0.5);
+            opacity: 0;
+            z-index: 30;
+            background: rgba(0, 0, 0, 0.3);
+            mask-image: url('https://s3-us-west-2.amazonaws.com/s.cdpn.io/8399/grunge.png');
+            -webkit-mask-image: url('https://s3-us-west-2.amazonaws.com/s.cdpn.io/8399/grunge.png');
+            mask-size: 400px;
+            animation: stampSlam 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) 2.2s forwards;
+        }
+
+        .spark {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: #FFD700;
+            border-radius: 50%;
+            pointer-events: none;
+            top: 50%;
+            left: 50%;
+            opacity: 0;
+            z-index: 15;
+        }
+
+        /* KEYFRAMES */
+        @keyframes rotateSpotlights {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes textFlickerEntry {
+            0% {
+                opacity: 0;
+                transform: scale(0.9);
+                filter: blur(10px);
+            }
+
+            20% {
+                opacity: 0.5;
+            }
+
+            40% {
+                opacity: 0.1;
+            }
+
+            60% {
+                opacity: 1;
+                transform: scale(1.05);
+                filter: blur(0);
+            }
+
+            80% {
+                opacity: 0.8;
+            }
+
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        @keyframes hammerSmashSequence {
+            0% {
+                opacity: 0;
+                transform: translateX(-50%) translateY(-100%) rotate(-60deg) scale(1.5);
+            }
+
+            20% {
+                opacity: 1;
+            }
+
+            60% {
+                transform: translateX(-50%) translateY(-80%) rotate(-60deg) scale(1.5);
+            }
+
+            75% {
+                transform: translateX(-50%) translateY(0%) rotate(0deg) scale(1);
+            }
+
+            85% {
+                transform: translateX(-50%) translateY(-10%) rotate(-5deg) scale(1);
+            }
+
+            100% {
+                transform: translateX(-50%) translateY(0%) rotate(0deg) scale(1);
+                opacity: 0;
+            }
+        }
+
+        @keyframes shatterBlast {
+            0% {
+                transform: translate(0, 0) rotate(0);
+                opacity: 1;
+            }
+
+            10% {
+                transform: scale(1.1);
+                color: #fff;
+                text-shadow: 0 0 50px white;
+            }
+
+            100% {
+                transform: translate(var(--tx), var(--ty)) rotate(var(--r));
+                opacity: 0;
+            }
+        }
+
+        @keyframes shockwaveRipple {
+            0% {
+                transform: translate(-50%, -50%) scale(0);
+                opacity: 0.8;
+                border-width: 10px;
+            }
+
+            100% {
+                transform: translate(-50%, -50%) scale(10);
+                opacity: 0;
+                border-width: 0px;
+            }
+        }
+
+        @keyframes stampSlam {
+            0% {
+                transform: translate(-50%, -50%) scale(5) rotate(-15deg);
+                opacity: 0;
+            }
+
+            70% {
+                transform: translate(-50%, -50%) scale(0.9) rotate(-2deg);
+                opacity: 1;
+            }
+
+            100% {
+                transform: translate(-50%, -50%) scale(1) rotate(-5deg);
+                opacity: 1;
+            }
+        }
+
+        @keyframes sparkFly {
+            0% {
+                transform: translate(0, 0) scale(1);
+                opacity: 1;
+            }
+
+            100% {
+                transform: translate(var(--sx), var(--sy)) scale(0);
+                opacity: 0;
+            }
+        }
+
+        @keyframes screenShake {
+
+            0%,
+            100% {
+                transform: translate(0, 0);
+            }
+
+            10%,
+            30%,
+            50%,
+            70%,
+            90% {
+                transform: translate(-10px, -10px);
+            }
+
+            20%,
+            40%,
+            60%,
+            80% {
+                transform: translate(10px, 10px);
+            }
+        }
+
+        @keyframes overlayFadeOut {
+            to {
+                opacity: 0;
+                visibility: hidden;
+                pointer-events: none;
+            }
+        }
+
+        .shake-active {
+            animation: screenShake 0.5s ease-in-out;
+        }
+
+        /* ABOUT SECTION STYLES */
+        .workflow-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 20px;
+            padding: 10px;
+        }
+
+        .workflow-card {
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.03) 0%, rgba(20, 20, 30, 0.6) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            padding: 25px 20px;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            min-height: 220px;
+        }
+
+        .workflow-card:hover {
+            transform: translateY(-8px);
+            border-color: rgba(255, 215, 0, 0.4);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 15px rgba(255, 215, 0, 0.1);
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.05) 0%, rgba(30, 30, 45, 0.8) 100%);
+        }
+
+        .card-bg-number {
+            position: absolute;
+            top: -15px;
+            right: -10px;
+            font-family: 'Teko', sans-serif;
+            font-size: 6rem;
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.03);
+            line-height: 1;
+            z-index: 0;
+            transition: 0.4s;
+            pointer-events: none;
+        }
+
+        .workflow-card:hover .card-bg-number {
+            color: rgba(255, 215, 0, 0.08);
+            transform: scale(1.1) rotate(-5deg);
+        }
+
+        .card-icon-box {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            z-index: 1;
+            position: relative;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: 0.4s;
+            color: #FFD700;
+        }
+
+        .workflow-card:hover .card-icon-box {
+            transform: scale(1.1);
+            background: #FFD700;
+            color: #000;
+            box-shadow: 0 0 25px rgba(255, 215, 0, 0.5);
+            border-color: transparent;
+        }
+
+        .card-title {
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #fff;
+            margin-bottom: 8px;
+            z-index: 1;
+            font-size: 1.3rem;
+        }
+
+        .card-desc {
+            font-size: 0.9rem;
+            color: #a0a0b0;
+            line-height: 1.5;
+            z-index: 1;
+            margin: 0;
+        }
+
+        /* Responsive adjustments for the grid */
+        @media (min-width: 992px) {
+            .workflow-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+    </style>
+</head>
+
+<body class="mobile-layout" style="background-color: #0b0c15;">
+
+    <div id="introOverlay">
+        <div class="spotlight-bg"></div>
+        <div class="intro-content" id="introContent">
+            <div class="broken-text">
+                <span style="--tx:-200px; --ty:-300px; --r:-120deg">I</span>
+                <span style="--tx:-100px; --ty:200px; --r:-45deg">P</span>
+                <span style="--tx:-150px; --ty:-100px; --r:90deg">L</span>
+                &nbsp;
+                <span style="--tx:50px; --ty:350px; --r:180deg">A</span>
+                <span style="--tx:100px; --ty:-300px; --r:-90deg">U</span>
+                <span style="--tx:180px; --ty:200px; --r:45deg">C</span>
+                <span style="--tx:250px; --ty:-150px; --r:-60deg">T</span>
+                <span style="--tx:200px; --ty:250px; --r:130deg">I</span>
+                <span style="--tx:300px; --ty:-50px; --r:-15deg">O</span>
+                <span style="--tx:350px; --ty:150px; --r:80deg">N</span>
+            </div>
+            <div class="shockwave"></div>
+            <div class="gavel-wrapper">
+                <svg viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg" style="width:100%; height:100%;">
+                    <defs>
+                        <linearGradient id="woodGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" style="stop-color:#3E2723" />
+                            <stop offset="40%" style="stop-color:#5D4037" />
+                            <stop offset="60%" style="stop-color:#8D6E63" />
+                            <stop offset="100%" style="stop-color:#3E2723" />
+                        </linearGradient>
+                        <linearGradient id="goldGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" style="stop-color:#FDB931" />
+                            <stop offset="30%" style="stop-color:#FFFFE0" />
+                            <stop offset="60%" style="stop-color:#D4AF37" />
+                            <stop offset="100%" style="stop-color:#8A6E2F" />
+                        </linearGradient>
+                    </defs>
+                    <rect x="90" y="80" width="20" height="200" rx="4" fill="url(#woodGradient)" />
+                    <rect x="90" y="260" width="20" height="10" fill="rgba(0,0,0,0.3)" />
+                    <g transform="translate(0, 0)">
+                        <rect x="20" y="20" width="160" height="70" rx="15" fill="url(#woodGradient)" stroke="#1a1a1a"
+                            stroke-width="1" />
+                        <rect x="35" y="18" width="15" height="74" fill="url(#goldGradient)" />
+                        <rect x="150" y="18" width="15" height="74" fill="url(#goldGradient)" />
+                        <rect x="90" y="20" width="20" height="70" fill="url(#goldGradient)" opacity="0.9" />
+                    </g>
+                </svg>
+            </div>
+            <div class="sold-stamp">START.</div>
+        </div>
+        <div id="sparkContainer"></div>
+    </div>
+
+    <div id="lobbyScreen">
+        <div class="lobby-card">
+            <h1 class="lobby-title" style="color:yellow">IPL AUCTION</h1>
+            <ul class="nav nav-pills mb-3 justify-content-center" id="lobbyTabs">
+                <li class="nav-item"><button class="nav-link active rounded-0 btn-gold text-dark" data-bs-toggle="tab"
+                        data-bs-target="#createTab">CREATE ROOM</button>
+                </li>
+                <li class="nav-item"><button class="nav-link rounded-0 btn-outline-light" data-bs-toggle="tab"
+                        data-bs-target="#joinTab">JOIN ROOM</button></li>
+            </ul>
+            <div class="tab-content">
+                <div class="tab-pane fade show active" id="createTab">
+                    <div class="mb-3">
+                        <label class="text-white-50 small mb-2">SET ROOM ID</label>
+                        <input type="text" id="createRoomId" style="color: white;"
+                            class="form-control lobby-input text-uppercase" placeholder="######" maxlength="6">
+                    </div>
+                    <div class="mb-3">
+                        <label class="text-white-50 small mb-2" style="color: white;">SET 4-DIGIT PASSWORD</label>
+                        <input type="password" id="createPass" style="color: white;" class="form-control lobby-input"
+                            maxlength="4" placeholder="****">
+                    </div>
+                    <button id="doCreateBtn" class="btn btn-gold w-100 btn-custom mt-2">CREATE & ENTER</button>
+                </div>
+                <div class="tab-pane fade" id="joinTab">
+                    <div class="mb-3">
+                        <label class="text-white-50 small mb-2" style="color: white;">ROOM ID</label>
+                        <input type="text" id="joinRoomId" style="color: white;"
+                            class="form-control lobby-input text-uppercase" placeholder="######" maxlength="6">
+                    </div>
+                    <div class="mb-3">
+                        <label class="text-white-50 small mb-2" style="color: white;">PASSWORD</label>
+                        <input type="password" id="joinPass" style="color: white;" class="form-control lobby-input"
+                            maxlength="4" placeholder="****">
+                    </div>
+                    <button id="doJoinBtn" class="btn btn-primary w-100 btn-custom mt-2"
+                        style="background: var(--brand-blue); border: none;">JOIN GAME</button>
+                </div>
+            </div>
+            <div id="lobbyError" class="text-danger mt-3 fw-bold"></div>
+
+            <div class="d-flex justify-content-center gap-3 mt-4 pt-3 border-top border-secondary">
+                <button class="btn btn-sm btn-outline-info rounded-0 px-4" data-bs-toggle="modal"
+                    data-bs-target="#aboutModal">
+                    <i class="bi bi-info-circle me-1"></i> ABOUT
+                </button>
+                <button class="btn btn-sm btn-outline-warning rounded-0 px-4" data-bs-toggle="modal"
+                    data-bs-target="#rulesModal">
+                    <i class="bi bi-book me-1"></i> RULES
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="aboutModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
+            <div class="modal-content bg-dark border-secondary text-white"
+                style="background-color: #0b0c15 !important; border: 1px solid rgba(255,215,0,0.2); box-shadow: 0 0 50px rgba(0,0,0,0.8);">
+                <div class="modal-header border-bottom border-secondary" style="background: rgba(0,0,0,0.2);">
+                    <h5 class="modal-title display-font text-info"><i class="bi bi-info-circle-fill me-2"></i> GAME
+                        WORKFLOW</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4"
+                    style="background: radial-gradient(circle at top right, rgba(20,30,50,0.4), transparent);">
+
+                    <div class="text-center mb-4">
+                        <h2 class="display-font text-white" style="font-size: 2.5rem; letter-spacing: 2px;">IPL MEGA
+                            AUCTION '25</h2>
+                        <p class="text-white-50">Complete Multiplayer Experience</p>
+                    </div>
+
+                    <div class="workflow-grid">
+                        <div class="workflow-card">
+                            <div class="card-bg-number">01</div>
+                            <div class="card-icon-box"><i class="bi bi-door-open-fill"></i></div>
+                            <div class="card-title">ENTER ARENA</div>
+                            <p class="card-desc">Create a private room with a secure password or join your friend's room
+                                using the ID.</p>
+                        </div>
+
+                        <div class="workflow-card">
+                            <div class="card-bg-number">02</div>
+                            <div class="card-icon-box"><i class="bi bi-shield-shaded"></i></div>
+                            <div class="card-title">PICK FRANCHISE</div>
+                            <p class="card-desc">Select your IPL Team. The Host controls the settings and starts the
+                                game once everyone is ready.</p>
+                        </div>
+
+                        <div class="workflow-card">
+                            <div class="card-bg-number">03</div>
+                            <div class="card-icon-box"><i class="bi bi-hammer"></i></div>
+                            <div class="card-title">LIVE AUCTION</div>
+                            <p class="card-desc">Realistic bidding experience with live logs, purse tracking, and
+                                strategic player sets.</p>
+                        </div>
+
+                        <div class="workflow-card">
+                            <div class="card-bg-number">04</div>
+                            <div class="card-icon-box"><i class="bi bi-mic-fill"></i></div>
+                            <div class="card-title">AI AUCTIONEER</div>
+                            <p class="card-desc">Immersive text-to-speech AI announces player names, bids, and sold
+                                statuses in real-time.</p>
+                        </div>
+
+                        <div class="workflow-card">
+                            <div class="card-bg-number">05</div>
+                            <div class="card-icon-box"><i class="bi bi-mic-fill"></i></div>
+                            <div class="card-title">VOICE CHAT</div>
+                            <p class="card-desc">Talk to other players in real-time using your microphone. WebRTC
+                                peer-to-peer voice communication.</p>
+                        </div>
+
+                        <div class="workflow-card">
+                            <div class="card-bg-number">06</div>
+                            <div class="card-icon-box"><i class="bi bi-chat-dots-fill"></i></div>
+                            <div class="card-title">LIVE CHAT</div>
+                            <p class="card-desc">Send text messages to all players. Coordinate strategies and celebrate
+                                victories together.</p>
+                        </div>
+
+                        <div class="workflow-card">
+                            <div class="card-bg-number">07</div>
+                            <div class="card-icon-box"><i class="bi bi-person-badge-fill"></i></div>
+                            <div class="card-title">PLAYER NAMES</div>
+                            <p class="card-desc">Enter your name and see it displayed next to your team. Full
+                                personalization for each player.</p>
+                        </div>
+
+                        <div class="workflow-card">
+                            <div class="card-bg-number">08</div>
+                            <div class="card-icon-box"><i class="bi bi-person-check-fill"></i></div>
+                            <div class="card-title">SQUAD BUILD</div>
+                            <p class="card-desc">Select your Playing XI and Impact Player order-wise from the players
+                                you bought.</p>
+                        </div>
+
+                        <div class="workflow-card">
+                            <div class="card-bg-number">09</div>
+                            <div class="card-icon-box"><i class="bi bi-cpu-fill"></i></div>
+                            <div class="card-title">AI SIMULATION</div>
+                            <p class="card-desc">Advanced algorithm simulates the entire tournament match-by-match based
+                                on player stats.</p>
+                        </div>
+
+                        <div class="workflow-card">
+                            <div class="card-bg-number">10</div>
+                            <div class="card-icon-box"><i class="bi bi-trophy-fill"></i></div>
+                            <div class="card-title">CHAMPIONS</div>
+                            <p class="card-desc">The team with the best performance wins the trophy. Runner-ups and
+                                playoffs are displayed.</p>
+                        </div>
+
+                        <div class="workflow-card">
+                            <div class="card-bg-number">11</div>
+                            <div class="card-icon-box"><i class="bi bi-graph-up-arrow"></i></div>
+                            <div class="card-title">DETAILED STATS</div>
+                            <p class="card-desc">Complete post-game analysis: Orange Cap, Purple Cap, MVP Leaderboard,
+                                and Points Table.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="rulesModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content bg-dark border-secondary text-white"
+                style="background-color: #151621 !important;">
+                <div class="modal-header border-bottom border-secondary">
+                    <h5 class="modal-title display-font text-warning">AUCTION RULES</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <ul class="list-group list-group-flush bg-transparent">
+                        <li class="list-group-item bg-transparent text-white border-secondary">
+                            <i class="bi bi-cash-stack text-success me-2"></i>
+                            <strong>Purse Limit:</strong> Host selects team budget (₹80/90/100/120/130 Cr). All teams
+                            get same amount.
+                        </li>
+                        <li class="list-group-item bg-transparent text-white border-secondary">
+                            <i class="bi bi-people-fill text-info me-2"></i>
+                            <strong>Squad Size:</strong> Minimum 18 players, Maximum 25 players per team.
+                        </li>
+                        <li class="list-group-item bg-transparent text-white border-secondary">
+                            <i class="bi bi-globe text-primary me-2"></i>
+                            <strong>Foreign Players:</strong> Maximum 8 overseas players in squad, max 4 in Playing XI.
+                        </li>
+                        <li class="list-group-item bg-transparent text-white border-secondary">
+                            <i class="bi bi-person-check-fill text-warning me-2"></i>
+                            <strong>Playing XI:</strong> Select exactly 12 players + 1 Captain + 2 Impact Players (Bat &
+                            Bowl).
+                        </li>
+                        <li class="list-group-item bg-transparent text-white border-secondary">
+                            <i class="bi bi-hammer text-danger me-2"></i>
+                            <strong>Bidding:</strong> First bid = Base price. Next bids = +₹25 Lakh. 10-sec timer. Host
+                            controls.
+                        </li>
+                        <li class="list-group-item bg-transparent text-white border-secondary">
+                            <i class="bi bi-mic-fill text-success me-2"></i>
+                            <strong>Communication:</strong> Use Voice Chat (🎤) and Live Chat (💬) to coordinate with
+                            players.
+                        </li>
+                        <li class="list-group-item bg-transparent text-white border-secondary">
+                            <i class="bi bi-trophy-fill text-warning me-2"></i>
+                            <strong>Tournament:</strong> AI simulates full IPL season. Best team wins the trophy!
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="gameContainer" style="display:none; height: 100%;">
+
+        <div id="saleOverlay"
+            class="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center">
+            <div class="sold-card-container">
+                <div class="sold-header">AUCTION UPDATE</div>
+                <div class="sold-body">
+                    <div class="sold-player-box"><img id="soldPlayerImg" src="" class="sold-player-img" alt="Player">
+                    </div>
+                    <div>
+                        <div class="sold-role" id="soldPlayerRole">BATSMAN</div>
+                        <div class="sold-player-name" id="soldPlayerName">Player Name</div>
+                    </div>
+                    <div id="soldToSection">
+                        <div class="small text-white-50">SOLD TO</div>
+                        <div class="fs-4 fw-bold text-white" id="soldTeamName">Team Name</div>
+                    </div>
+                    <div class="sold-price-box" id="soldPriceSection">
+                        <div class="small text-white-50">FINAL PRICE</div>
+                        <div class="sold-final-price" id="soldFinalPrice">₹0</div>
+                    </div>
+                </div>
+                <div id="finalStamp" class="stamp-overlay">SOLD</div>
+            </div>
+        </div>
+
+        <div id="squadSelectionScreen"
+            class="position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center">
+            <div class="squad-selection-container">
+                <div class="selection-header">
+                    <h2 class="m-0">SELECT PLAYING XI & CAPTAIN</h2>
+                    <p class="small text-white-50 mb-0">Choose exactly 11 Players + 1 Impact Player</p>
+                </div>
+                <div class="selection-body">
+                    <div class="row h-100">
+                        <div class="col-md-6 border-end border-secondary">
+                            <h4 class="text-success mb-3">Select 11 Players & Captain</h4>
+                            <div id="playing11List"></div>
+                            <div class="mt-2 text-end text-success fw-bold" id="p11Count">0/11 Selected</div>
+                            <div class="mt-1 text-end small">
+                                <span id="foreignCountDisplay" style="color: #aaa; margin-right: 15px;">Foreign:
+                                    0/4</span>
+                                <span id="wkCountDisplay" style="color: #aaa;">WK: 0/1</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h3 class="text-warning mb-0">TOURNAMENT FIXTURES <span class="badge bg-danger ms-2"
+                                    style="font-size:0.6em; vertical-align:middle;">T20 FORMAT</span></h3>
+                            <small class="text-white-50">All matches limit to 20 overs per side.</small>
+                            <h4 class="text-warning mb-3">Select 1 Impact Player</h4>
+                            <div id="impactList"></div>
+                            <div class="mt-2 text-end text-warning fw-bold" id="impactCount">0/1 Selected</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-3 bg-dark border-top border-secondary text-center">
+                    <div id="waitingMsg" class="d-none text-info mb-2 fs-4">WAITING FOR OTHER TEAMS...</div>
+                    <button id="submitSquadBtn" class="btn btn-gold btn-lg w-50" disabled>SUBMIT SQUAD</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="resultsScreen" class="position-fixed top-0 start-0 w-100 h-100">
+            <div class="results-container">
+                <div class="winner-section">
+                    <i class="bi bi-trophy-fill winner-trophy"></i>
+                    <h1 class="display-1 text-white fw-bold mt-3" style="text-shadow: 0 0 30px #FFD700;">CHAMPIONS
+                    </h1>
+                    <h1 class="display-2 text-warning fw-bold" id="winnerName">CSK</h1>
+                    <h3 class="text-white-50 mt-2">RUNNER UP: <span id="runnerName" class="text-white">MI</span>
+                    </h3>
+                </div>
+
+                <ul class="nav result-nav justify-content-center mb-4" id="resultTabs">
+                    <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab"
+                            data-bs-target="#tabAwards">AWARDS & PLAYOFFS</button></li>
+                    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab"
+                            data-bs-target="#tabPoints">POINTS TABLE</button></li>
+                    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab"
+                            data-bs-target="#tabMatches">MATCH CENTER</button></li>
+                    <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabAllTeams">ALL
+                            SQUADS</button></li>
+                </ul>
+
+                <div class="tab-content">
+                    <div class="tab-pane fade show active" id="tabAwards">
+                        <div class="d-flex justify-content-center gap-4 flex-wrap">
+                            <div class="result-stat-box" style="border-color: #FF8C00;">
+                                <div class="text-white-50 small mb-2">ORANGE CAP</div>
+                                <i class="bi bi-fire fs-1 text-warning"></i>
+                                <h4 class="text-white mt-2 mb-0" id="resOrange">Name</h4>
+                                <div class="text-warning small" id="resOrangeStat">0 Runs</div>
+                            </div>
+                            <div class="result-stat-box" style="border-color: #9C27B0;">
+                                <div class="text-white-50 small mb-2">PURPLE CAP </div>
+                                <i class="bi bi-lightning-charge-fill fs-1" style="color: #E040FB;"></i>
+                                <h4 class="text-white mt-2 mb-0" id="resPurple">Name</h4>
+                                <div class="small" style="color: #E040FB;" id="resPurpleStat">0 Wickets</div>
+                            </div>
+                            <div class="result-stat-box" style="border-color: #00E676;">
+                                <div class="text-white-50 small mb-2">MVP (Most Valuable Player)</div>
+                                <i class="bi bi-star-fill fs-1 text-success"></i>
+                                <h4 class="text-white mt-2 mb-0" id="resMvp">Name</h4>
+                                <div class="text-success small" id="resMvpStat">0 Pts</div>
+                            </div>
+                        </div>
+                        <div class="mt-5">
+                            <h3 class="text-center text-white-50 display-font border-bottom border-secondary pb-2">
+                                PLAYOFF BRACKET</h3>
+                            <div id="playoffTree" class="mt-3 d-flex flex-column align-items-center gap-3"></div>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane fade" id="tabPoints">
+                        <div class="table-responsive">
+                            <table class="points-table text-center">
+                                <thead>
+                                    <tr>
+                                        <th>POS</th>
+                                        <th class="text-start">TEAM</th>
+                                        <th>P</th>
+                                        <th>W</th>
+                                        <th>L</th>
+                                        <th>NRR</th>
+                                        <th>PTS</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="pointsTableBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane fade" id="tabMatches">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="text-white-50 m-0">MATCH RESULTS</h5>
+                            <select id="matchFilterTeam"
+                                class="form-select w-auto bg-dark text-warning border-secondary display-font"
+                                onchange="filterMatchLogs(this.value)">
+                                <option value="ALL">ALL MATCHES</option>
+                            </select>
+                        </div>
+                        <div id="matchLogContainer" class="d-flex flex-column gap-2"
+                            style="max-height: 60vh; overflow-y: auto;"></div>
+                    </div>
+
+                    <div class="tab-pane fade" id="tabAllTeams">
+                        <div id="allTeamsContainer" class="container"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="scorecardModal" tabindex="-1">
+            <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content bg-dark border-secondary text-white"
+                    style="background-color: #0b0c15 !important;">
+                    <div class="modal-header border-secondary">
+                        <h5 class="modal-title display-font text-warning">MATCH SCORECARD</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body p-0">
+                        <div id="detailedScorecardContent">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <header class="broadcast-header">
+            <div class="d-flex align-items-center gap-3">
+                <div class="logo-box">IPL '25</div>
+                <div style="line-height: 1;">
+                    <div class="h5 mb-0 text-white display-font" style="letter-spacing: 2px;">MEGA AUCTION</div>
+                    <div class="small text-white-50" style="font-size: 0.7rem;">ROOM: <span id="currentRoomDisplay"
+                            class="text-warning">---</span></div>
+                </div>
+            </div>
+            <div class="ms-auto d-flex gap-2">
+                <button id="soundToggleBtn" class="btn btn-sm btn-outline-light rounded-0 ms-2">
+                    <i class="bi bi-volume-mute-fill"></i>
+                </button>
+                <button id="micToggleBtn" class="btn btn-sm btn-outline-danger rounded-0" title="Voice Chat">
+                    <i class="bi bi-mic-mute-fill"></i>
+                </button>
+                <span id="adminControls" class="admin-only d-flex gap-2">
+                    <!-- <button id="autoTestBtn" class="btn btn-sm btn-outline-danger" style="border-style:dashed;">
+                        <i class="bi bi-robot"></i> AUTO
+                    </button> -->
+                    <button id="endAuctionBtn" class="btn-custom btn-action btn-end-auction">END</button>
+                    <button id="timerToggleBtn" class="btn-custom btn-action"><i class="bi bi-pause-fill"></i></button>
+                </span>
+                <button class="btn btn-sm btn-outline-light rounded-0" data-bs-toggle="modal"
+                    data-bs-target="#teamStatusModal" onclick="renderSquads()">SQUADS</button>
+                <button class="btn btn-sm btn-outline-light rounded-0" data-bs-toggle="modal"
+                    data-bs-target="#listModal" onclick="renderPlayerPool()">PLAYERS</button>
+
+
+            </div>
+        </header>
+
+        <div class="main-container">
+
+            <div id="setupSection" class="setup-wrapper">
+                <div class="glass-panel setup-box p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h2 class="text-white display-font mb-0" style="font-size: 2.5rem;">Lobby & Team Selection
+                        </h2>
+                        <div class="player-count-display">
+                            <i class="bi bi-people-fill me-2"></i>Connected: <span id="joinedCount">1</span>
+                        </div>
+                    </div>
+
+                    <!-- Name Entry Section -->
+                    <div id="nameEntrySection" class="mb-4 p-4 border border-warning rounded"
+                        style="background: rgba(255, 193, 7, 0.1); display: none;">
+                        <h5 class="text-warning mb-3 text-center">
+                            <i class="bi bi-person-circle me-2"></i>ENTER YOUR NAME
+                        </h5>
+                        <div class="row justify-content-center">
+                            <div class="col-md-6">
+                                <input type="text" id="lobbyPlayerName"
+                                    class="form-control form-control-lg text-center bg-dark text-white border-warning"
+                                    placeholder="Type your name and press Enter" maxlength="20"
+                                    style="font-size: 1.5rem; letter-spacing: 2px;">
+                                <small class="text-white-50 d-block text-center mt-2">
+                                    Press Enter to save your name
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="hostSettings" class="admin-only row g-2 mb-3 border-bottom border-secondary pb-3">
+                        <div class="col-12">
+                            <h5 class="text-warning">Game Settings (Host Only)</h5>
+                        </div>
+                        <div class="col-6">
+                            <label class="text-white-50 small">Team Purse</label>
+                            <select id="budget" class="form-select form-control-dark" onchange="updateAllTeamBudgets()">
+                                <option value="800000000">₹80 Crore</option>
+                                <option value="900000000">₹90 Crore</option>
+                                <option value="1000000000" selected>₹100 Crore</option>
+                                <option value="1200000000">₹120 Crore</option>
+                                <option value="1300000000">₹130 Crore</option>
+                            </select>
+                        </div>
+                        <div class="col-6"><label class="text-white-50 small">Min Increment</label><input id="increment"
+                                type="number" class="form-control form-control-dark" value="2500000">
+                        </div>
+                        <div class="col-12 text-center mt-2">
+                            <small class="text-info">Wait for players to join teams. Only active teams will proceed to
+                                auction.</small>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-end mb-2">
+                        <label class="text-white small text-uppercase fw-bold text-success">
+                            <i class="bi bi-arrow-down-circle-fill"></i> Select Your Team to Join
+                        </label>
+                    </div>
+
+                    <div id="teamNamesContainer" class="d-grid gap-3"
+                        style="grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); max-height: 55vh; overflow-y: auto; padding-right: 5px;">
+                    </div>
+
+                    <div class="mt-4">
+                        <button id="startBtn" class="btn btn-gold w-100 py-3 fs-4 btn-custom admin-only" disabled>
+                            WAITING FOR TEAMS...
+                        </button>
+                        <div id="waitingText" class="text-center text-white-50 fs-5 mt-2">
+                            Waiting for Host to start..
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="auctionDashboard" class="dashboard-row" style="display: none;">
+                <div class="col-side">
+                    <!-- Live Chat & Log Container -->
+                    <div class="chat-log-container">
+                        <!-- Live Chat Section -->
+                        <div class="glass-panel chat-panel">
+                            <div class="p-2 border-bottom border-secondary bg-black bg-opacity-25">
+                                <h5 class="mb-0 text-white"><i class="bi bi-chat-dots me-2"></i>LIVE CHAT</h5>
+                            </div>
+                            <div id="chatMessages" class="scroll-area small text-white-50"
+                                style="height: calc(100% - 100px); overflow-y: auto; padding: 10px;">
+                                <div class="text-center text-white-50 small mb-2">
+                                    Welcome to the auction room!<br>
+                                    Chat with other bidders here.
+                                </div>
+                            </div>
+                            <div class="chat-input-container p-2 border-top border-secondary">
+                                <div class="d-flex gap-2">
+                                    <input type="text" id="chatInput"
+                                        class="form-control form-control-sm bg-dark text-white border-secondary"
+                                        placeholder="Type a message..." maxlength="200" style="border-radius: 20px;">
+                                    <button id="sendChatBtn" class="btn btn-warning btn-sm"
+                                        style="border-radius: 50%; width: 40px; height: 40px; padding: 0;">
+                                        <i class="bi bi-send-fill"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Live Log Section -->
+                        <div class="glass-panel log-panel">
+                            <div class="p-2 border-bottom border-secondary bg-black bg-opacity-25">
+                                <h5 class="mb-0 text-white"><i class="bi bi-terminal me-2"></i>LIVE LOG</h5>
+                            </div>
+                            <div id="log" class="scroll-area small font-monospace text-white-50"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-main">
+                    <div
+                        class="glass-panel player-hero-section d-flex flex-column align-items-center justify-content-center text-center p-3">
+                        <div class="w-100 d-flex justify-content-between align-items-start absolute-top px-3 pt-2">
+                            <div class="text-start"><span class="badge bg-warning text-black rounded-0 fs-6"
+                                    id="currentSet">SET 1</span>
+                                <div class="text-white mt-1 display-font fs-5" id="lotNoDisplay">LOT #001</div>
+                            </div>
+                            <div class="text-end"><span class="badge bg-secondary rounded-0 fs-6"
+                                    id="pTypeBadge">ROLE</span>
+                                <div class="text-white-50 small mt-1">BASE PRICE</div>
+                                <div id="pBase" class="text-white font-monospace">₹2 Cr</div>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <div class="p-avatar-circle mb-3" id="pInitials">VK</div>
+                            <h1 id="pName" class="display-font text-white mb-0"
+                                style="font-size: 3.5rem; text-shadow: 0 5px 15px rgba(0,0,0,0.8); line-height: 1;">
+                                VIRAT KOHLI</h1>
+                            <div id="pCat" class="text-info text-uppercase letter-spacing-2 mb-3">Indian Batter
+                            </div>
+                            <div class="d-flex align-items-center justify-content-center gap-4 mt-1">
+                                <div class="text-end">
+                                    <div class="small text-white-50 mb-0">CURRENT BID</div>
+                                    <div id="pTeam" class="text-white fs-5 text-truncate" style="max-width: 200px;">
+                                        Waiting...</div>
+                                </div>
+                                <div id="pBid" class="price-display">₹-</div>
+                                <div class="position-relative">
+                                    <div id="auctionTimer" class="timer-ring">10</div>
+                                    <div class="paused-text">PAUSED</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel controls-panel">
+                        <div class="d-flex align-items-center gap-2 w-100">
+                            <div class="flex-grow-1 d-flex gap-2 align-items-center">
+                                <div class="input-group input-group-lg" style="max-width: 180px;">
+                                    <span class="input-group-text bg-secondary border-secondary text-white small"
+                                        style="font-size: 0.8rem;">INC</span>
+                                    <input type="number" id="customBidInput"
+                                        class="form-control bg-dark text-warning border-secondary fw-bold"
+                                        value="2500000" step="100000">
+                                </div>
+                                <button id="placeBidBtn" class="btn-custom bid-btn-large flex-grow-1" disabled>BID <i
+                                        class="bi bi-hammer"></i></button>
+                            </div>
+
+                            <span id="adminControls" class="admin-only d-flex gap-2">
+                                <button id="soldBtn" class="btn-custom btn-action btn-sold">SOLD</button>
+
+                                <button id="skipBtn" class="btn-custom btn-action btn-unsold" disabled>PASS</button>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-side">
+                    <div class="glass-panel">
+                        <div class="p-2 border-bottom border-secondary bg-black bg-opacity-25">
+                            <h5 class="mb-0 text-white"><i class="bi bi-grid me-2"></i>FRANCHISE</h5>
+                        </div>
+                        <div id="teams" class="scroll-area"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="teamStatusModal" tabindex="-1">
+            <div class="modal-dialog modal-xl modal-dialog-centered">
+                <div class="modal-content bg-dark border-secondary text-white">
+                    <div class="modal-header border-secondary">
+                        <h5 class="modal-title display-font">Squad Details</h5><button type="button"
+                            class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body" id="teamStatusOverview"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="listModal" tabindex="-1">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content bg-dark border-secondary text-white">
+                    <div class="modal-header border-secondary">
+                        <h5 class="modal-title display-font">Player Pool</h5><button type="button"
+                            class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <ul class="nav nav-pills mb-3" id="tabList">
+                            <li class="nav-item"><button class="nav-link active rounded-0 bg-secondary text-white"
+                                    data-bs-toggle="tab" data-bs-target="#availableTab">Available</button></li>
+                            <li class="nav-item"><button class="nav-link rounded-0 bg-dark text-white border"
+                                    data-bs-toggle="tab" data-bs-target="#soldTab">Sold</button></li>
+                            <li class="nav-item"><button class="nav-link rounded-0 bg-dark text-white border"
+                                    data-bs-toggle="tab" data-bs-target="#unsoldTab">Unsold</button></li>
+                        </ul>
+                        <div class="tab-content">
+                            <div class="tab-pane fade show active" id="availableTab">
+                                <div id="availableList" class="row g-2"></div>
+                            </div>
+                            <div class="tab-pane fade" id="soldTab">
+                                <div id="soldList" class="row g-2"></div>
+                            </div>
+                            <div class="tab-pane fade" id="unsoldTab">
+                                <div id="unsoldList" class="row g-2"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/simple-peer/9.11.1/simplepeer.min.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Intro Animation Timing Scripts
+            const introContent = document.getElementById('introContent');
+            const sparkContainer = document.getElementById('sparkContainer');
+
+            // Trigger Shake and Explosion slightly after animation starts (sync with hammer hit)
+            setTimeout(() => {
+                introContent.classList.add('shake-active');
+                createExplosion();
+            }, 1150); // Matches the CSS hammer hit timing
+
+            function createExplosion() {
+                const particleCount = 40;
+                const colors = ['#FFD700', '#FFA500', '#FFFFFF', '#FF4500'];
+
+                for (let i = 0; i < particleCount; i++) {
+                    const spark = document.createElement('div');
+                    spark.className = 'spark';
+
+                    // Random Trajectory
+                    const angle = Math.random() * 360;
+                    const velocity = 100 + Math.random() * 300; // distance
+                    const tx = Math.cos(angle * Math.PI / 180) * velocity;
+                    const ty = Math.sin(angle * Math.PI / 180) * velocity;
+
+                    spark.style.setProperty('--sx', `${tx}px`);
+                    spark.style.setProperty('--sy', `${ty}px`);
+                    spark.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                    spark.style.animation = `sparkFly 0.8s ease-out forwards`;
+
+                    sparkContainer.appendChild(spark);
+                }
+            }
+
+
+            // Show Lobby Screen as Intro Fades
+            setTimeout(() => {
+                const lobby = document.getElementById('lobbyScreen');
+                if (lobby) lobby.style.display = 'flex';
+            }, 4000);
+        });
+    </script>
+    <script src="script.js"></script>
+    <script src="voice-chat.js"></script>
+</body>
+
+</html>
