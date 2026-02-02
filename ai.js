@@ -703,10 +703,8 @@ function runFullTournament(tourneyTeams) {
              const t2 = tourneyTeams.find(t => t.name === match.t2);
              t1.stats.pts += 1;
              t2.stats.pts += 1;
-             // NRR Calculation updates for Ties
-             // We still track runs/overs for NRR even in ties
-             updateNRRStats(t1, match.details.i1, match.details.i2);
-             updateNRRStats(t2, match.details.i2, match.details.i1);
+             // Note: NRR stats (runs/overs) are already updated in simulateMatch for ALL matches including TIES.
+             // No need to call updateNRRStats here to avoid double counting.
         } else {
              // Standard Win/Loss logic handled in simulateMatch? 
              // WAIT, simulateMatch handles league logic internally in previous code.
