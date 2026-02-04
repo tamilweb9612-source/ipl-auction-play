@@ -433,6 +433,8 @@ const PLAYER_DATABASE = {
   "Mitchell Marsh": { bat: 88, bowl: 78, luck: 82, type: "ar" },
   "Pat Cummins": { bat: 75, bowl: 92, luck: 95, type: "ar" },
   "Ravichandran Ashwin": { bat: 72, bowl: 88, luck: 90, type: "ar" },
+   "Shyam Khan": { bat: 85, bowl: 80, luck: 88, type: "ar" },
+  "Siva": { bat: 82, bowl: 78, luck: 85, type: "ar" },
 
   // --- ALL-ROUNDERS (Mid/Domestic) ---
   "Nitish Kumar Reddy": { bat: 85, bowl: 78, luck: 88, type: "ar" },
@@ -464,6 +466,7 @@ const PLAYER_DATABASE = {
   "Tanush Kotian": { bat: 60, bowl: 75, luck: 75, type: "ar" },
   "Suryansh Shedge": { bat: 65, bowl: 60, luck: 75, type: "ar" },
   "Vipraj Nigam": { bat: 60, bowl: 70, luck: 75, type: "ar" },
+ 
 
   // --- FAST BOWLERS (Foreign) ---
   "Jasprit Bumrah": { bat: 20, bowl: 99, luck: 95, type: "bowl" },
@@ -583,6 +586,8 @@ const MARQUEE_PLAYERS = {
     { name: "Cameron Green", type: "Foreign" },
     { name: "Sam Curran", type: "Foreign" },
     { name: "Marcus Stoinis", type: "Foreign" },
+    { name: "Shyam Khan", type: "Indian" },
+    { name: "Siva", type: "Indian" },
   ],
   wicketkeeper: [
     { name: "MS Dhoni", type: "Indian" },
@@ -750,6 +755,7 @@ const RAW_DATA = {
       "Ramandeep Singh",
       "Lalit Yadav",
       "Nitish Kumar Reddy",
+      
     ],
   },
   Domestic: {
@@ -1050,6 +1056,8 @@ const PLAYER_IMAGE_MAP = {
     "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQgVBnKUGvBQjHnNvaw_A9lKO7c6MwP2EqHlQ&s",
   "Josh Inglis":
     "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ96_gVuW8JTbxirRPH9mVAjB59jbtQRt6UtQ&s",
+  "Shyam Khan": "IMG-20260204-WA0000.jpg",
+  "Siva": "IMG-20260204-WA0001.jpg",
 };
 
 // FIX: Runtime Normalization of Image Keys to Lowercase
