@@ -17,7 +17,7 @@
         #introOverlay {
             position: fixed;
             inset: 0;
-            z-index: 9999;
+            z-index: 900;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -346,8 +346,16 @@
         </div>
     </div>
 
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="auth.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            // IF LOGGED IN - Auth.js will handle redirect/reconnect
+            if (localStorage.getItem('token')) {
+                // Let auth.js handle it
+                return;
+            }
+
             // Intro Animation Timing Scripts
             const introContent = document.getElementById('introContent');
             const sparkContainer = document.getElementById('sparkContainer');
@@ -380,11 +388,177 @@
                 }
             }
 
-            // Redirect to Login Page after animation
+            // Open Login Popup after animation
             setTimeout(() => {
-                window.location.href = 'login.html';
-            }, 3500); // 3.5 seconds duration
+                // Clear the intro elements to show a blank background
+                if (introContent) introContent.style.display = 'none';
+
+                // Wait for Auth to be ready
+                const checkAuth = setInterval(() => {
+                    if (window.Auth && window.Auth.clerk) {
+                        clearInterval(checkAuth);
+                        window.Auth.openAuthModal();
+                    }
+                }, 100);
+            }, 5000); // 5 seconds duration
+
+            // 'R' to Restart Intro
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'r' || e.key === 'R') {
+                    window.location.reload();
+                }
+            });
         });
+
+        // NEW: Check for active game and show "Continue" button
+        function checkForActiveGame() {
+            const playerId = sessionStorage.getItem("ipl_auction_player_id") || "guest_" + Date.now();
+
+            // Create temp socket to check for active room
+            const tempSocket = io({
+                transports: ["websocket"],
+                auth: { playerId: playerId }
+            });
+
+            tempSocket.on("connect", () => {
+                tempSocket.emit("check_active_room");
+            });
+
+            tempSocket.on("active_room_found", (data) => {
+                console.log("🎮 Active game found!", data);
+                tempSocket.disconnect();
+
+                // Show "Continue Your Game" button
+                showContinueGameButton(data);
+            });
+
+            tempSocket.on("no_active_room", () => {
+                console.log("ℹ️ No active game");
+                tempSocket.disconnect();
+                // Go to dashboard normally
+                window.location.href = "dashboard.html";
+            });
+
+            // Timeout fallback
+            setTimeout(() => {
+                if (tempSocket.connected) {
+                    tempSocket.disconnect();
+                    window.location.href = "dashboard.html";
+                }
+            }, 3000);
+        }
+
+        // Show Continue Game Button
+        function showContinueGameButton(gameData) {
+            // Hide intro animation
+            const introContent = document.getElementById('introContent');
+            if (introContent) introContent.style.display = 'none';
+
+            // Create Continue Game UI
+            const continueUI = document.createElement('div');
+            continueUI.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                z-index: 1000;
+                text-align: center;
+                background: linear-gradient(135deg, #1a2342 0%, #2d3561 100%);
+                padding: 40px;
+                border-radius: 20px;
+                box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+                border: 2px solid #FFD700;
+            `;
+
+            continueUI.innerHTML = `
+                <h1 style="color: #FFD700; font-family: 'Teko', sans-serif; font-size: 3rem; margin: 0 0 20px 0; text-shadow: 0 0 20px rgba(255,215,0,0.5);">
+                    🎮 GAME IN PROGRESS
+                </h1>
+                <p style="color: #fff; font-size: 1.2rem; margin: 10px 0;">
+                    You have an ongoing auction!
+                </p>
+                <p style="color: #FFD700; font-size: 1.5rem; font-weight: bold; margin: 10px 0;">
+                    Team: ${gameData.teamName}
+                </p>
+                <p style="color: #aaa; font-size: 0.9rem; margin: 10px 0;">
+                    Room ID: ${gameData.roomId}
+                </p>
+                <div style="margin-top: 30px; display: flex; gap: 20px; justify-content: center;">
+                    <button id="continueGameBtn" style="
+                        background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+                        color: #000;
+                        border: none;
+                        padding: 15px 40px;
+                        font-size: 1.2rem;
+                        font-weight: bold;
+                        border-radius: 10px;
+                        cursor: pointer;
+                        box-shadow: 0 5px 20px rgba(255,215,0,0.4);
+                        transition: all 0.3s;
+                        font-family: 'Rajdhani', sans-serif;
+                    ">
+                        🚀 CONTINUE GAME
+                    </button>
+                    <button id="newGameBtn" style="
+                        background: transparent;
+                        color: #fff;
+                        border: 2px solid #666;
+                        padding: 15px 40px;
+                        font-size: 1.2rem;
+                        font-weight: bold;
+                        border-radius: 10px;
+                        cursor: pointer;
+                        transition: all 0.3s;
+                        font-family: 'Rajdhani', sans-serif;
+                    ">
+                        NEW GAME
+                    </button>
+                </div>
+            `;
+
+            document.body.appendChild(continueUI);
+
+            // Continue Game Button
+            document.getElementById('continueGameBtn').addEventListener('click', () => {
+                // Store room info for auto-join
+                localStorage.setItem("auto_reconnect_room", gameData.roomId);
+                localStorage.setItem("auto_reconnect_team", gameData.teamKey);
+
+                // Redirect based on auction state
+                if (gameData.auctionState === "SQUAD_SELECTION" || gameData.auctionState === "RESULTS") {
+                    window.location.href = "play.html";
+                } else {
+                    window.location.href = "ipl.html";
+                }
+            });
+
+            // New Game Button
+            document.getElementById('newGameBtn').addEventListener('click', () => {
+                window.location.href = "dashboard.html";
+            });
+
+            // Hover effects
+            const continueBtn = document.getElementById('continueGameBtn');
+            const newBtn = document.getElementById('newGameBtn');
+
+            continueBtn.addEventListener('mouseenter', () => {
+                continueBtn.style.transform = 'scale(1.05)';
+                continueBtn.style.boxShadow = '0 8px 30px rgba(255,215,0,0.6)';
+            });
+            continueBtn.addEventListener('mouseleave', () => {
+                continueBtn.style.transform = 'scale(1)';
+                continueBtn.style.boxShadow = '0 5px 20px rgba(255,215,0,0.4)';
+            });
+
+            newBtn.addEventListener('mouseenter', () => {
+                newBtn.style.borderColor = '#FFD700';
+                newBtn.style.color = '#FFD700';
+            });
+            newBtn.addEventListener('mouseleave', () => {
+                newBtn.style.borderColor = '#666';
+                newBtn.style.color = '#fff';
+            });
+        }
     </script>
 </body>
 

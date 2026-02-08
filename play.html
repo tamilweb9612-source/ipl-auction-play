@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IPL Pro Sim: Ultimate Edition</title>
+    <title>IPL Pro Sim: Ultimate Edition </title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
@@ -610,15 +610,18 @@
                     <i class="fa-solid fa-trophy text-warning"></i>
                 </div>
                 <div class="d-flex flex-column justify-content-center">
-                    <div class="brand-main">IPL <span class="brand-sub">PRO SIM</span></div>
+                    <div class="brand-main">
+                        IPL <span class="brand-sub">PRO SIM</span></div>
                     <div
                         style="font-size: 0.7rem; letter-spacing: 0.3em; color: #666; font-weight: 600; margin-top: -2px;">
-                        ULTIMATE EDITION</div>
+                        ULTIMATE EDITION
+                    </div>
                 </div>
             </a>
             <div class="d-flex align-items-center">
                 <div class="live-pill">
-                    <i class="fa-solid fa-circle-dot" style="font-size: 0.6rem;"></i> LIVE SERVER
+                    <i class="fa-solid fa-circle-dot" style="font-size: 0.6rem;"></i>
+                    LIVE SERVER
                 </div>
             </div>
         </div>
@@ -638,14 +641,22 @@
 
                     <div class="d-flex flex-column gap-3">
                         <div class="info-highlight-box">
-                            <div class="text-muted small text-uppercase fw-bold mb-1">Room ID</div>
-                            <div class="font-monospace text-white" id="displayRoomId">LOADING...</div>
+                            <div class="text-muted small text-uppercase fw-bold mb-1">
+                                Room ID
+                            </div>
+                            <div class="font-monospace text-white" id="displayRoomId">
+                                LOADING...
+                            </div>
                         </div>
 
                         <div class="info-highlight-box">
-                            <div class="text-muted small text-uppercase fw-bold mb-2">Team Owners</div>
+                            <div class="text-muted small text-uppercase fw-bold mb-2">
+                                Team Owners
+                            </div>
                             <div id="teamOwnersList" class="d-flex flex-column gap-1">
-                                <div class="text-white-50 small">Loading...</div>
+                                <div class="text-white-50 small">
+                                    Loading...
+                                </div>
                             </div>
                         </div>
 
@@ -666,7 +677,8 @@
                     </div>
 
                     <div class="mt-auto pt-4 text-center">
-                        <div class="text-muted small" style="font-size: 0.7rem; opacity: 0.5;">POWERED BY SOCKET.IO
+                        <div class="text-muted small" style="font-size: 0.7rem; opacity: 0.5;">
+                            POWERED BY SOCKET.IO
                         </div>
                     </div>
                 </div>
@@ -676,36 +688,51 @@
                 <div class="row g-3 mb-3 fade-in-up" style="animation-delay: 0.2s;">
                     <div class="col-md-3">
                         <div class="stat-box">
-                            <div class="award-title text-warning">ORANGE CAP</div>
-                            <div class="award-val text-warning" id="orangeCapVal">0</div>
-                            <div class="award-player" id="orangeCapName">---</div>
+                            <div class="award-title text-warning">
+                                ORANGE CAP
+                            </div>
+                            <div class="award-val text-warning" id="orangeCapVal">
+                                0</div>
+                            <div class="award-player" id="orangeCapName">
+                                ---</div>
                             <i class="fa-solid fa-shirt position-absolute end-0 bottom-0 m-3 text-warning opacity-25"
                                 style="font-size: 2.5rem;"></i>
                         </div>
                     </div>
                     <div class="col-md-3">
                         <div class="stat-box">
-                            <div class="award-title text-info">PURPLE CAP</div>
-                            <div class="award-val text-info" id="purpleCapVal">0</div>
-                            <div class="award-player" id="purpleCapName">---</div>
+                            <div class="award-title text-info">
+                                PURPLE CAP
+                            </div>
+                            <div class="award-val text-info" id="purpleCapVal">
+                                0</div>
+                            <div class="award-player" id="purpleCapName">
+                                ---</div>
                             <i class="fa-solid fa-baseball position-absolute end-0 bottom-0 m-3 text-info opacity-25"
                                 style="font-size: 2.5rem;"></i>
                         </div>
                     </div>
                     <div class="col-md-3">
                         <div class="stat-box">
-                            <div class="award-title text-success">TOURNAMENT MVP</div>
-                            <div class="award-val text-success" id="mvpVal">0</div>
-                            <div class="award-player" id="mvpName">---</div>
+                            <div class="award-title text-success">
+                                TOURNAMENT MVP</div>
+                            <div class="award-val text-success" id="mvpVal">
+                                0</div>
+                            <div class="award-player" id="mvpName">
+                                ---</div>
                             <i class="fa-solid fa-star position-absolute end-0 bottom-0 m-3 text-success opacity-25"
                                 style="font-size: 2.5rem;"></i>
                         </div>
                     </div>
                     <div class="col-md-3">
                         <div class="stat-box">
-                            <div class="award-title text-danger">MAX SIXES</div>
-                            <div class="award-val text-danger" id="mostSixesVal">0</div>
-                            <div class="award-player" id="mostSixesName">---</div>
+                            <div class="award-title text-danger">
+                                MAX SIXES
+                            </div>
+                            <div class="award-val text-danger" id="mostSixesVal">
+                                0</div>
+                            <div class="award-player" id="mostSixesName">
+                                ---</div>
                             <i class="fa-solid fa-fire position-absolute end-0 bottom-0 m-3 text-danger opacity-25"
                                 style="font-size: 2.5rem;"></i>
                         </div>
@@ -715,37 +742,55 @@
                 <div class="row g-3 mb-4 fade-in-up" style="animation-delay: 0.3s;">
                     <div class="col-md-3">
                         <div class="stat-box">
-                            <div class="award-title text-white">BEST IMPACT</div>
-                            <div class="award-val text-white" id="impactVal">0</div>
-                            <div class="award-player" id="impactName">---</div>
+                            <div class="award-title text-white">
+                                BEST IMPACT
+                            </div>
+                            <div class="award-val text-white" id="impactVal">
+                                0</div>
+                            <div class="award-player" id="impactName">
+                                ---</div>
                         </div>
                     </div>
                     <div class="col-md-3">
                         <div class="stat-box">
-                            <div class="award-title text-warning">HIGHEST SR</div>
-                            <div class="award-val text-warning" id="srVal">0</div>
-                            <div class="award-player" id="srName">---</div>
+                            <div class="award-title text-warning">
+                                HIGHEST SR
+                            </div>
+                            <div class="award-val text-warning" id="srVal">0
+                            </div>
+                            <div class="award-player" id="srName">
+                                ---</div>
                         </div>
                     </div>
                     <div class="col-md-3">
                         <div class="stat-box">
-                            <div class="award-title text-info">BEST ECONOMY</div>
-                            <div class="award-val text-info" id="ecoVal">0</div>
-                            <div class="award-player" id="ecoName">---</div>
+                            <div class="award-title text-info">
+                                BEST ECONOMY
+                            </div>
+                            <div class="award-val text-info" id="ecoVal">
+                                0</div>
+                            <div class="award-player" id="ecoName">
+                                ---</div>
                         </div>
                     </div>
                     <div class="col-md-3">
                         <div class="stat-box d-flex flex-column justify-content-center align-items-center text-center">
-                            <div class="small text-muted mb-1 text-uppercase fw-bold">Tournament Sixes</div>
-                            <div class="award-val text-white display-4" id="totalMatchSixes">0</div>
+                            <div class="small text-muted mb-1 text-uppercase fw-bold">
+                                Tournament Sixes</div>
+                            <div class="award-val text-white display-4" id="totalMatchSixes">
+                                0</div>
                         </div>
                     </div>
                 </div>
 
                 <div class="champion-banner fade-in-up" style="animation-delay: 0.4s;">
-                    <div class="champion-label"><i class="fa-solid fa-crown me-2"></i>SEASON CHAMPIONS</div>
-                    <div class="champion-team" id="champName">TBD</div>
-                    <div class="text-white-50 small mt-2 letter-spacing-2">SIMULATION RESULTS FINALIZED</div>
+                    <div class="champion-label">
+                        <i class="fa-solid fa-crown me-2"></i>SEASON CHAMPIONS
+                    </div>
+                    <div class="champion-team" id="champName">TBD
+                    </div>
+                    <div class="text-white-50 small mt-2 letter-spacing-2">
+                        SIMULATION RESULTS FINALIZED</div>
                 </div>
 
                 <div class="row g-4 fade-in-up" style="animation-delay: 0.5s;">
@@ -755,7 +800,8 @@
                             <div class="glass-header">
                                 <span class="text-uppercase fw-bold"
                                     style="font-family: var(--font-head); font-size: 1.1rem; letter-spacing: 1px;">
-                                    <i class="fa-solid fa-list-ol me-2 text-info"></i> Standings
+                                    <i class="fa-solid fa-list-ol me-2 text-info"></i>
+                                    Standings
                                 </span>
                                 <span class="badge bg-dark border border-secondary text-secondary">LEAGUE</span>
                             </div>
@@ -763,12 +809,27 @@
                                 <table class="table table-custom align-middle">
                                     <thead>
                                         <tr>
-                                            <th class="ps-4">TEAM</th>
-                                            <th class="text-center">P</th>
-                                            <th class="text-center">W</th>
-                                            <th class="text-center">L</th>
-                                            <th class="text-center">NRR</th>
-                                            <th class="text-center pe-4 text-white">PTS</th>
+                                            <th class="ps-4 text-center fw-bold">
+                                                POS
+                                            </th>
+                                            <th class="ps-4">
+                                                TEAM
+                                            </th>
+                                            <th class="text-center">
+                                                P
+                                            </th>
+                                            <th class="text-center">
+                                                W
+                                            </th>
+                                            <th class="text-center">
+                                                L
+                                            </th>
+                                            <th class="text-center">
+                                                NRR
+                                            </th>
+                                            <th class="text-center pe-4 text-white">
+                                                PTS
+                                            </th>
                                         </tr>
                                     </thead>
                                     <tbody id="pointsTableBody">
@@ -809,13 +870,16 @@
                             <div class="tab-content custom-scrollbar" id="pills-tabContent"
                                 style="height: 600px; overflow-y: auto; padding-right: 5px;">
                                 <div class="tab-pane fade show active" id="pills-playoffs">
-                                    <div id="playoffsList"></div>
+                                    <div id="playoffsList">
+                                    </div>
                                 </div>
                                 <div class="tab-pane fade" id="pills-league">
-                                    <div id="matchLog"></div>
+                                    <div id="matchLog">
+                                    </div>
                                 </div>
                                 <div class="tab-pane fade" id="pills-teams">
-                                    <div id="teamsOverview"></div>
+                                    <div id="teamsOverview">
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -835,8 +899,11 @@
                 <div class="modal-header border-bottom border-secondary border-opacity-25 bg-black bg-opacity-50">
                     <div>
                         <div class="small text-white-50 text-uppercase fw-bold" style="letter-spacing: 1px;"
-                            id="scVenueInfo">Venue Info</div>
-                        <div class="mt-1" id="scResult">Result Placeholder</div>
+                            id="scVenueInfo">
+                            Venue Info</div>
+                        <div class="mt-1" id="scResult">
+                            Result Placeholder
+                        </div>
                     </div>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
                         aria-label="Close"></button>
@@ -846,13 +913,18 @@
                     <div class="d-flex justify-content-between align-items-center py-4 px-5 bg-black bg-opacity-25"
                         style="border-bottom: 1px solid rgba(255,255,255,0.05);">
                         <div class="text-center">
-                            <h3 class="font-head fw-bold text-white mb-0" id="scTeam1">T1</h3>
-                            <div class="display-6 fw-bold text-warning" id="scScore1">0/0</div>
+                            <h3 class="font-head fw-bold text-white mb-0" id="scTeam1">
+                                T1</h3>
+                            <div class="display-6 fw-bold text-warning" id="scScore1">
+                                0/0</div>
                         </div>
-                        <div class="text-secondary small fw-bold mx-3 opacity-50">VS</div>
+                        <div class="text-secondary small fw-bold mx-3 opacity-50">
+                            VS</div>
                         <div class="text-center">
-                            <h3 class="font-head fw-bold text-white mb-0" id="scTeam2">T2</h3>
-                            <div class="display-6 fw-bold text-warning" id="scScore2">0/0</div>
+                            <h3 class="font-head fw-bold text-white mb-0" id="scTeam2">
+                                T2</h3>
+                            <div class="display-6 fw-bold text-warning" id="scScore2">
+                                0/0</div>
                         </div>
                     </div>
 
@@ -876,8 +948,10 @@
 
                     <!-- Tab Content -->
                     <div class="tab-content p-0">
-                        <div class="tab-pane fade show active p-4" id="tab1" role="tabpanel"></div>
-                        <div class="tab-pane fade p-4" id="tab2" role="tabpanel"></div>
+                        <div class="tab-pane fade show active p-4" id="tab1" role="tabpanel">
+                        </div>
+                        <div class="tab-pane fade p-4" id="tab2" role="tabpanel">
+                        </div>
                     </div>
                 </div>
             </div>
@@ -915,13 +989,20 @@
                 const parsed = JSON.parse(savedResults);
                 renderResults(parsed);
                 const loader = document.getElementById('loadingOverlay');
-                if (loader) { loader.style.opacity = '0'; setTimeout(() => loader.remove(), 500); }
+                if (loader) {
+                    loader.style.opacity = '0';
+                    setTimeout(() => loader.remove(), 500);
+                }
             } catch (e) {
                 console.error("Error parsing saved results", e);
-                if (roomId) socket.emit('request_tournament_data', { roomId });
+                if (roomId) socket.emit('request_tournament_data', {
+                    roomId
+                });
             }
         } else if (roomId) {
-            socket.emit('request_tournament_data', { roomId });
+            socket.emit('request_tournament_data', {
+                roomId
+            });
         } else {
             console.warn('No room ID found.');
         }
@@ -935,7 +1016,10 @@
             sessionStorage.setItem("IPL_RESULTS", JSON.stringify(data.tournamentResults));
             renderResults(data.tournamentResults);
             const loader = document.getElementById('loadingOverlay');
-            if (loader) { loader.style.opacity = '0'; setTimeout(() => loader.remove(), 500); }
+            if (loader) {
+                loader.style.opacity = '0';
+                setTimeout(() => loader.remove(), 500);
+            }
         });
 
         socket.on('tournamentComplete', (results) => {
@@ -952,8 +1036,85 @@
             document.getElementById('loadingOverlay')?.remove();
         });
 
-        function renderResults(results) {
-            console.log('Rendering results:', results);
+        // ADAPTER: Normalize Gemini Data or Local Data
+        function normalizeData(data) {
+            // Create a normalized result object
+            let normalized = { ...data };
+
+            // Map standings to pointsTable if not already present
+            if (!normalized.pointsTable && normalized.standings) {
+                normalized.pointsTable = normalized.standings;
+            }
+
+            // Map leagueMatches to matches if not already present
+            if (!normalized.matches && normalized.leagueMatches) {
+                normalized.matches = normalized.leagueMatches;
+            }
+
+            // Normalize stats in pointsTable - ensure each row has proper stats
+            if (normalized.pointsTable && Array.isArray(normalized.pointsTable)) {
+                normalized.pointsTable = normalized.pointsTable.map(team => {
+                    // If stats is nested inside team.stats, use it; otherwise, team has direct properties
+                    const stats = team.stats || {
+                        played: team.played || 0,
+                        won: team.won || 0,
+                        lost: team.lost || 0,
+                        pts: team.pts || 0,
+                        nrr: team.nrr || team.nrrVal || 0
+                    };
+                    return {
+                        ...team,
+                        stats: stats
+                    };
+                });
+            }
+
+            // Build awards object if it doesn't exist (Gemini format) or enhance it
+            if (!normalized.awards) {
+                normalized.awards = {
+                    orange: {
+                        name: data.orangeCap?.name || "N/A",
+                        val: data.orangeCap?.val || data.orangeCap?.runs || data.orangeCap?.Runs || 0
+                    },
+                    purple: {
+                        name: data.purpleCap?.name || "N/A",
+                        val: data.purpleCap?.val || data.purpleCap?.wkts || data.purpleCap?.Wkts || 0
+                    },
+                    mvp: {
+                        name: data.mvp?.name || "N/A",
+                        val: data.mvp?.val || data.mvp?.pts || data.mvp?.Pts || 0
+                    },
+                    sixes: {
+                        name: data.mostSixes?.name || "N/A",
+                        val: data.mostSixes?.val || 0
+                    },
+                    impact: {
+                        name: data.bestImpact?.name || "N/A",
+                        val: data.bestImpact?.val || 0
+                    },
+                    sr: {
+                        name: data.highestSr?.name || "N/A",
+                        val: data.highestSr?.val || 0
+                    },
+                    eco: {
+                        name: data.bestEco?.name || "N/A",
+                        val: data.bestEco?.val || 0
+                    }
+                };
+            }
+
+            // Ensure tournamentSixes has a value
+            if (normalized.tournamentSixes === undefined) {
+                normalized.tournamentSixes = data.tournamentSixes || 0;
+            }
+
+            console.log('Normalized data:', normalized);
+            return normalized;
+        }
+
+        function renderResults(rawData) {
+            const results = normalizeData(rawData);
+            console.log('Rendering normalized results:', results);
 
             // Display Room ID
             const urlParams = new URLSearchParams(window.location.search);
@@ -962,18 +1123,22 @@
 
             // Display Team Owners
             const teamOwnersList = document.getElementById('teamOwnersList');
-            if (teamOwnersList && results.teams) {
+            if (teamOwnersList) {
                 teamOwnersList.innerHTML = '';
-                results.teams.forEach(team => {
-                    const ownerName = team.playerName || 'Unknown';
-                    const ownerDiv = document.createElement('div');
-                    ownerDiv.className = 'd-flex justify-content-between align-items-center';
-                    ownerDiv.innerHTML = `
+                // Use teams if available, else standings
+                const teamSource = results.teams || results.pointsTable;
+                if (teamSource && Array.isArray(teamSource)) {
+                    teamSource.forEach(team => {
+                        const ownerName = team.playerName || '---';
+                        const ownerDiv = document.createElement('div');
+                        ownerDiv.className = 'd-flex justify-content-between align-items-center';
+                        ownerDiv.innerHTML = `
                         <span class="text-white small fw-bold">${team.name}</span>
                         <span class="text-warning small">${ownerName}</span>
                     `;
-                    teamOwnersList.appendChild(ownerDiv);
-                });
+                        teamOwnersList.appendChild(ownerDiv);
+                    });
+                }
             }
 
             // Render awards
@@ -984,92 +1149,69 @@
                 updateText('purpleCapName', results.awards.purple?.name, '---');
                 updateText('mvpVal', results.awards.mvp?.val, 0);
                 updateText('mvpName', results.awards.mvp?.name, '---');
-                updateText('mostSixesVal', results.awards.sixes?.val, 0);
+
+                // Optional stats
+                updateText('mostSixesVal', results.awards.sixes?.val, '-');
                 updateText('mostSixesName', results.awards.sixes?.name, '---');
-                updateText('impactVal', results.awards.impact?.val, 0);
-                updateText('impactName', results.awards.impact?.name, '---');
-                updateText('srVal', results.awards.sr?.val, 0);
+                // Impact is not currently in AI prompt, but we leave placeholder
+                updateText('impactVal', results.awards.impact?.val, '0');
+                updateText('impactName', results.awards.impact?.name, 'N/A');
+
+                updateText('srVal', results.awards.sr?.val, '-');
                 updateText('srName', results.awards.sr?.name, '---');
-                updateText('ecoVal', results.awards.eco?.val, 0);
+                updateText('ecoVal', results.awards.eco?.val, '-');
                 updateText('ecoName', results.awards.eco?.name, '---');
-
-                // Calculate total sixes
-                let totalSixes = 0;
-                const processMatch = (m) => {
-                    if (m.details?.i1?.batting) m.details.i1.batting.forEach(b => totalSixes += (b.sixes || 0));
-                    if (m.details?.i2?.batting) m.details.i2.batting.forEach(b => totalSixes += (b.sixes || 0));
-                };
-                if (results.matches) results.matches.forEach(processMatch);
-                if (results.playoffs) results.playoffs.forEach(processMatch);
-
-                document.getElementById('totalMatchSixes').textContent = totalSixes;
             }
 
+            // Tournament Sixes
+            updateText('totalMatchSixes', results.tournamentSixes, 0);
+
             // Render champion
-            document.getElementById('champName').textContent = results.champion || 'TBD';
+            document.getElementById('champName').textContent = (results.champion && results.champion.name) ? results.champion.name : (results.winner && results.winner.name ? results.winner.name : 'TBD');
 
             // Render points table
-            if (results.pointsTable) {
+            if (results.pointsTable && Array.isArray(results.pointsTable) && results.pointsTable.length > 0) {
                 const tbody = document.getElementById('pointsTableBody');
                 tbody.innerHTML = '';
                 results.pointsTable.forEach((row, i) => {
+                    const stats = row.stats || row; // Handle nested stats or direct properties
+                    const played = stats.played ?? row.played ?? 0;
+                    const won = stats.won ?? row.won ?? 0;
+                    const lost = stats.lost ?? row.lost ?? 0;
+                    const pts = stats.pts ?? row.pts ?? 0;
+                    const nrr = parseFloat(stats.nrr ?? row.nrr ?? row.nrrVal ?? 0);
+
                     const tr = document.createElement('tr');
-                    // Alternating row delays for animation could be added here
                     tr.innerHTML = `
+                        <td class="text-center fw-bold text-warning" style="font-size:1rem;">${i + 1}</td>
                         <td class="ps-4">
                             <div class="d-flex align-items-center">
                                 <span class="team-dot" style="background:hsl(${i * 45}, 80%, 60%);"></span>
-                                <span class="fw-bold text-white">${row.name}</span>
+                                <span class="fw-bold text-white">${row.name || 'Unknown'}</span>
                             </div>
                         </td>
-                        <td class="text-center text-muted">${row.played}</td>
-                        <td class="text-center text-success fw-bold">${row.won}</td>
-                        <td class="text-center text-danger fw-bold">${row.lost}</td>
-                        <td class="text-center font-monospace small">${row.nrrVal.toFixed(2)}</td>
-                        <td class="text-center pe-4 fw-bold text-warning" style="font-size:1.1em;">${row.pts}</td>
+                        <td class="text-center text-muted">${played}</td>
+                        <td class="text-center text-success fw-bold">${won}</td>
+                        <td class="text-center text-danger fw-bold">${lost}</td>
+                        <td class="text-center font-monospace small">${nrr.toFixed(3)}</td>
+                        <td class="text-center pe-4 fw-bold text-warning" style="font-size:1.1em;">${pts}</td>
                     `;
                     tbody.appendChild(tr);
                 });
+            } else {
+                console.warn('Points table data missing or empty:', results.pointsTable);
+                const tbody = document.getElementById('pointsTableBody');
+                if (tbody) {
+                    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">No standings data available</td></tr>';
+                }
             }
 
             // Render matches
             renderMatchList('playoffsList', results.playoffs);
             renderMatchList('matchLog', results.matches);
 
-            // Render Squads
-            const squadsContainer = document.getElementById('teamsOverview');
-            if (squadsContainer && results.squads && results.teams) {
-                squadsContainer.innerHTML = '';
-                Object.keys(results.squads).forEach(key => {
-                    const sq = results.squads[key];
-                    const team = results.teams.find(t => t.bidKey === key);
-                    if (!team) return;
-
-                    const card = document.createElement('div');
-                    card.className = 'squad-card fade-in-up';
-
-                    let contentHtml = '';
-                    if (sq.fixed10) {
-                        const fixedList = sq.fixed10.map((p, i) =>
-                            `<div class="d-flex justify-content-between py-1 border-bottom border-secondary border-opacity-10">
-                                <span class="text-secondary small">${i + 1}.</span>
-                                <span class="text-white small fw-bold">${p.name}</span>
-                                <span class="badge bg-dark text-secondary border border-secondary border-opacity-25" style="font-size:0.6em">${p.roleKey}</span>
-                            </div>`
-                        ).join('');
-
-                        const batImp = sq.batImpact ? `<div class="mt-2 text-info small"><i class="fa-solid fa-bolt me-1"></i>Bat Sub: <strong>${sq.batImpact.name}</strong></div>` : '';
-                        const bowlImp = sq.bowlImpact ? `<div class="mt-1 text-warning small"><i class="fa-solid fa-bolt me-1"></i>Bowl Sub: <strong>${sq.bowlImpact.name}</strong></div>` : '';
-
-                        contentHtml = `<div class="row"><div class="col-12 mb-2">${fixedList}</div><div class="col-12 pt-2 border-top border-secondary border-opacity-25">${batImp}${bowlImp}</div></div>`;
-                    } else if (sq.playing11) {
-                        contentHtml = sq.playing11.map((p, i) => `<span class="badge bg-dark border border-secondary m-1">${p.name}</span>`).join('');
-                    }
-
-                    card.innerHTML = `<div class="squad-title text-uppercase font-head fw-bold">${team.name}</div>${contentHtml}`;
-                    squadsContainer.appendChild(card);
-                });
-            }
+            // Render Squads (if available)
+            // Note: results.squads might be missing in Gemini output unless we pass it through
         }
 
         function updateText(id, val, fallback) {
@@ -1101,8 +1243,8 @@
 
             card.innerHTML = `
                 <div class="match-meta">
-                    <span>${match.matchId ? '#' + match.matchId : 'MATCH'}</span>
-                    <span>${match.type || 'LEAGUE'} • ${match.venue?.city || 'Venue'}</span>
+                    <span>${match.matchId ? '#' + match.matchId : 'GAME'}</span>
+                    <span>${match.type || 'LEAGUE'} • ${match.venue?.city || 'Term'}</span>
                 </div>
                 
                 <div class="match-teams">
@@ -1130,64 +1272,57 @@
         }
 
         function showScorecard(match) {
-            document.getElementById('scVenueInfo').textContent = `${match.venue?.name || 'Venue'}, ${match.venue?.city || ''}`;
+            // Handle limited Gemini Data
+            document.getElementById('scVenueInfo').textContent = `${match.venue?.name || 'Simulation Mode'}, ${match.venue?.city || ''}`;
 
-            // Result & Toss
+            // Result & Toss (Toss might be missing)
             document.getElementById('scResult').innerHTML = `
                 <div class="fw-bold fs-5 text-uppercase">${match.winner} WON BY ${match.margin}</div>
-                <div class="small text-white-50 mt-1" style="letter-spacing:1px; font-style:italic;">
-                    <i class="bi bi-coin me-1 text-warning"></i> ${match.toss}
-                </div>
             `;
 
-            // Determine Batting First vs Batting Second
-            const batFirstTeam = match.batFirst || match.details.i1.teamName;
-            let batSecondTeam = '';
-            let score1 = '';
-            let score2 = '';
+            // Determine actual batting order from match details
+            // i1 = first innings, i2 = second innings
+            const firstBatTeam = match.details?.i1?.teamName || match.batFirst || match.t1;
+            const secondBatTeam = match.details?.i2?.teamName || (match.batFirst === match.t1 ? match.t2 : match.t1);
 
-            // Check if T1 is batting first
-            if (match.t1 === batFirstTeam) {
-                batSecondTeam = match.t2;
-                score1 = match.score1; // T1 Score (1st Inn)
-                score2 = match.score2; // T2 Score (2nd Inn)
-            } else {
-                batSecondTeam = match.t1;
-                score1 = match.score2; // T2 Score (1st Inn) -> Display on Left
-                score2 = match.score1; // T1 Score (2nd Inn) -> Display on Right
-            }
+            // Get correct scores for each innings (based on batting order, not t1/t2)
+            const firstBatScore = match.details?.i1 ? `${match.details.i1.score}/${match.details.i1.wkts}` :
+                (firstBatTeam === match.t1 ? match.score1 : match.score2);
+            const secondBatScore = match.details?.i2 ? `${match.details.i2.score}/${match.details.i2.wkts}` :
+                (secondBatTeam === match.t1 ? match.score1 : match.score2);
 
-            // HEADER: Left = 1st Innings, Right = 2nd Innings
-            document.getElementById('scTeam1').textContent = batFirstTeam;
-            document.getElementById('scScore1').textContent = score1;
+            // Update header with batting order (first bat on left, second bat on right)
+            document.getElementById('scTeam1').textContent = firstBatTeam;
+            document.getElementById('scScore1').textContent = firstBatScore;
 
-            document.getElementById('scTeam2').textContent = batSecondTeam;
-            document.getElementById('scScore2').textContent = score2;
+            document.getElementById('scTeam2').textContent = secondBatTeam;
+            document.getElementById('scScore2').textContent = secondBatScore;
 
-            // Setup Tabs with Team Names
-            document.getElementById('tab1Trigger').innerHTML = `${batFirstTeam}<br><small style="font-size:0.7em" class="text-white-50">1st INNINGS</small>`;
-            document.getElementById('tab2Trigger').innerHTML = `${batSecondTeam}<br><small style="font-size:0.7em" class="text-white-50">2nd INNINGS</small>`;
+            // Setup Tabs with ACTUAL batting order team names
+            document.getElementById('tab1Trigger').innerHTML = `${firstBatTeam}<br><small style="font-size:0.7em" class="text-white-50">1st INNINGS</small>`;
+            document.getElementById('tab2Trigger').innerHTML = `${secondBatTeam}<br><small style="font-size:0.7em" class="text-white-50">2nd INNINGS</small>`;
 
             const tab1 = document.getElementById('tab1');
-            tab1.innerHTML = renderInnings(match.details.i1, batFirstTeam);
+            tab1.innerHTML = renderInnings(match.details?.i1, firstBatTeam);
 
             const tab2 = document.getElementById('tab2');
-            tab2.innerHTML = renderInnings(match.details.i2, batSecondTeam);
+            tab2.innerHTML = renderInnings(match.details?.i2, secondBatTeam);
 
             const modalEl = document.getElementById('scorecardModal');
             new bootstrap.Modal(modalEl).show();
         }
 
-        function renderInnings(innings, teamName) {
-            if (!innings) return '<div class="text-center text-muted py-3">INNINGS DATA PENDING</div>';
 
+        function renderInnings(innings, teamName) {
+            if (!innings || !innings.batting) return '<div class="text-center text-muted py-3">DETAILED SCORECARD NOT AVAILABLE FOR AI SIMULATION</div>';
+
+            // --- BATTING CARD ---
             let html = `<h6 class="fw-bold mb-3 text-info text-uppercase border-start border-3 border-info ps-2">Batting Card</h6>`;
             html += '<div class="table-responsive mb-4"><table class="table table-sm table-borderless table-hover text-white small">';
             html += '<thead class="border-bottom border-secondary border-opacity-25 text-secondary"><tr><th>BATTER</th><th class="text-center">R</th><th class="text-center">B</th><th class="text-center">4s</th><th class="text-center">6s</th><th class="text-center">SR</th></tr></thead><tbody>';
 
             innings.batting.forEach(b => {
                 const sr = b.balls > 0 ? ((b.runs / b.balls) * 100).toFixed(1) : '0.0';
-                const outStatus = b.status === "out" ? "out" : "not out";
                 const rowClass = b.runs >= 50 ? 'fw-bold text-white' : 'text-light';
 
                 html += `
@@ -1195,141 +1330,50 @@
                         <td class="${rowClass}">${b.name} <span class="small text-secondary fst-italic">${b.status === 'out' ? (b.wicketType === 'run out' ? '(Run Out)' : '') : (b.status === 'not out' ? '*' : '')}</span></td>
                         <td class="text-center fw-bold">${b.runs}</td>
                         <td class="text-center text-muted">${b.balls}</td>
-                        <td class="text-center text-secondary">${b.fours}</td>
-                        <td class="text-center text-secondary">${b.sixes}</td>
+                        <td class="text-center text-secondary">${b.fours || 0}</td>
+                        <td class="text-center text-secondary">${b.sixes || 0}</td>
                         <td class="text-center text-muted">${sr}</td>
                     </tr>
                 `;
             });
             html += '</tbody></table></div>';
 
-            html += `<h6 class="fw-bold mb-3 text-warning text-uppercase border-start border-3 border-warning ps-2">Bowling Card</h6>`;
-            html += '<div class="table-responsive"><table class="table table-sm table-borderless table-hover text-white small">';
-            html += '<thead class="border-bottom border-secondary border-opacity-25 text-secondary"><tr><th>BOWLER</th><th class="text-center">O</th><th class="text-center">R</th><th class="text-center">W</th><th class="text-center">ECO</th></tr></thead><tbody>';
+            // --- BOWLING CARD ---
+            if (innings.bowling && innings.bowling.length > 0) {
+                html += `<h6 class="fw-bold mb-3 text-purple text-uppercase border-start border-3 border-purple ps-2" style="border-color: #bc13fe !important; color: #bc13fe;">Bowling Card</h6>`;
+                html += '<div class="table-responsive"><table class="table table-sm table-borderless table-hover text-white small">';
+                html += '<thead class="border-bottom border-secondary border-opacity-25 text-secondary"><tr><th>BOWLER</th><th class="text-center">O</th><th class="text-center">R</th><th class="text-center">W</th><th class="text-center">ECO</th></tr></thead><tbody>';
 
-            innings.bowling.forEach(b => {
-                const wktClass = b.wkts >= 3 ? 'text-warning fw-bold' : 'text-white';
-                html += `
-                    <tr>
-                        <td class="text-light">${b.name}</td>
-                        <td class="text-center text-muted">${b.oversDisplay || '0.0'}</td>
-                        <td class="text-center text-muted">${b.runs}</td>
-                        <td class="text-center ${wktClass}">${b.wkts}</td>
-                        <td class="text-center text-muted">${b.economy || '0.00'}</td>
-                    </tr>
-                `;
-            });
-            html += '</tbody></table></div>';
+                innings.bowling.forEach(bowler => {
+                    // Calculate overs from balls if oversDisplay not available
+                    const overs = bowler.oversDisplay || bowler.overs || (bowler.balls ? `${Math.floor(bowler.balls / 6)}.${bowler.balls % 6}` : '0.0');
+                    const runs = bowler.runs || 0;
+                    const wickets = bowler.wkts || bowler.wickets || 0;
+                    const economy = bowler.economy || (bowler.balls > 0 ? (runs / (bowler.balls / 6)).toFixed(2) : '0.00');
+
+                    // Highlight good bowling figures
+                    const rowClass = wickets >= 3 ? 'fw-bold text-success' : (wickets >= 2 ? 'text-white' : 'text-light');
+                    const ecoClass = parseFloat(economy) <= 6 ? 'text-success' : (parseFloat(economy) >= 10 ? 'text-danger' : 'text-muted');
+
+                    html += `
+                        <tr>
+                            <td class="${rowClass}">${bowler.name}</td>
+                            <td class="text-center text-muted">${overs}</td>
+                            <td class="text-center">${runs}</td>
+                            <td class="text-center fw-bold ${wickets >= 2 ? 'text-success' : ''}">${wickets}</td>
+                            <td class="text-center ${ecoClass}">${economy}</td>
+                        </tr>
+                    `;
+                });
+                html += '</tbody></table></div>';
+            }
+
             return html;
         }
 
-        // --- NEW: Render Complete Squads with Impact Roles (Grid Fix) ---
-        function renderTeamSquads() {
-            if (!sessionStorage.getItem("IPL_RESULTS")) return;
-            const resultsData = JSON.parse(sessionStorage.getItem("IPL_RESULTS"));
-
-            const container = document.getElementById('pills-teams');
-            if (!resultsData || !resultsData.allTeamsData || resultsData.allTeamsData.length === 0) {
-                container.innerHTML = '<div class="text-center text-muted mt-5 font-monospace">No squad data available yet.</div>';
-                return;
-            }
-
-            let html = '<div class="row g-4">';
-
-            resultsData.allTeamsData.forEach((team) => {
-                const fullSquad = team.squad || team.playing11 || [];
-                const batImpName = team.batImpact?.name;
-                const bowlImpName = team.bowlImpact?.name;
-
-                // GRID CONTAINER: Auto-fit columns (min 220px) to prevent overlap
-                let rosterHtml = '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px;">';
-
-                fullSquad.forEach((p, pIndex) => {
-                    let badges = '';
-                    let cardClass = 'bg-dark bg-opacity-25 border-secondary border-opacity-10';
-                    let textClass = 'text-white';
-                    let icon = '<i class="fa-solid fa-circle-small text-secondary opacity-50 me-2" style="font-size: 6px;"></i>';
-
-                    if (team.captain === p.name) {
-                        badges += `<span class="badge bg-warning text-black fw-bold ms-auto shadow-sm" style="font-size:0.65rem; letter-spacing:1px;">C</span>`;
-                        icon = '<i class="fa-solid fa-crown text-warning me-2" style="font-size: 0.8rem;"></i>';
-                    }
-
-                    if (p.name === batImpName) {
-                        badges += `<span class="badge bg-danger ms-auto shadow-sm" style="letter-spacing:1px; font-size:0.65rem;">BAT</span>`;
-                        cardClass = 'bg-danger bg-opacity-10 border-danger border-opacity-50';
-                        icon = '<i class="fa-solid fa-fire text-danger me-2"></i>';
-                    } else if (p.name === bowlImpName) {
-                        badges += `<span class="badge bg-primary ms-auto shadow-sm" style="letter-spacing:1px; font-size:0.65rem;">BOWL</span>`;
-                        cardClass = 'bg-primary bg-opacity-10 border-primary border-opacity-50';
-                        icon = '<i class="fa-solid fa-baseball text-primary me-2"></i>';
-                    }
-
-                    rosterHtml += `
-                        <div class="p-2 border rounded-3 d-flex align-items-center ${cardClass}" style="min-height: 50px;">
-                            <span class="text-secondary fw-bold me-2 font-monospace small" style="opacity:0.5; width:20px;">#${pIndex + 1}</span>
-                            <div class="d-flex align-items-center flex-grow-1" style="min-width:0;">
-                                ${icon}
-                                <span class="${textClass} fw-semibold text-truncate small" style="flex-grow: 1;">${p.name}</span>
-                            </div>
-                            <div class="ms-1 flex-shrink-0">${badges}</div>
-                        </div>
-                    `;
-                });
-                rosterHtml += '</div>';
-
-                html += `
-                    <div class="col-12 col-xl-6 fade-in-up">
-                        <div class="glass-card h-100 p-0 overflow-hidden shadow-lg border-0">
-                            <!-- Header -->
-                            <div class="p-3 border-bottom border-secondary border-opacity-10" 
-                                 style="background: linear-gradient(135deg, rgba(20,20,30,0.95) 0%, rgba(10,10,15,0.95) 100%);">
-                                <div class="d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <h4 class="m-0 text-white font-head fw-bold display-6" style="letter-spacing: 1px;">${team.name}</h4>
-                                        <div class="small text-secondary mt-1 text-uppercase" style="letter-spacing: 1.5px; font-size: 0.65rem;">Official Squad</div>
-                                    </div>
-                                    <span class="badge bg-white bg-opacity-10 border border-white border-opacity-10 text-white px-3 py-1 rounded-pill small">
-                                        <i class="fa-solid fa-users me-2"></i>12
-                                    </span>
-                                </div>
-                            </div>
-                            
-                            <!-- Body -->
-                            <div class="p-3 bg-black bg-opacity-50">
-                                ${rosterHtml}
-                            </div>
-                        </div>
-                    </div>
-                `;
-            });
-
-            html += '</div>';
-            container.innerHTML = html;
-        }
-
-        // Removed toggleTeamCard as it is no longer needed
-
-
-        // Expose to global scope for script.js
+        // Expose to global scope for script.js if needed
         window.showScorecard = showScorecard;
-        window.renderTeamSquads = renderTeamSquads;
-        window.toggleTeamCard = toggleTeamCard;
     </script>
 </body>
 
 </html>
-
-
-<!-- i does not want this type after logic empty page create that pace contion some details user image
-if click profile go to there name
-view all details i will see
-add center search option if i click search and enter user name correctly there
-profile will show
-the playeres profile add
-how many matches he play
-how many he won
-each time one auction end who got 1 there profile that details will stored
-and there pick players details will store add clear button clear that squade will cleare
-
-the empty page add entur war after create room join room will show change it now -->

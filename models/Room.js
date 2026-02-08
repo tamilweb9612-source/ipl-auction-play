@@ -1,36 +1,52 @@
 const mongoose = require('mongoose');
 
-const roomSchema = new mongoose.Schema({
-    roomId: { type: String, required: true, unique: true },
-    password: { type: String, required: true },
-    adminPlayerId: { type: String, required: true },
-    config: mongoose.Schema.Types.Mixed,
-    users: [String], // Array of socket IDs or Player IDs
-    playerNames: { type: Map, of: String },
-    teams: [{
-        name: String,
-        bidKey: String,
-        isTaken: Boolean,
-        ownerPlayerId: String,
-        playerName: String,
-        playerEmail: String,
-        budget: Number,
-        totalSpent: Number,
-        totalPlayers: Number,
-        roster: [mongoose.Schema.Types.Mixed]
-    }],
-    auctionQueue: [mongoose.Schema.Types.Mixed],
-    auctionIndex: { type: Number, default: 0 },
-    currentBid: { type: Number, default: 0 },
-    currentBidder: String,
-    currentPlayer: mongoose.Schema.Types.Mixed,
-    state: {
-        isActive: { type: Boolean, default: false }
-    },
-    squads: { type: Map, of: mongoose.Schema.Types.Mixed },
-    lastTournamentResults: mongoose.Schema.Types.Mixed,
-    isFinalized: { type: Boolean, default: false },
-    createdAt: { type: Date, default: Date.now, expires: 86400 } // Auto-delete after 24 hours
+const PlayerSchema = new mongoose.Schema({
+    id: String,
+    name: String,
+    role: String,
+    basePrice: Number,
+    soldPrice: Number,
+    isSold: { type: Boolean, default: false },
+    owner: String, // Team ID
 });
 
-module.exports = mongoose.model('Room', roomSchema);
+const TeamSchema = new mongoose.Schema({
+    bidKey: String,
+    name: String,
+    abbreviation: String,
+    budget: Number,
+    totalSpent: { type: Number, default: 0 },
+    roster: [PlayerSchema],
+    ownerSocketId: String,
+    isTaken: { type: Boolean, default: false },
+    ownerName: String, // User name
+    ownerPlayerId: String, // Persistent player ID for reconnection
+});
+
+const RoomSchema = new mongoose.Schema({
+    roomId: { type: String, required: true, unique: true },
+    password: { type: String }, // Store room password
+    hostId: String,
+    adminPlayerId: String, // Persistent admin ID
+    adminSocketId: String,
+    gameType: { type: String, default: 'normal' }, // normal or blind
+    config: { type: Object, default: {} }, // Room settings (budget, etc)
+    teams: [TeamSchema],
+    auctionQueue: [Object], // List of players for auction
+    auctionIndex: { type: Number, default: 0 },
+    currentLotIndex: { type: Number, default: 0 },
+    currentSetIndex: { type: Number, default: 0 },
+    auctionState: { type: String, default: 'LOBBY' }, // LOBBY, AUCTION, SQUAD_SELECTION, RESULTS
+    players: [PlayerSchema], // All players in the auction
+    sets: [Object], // Structure of sets
+    playerNames: { type: Map, of: String }, // Map of playerId -> name
+    squads: { type: Object, default: {} }, // Map of teamKey -> squad data
+    createdAt: { type: Date, default: Date.now },
+    lastActivity: { type: Date, default: Date.now },
+    completedAt: { type: Date }, // Set when auction/tournament completes
+});
+
+// Auto-delete completed rooms after 12 hours (43200 seconds)
+RoomSchema.index({ "completedAt": 1 }, { expireAfterSeconds: 43200 });
+
+module.exports = mongoose.model('Room', RoomSchema);

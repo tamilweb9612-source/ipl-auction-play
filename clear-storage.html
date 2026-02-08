@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clear All Storage - IPL Auction</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2rem;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 0.9rem;
+        }
+
+        .warning {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+
+        .warning strong {
+            color: #856404;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .info {
+            background: #d1ecf1;
+            border-left: 4px solid #17a2b8;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+
+        .info strong {
+            color: #0c5460;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .storage-list {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .storage-list h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.1rem;
+        }
+
+        .storage-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: white;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+        }
+
+        .storage-item span {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .storage-item .count {
+            background: #667eea;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.85rem;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 10px;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(220, 53, 69, 0.3);
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        .btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .status {
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .status.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            display: block;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            display: block;
+        }
+
+        .back-link {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .back-link a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .back-link a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🗑️ Clear All Storage</h1>
+        <p class="subtitle">Remove all stored data from browser and server</p>
+
+        <div class="warning">
+            <strong>⚠️ WARNING</strong>
+            This will permanently delete all stored data including:
+            <ul style="margin-top: 10px; margin-left: 20px;">
+                <li>User sessions and login data</li>
+                <li>Room information and team selections</li>
+                <li>Saved preferences</li>
+            </ul>
+        </div>
+
+        <div class="info">
+            <strong>ℹ️ What gets cleared:</strong>
+            <ul style="margin-top: 10px; margin-left: 20px;">
+                <li><strong>Browser:</strong> localStorage, sessionStorage, cookies</li>
+                <li><strong>Server:</strong> MongoDB collections (run clear_db.js separately)</li>
+            </ul>
+        </div>
+
+        <div class="storage-list">
+            <h3>Current Browser Storage:</h3>
+            <div class="storage-item">
+                <span>localStorage items</span>
+                <span class="count" id="localStorageCount">0</span>
+            </div>
+            <div class="storage-item">
+                <span>sessionStorage items</span>
+                <span class="count" id="sessionStorageCount">0</span>
+            </div>
+            <div class="storage-item">
+                <span>Cookies</span>
+                <span class="count" id="cookiesCount">0</span>
+            </div>
+        </div>
+
+        <button class="btn btn-danger" id="clearBtn" onclick="clearAllStorage()">
+            🗑️ Clear All Browser Storage
+        </button>
+
+        <button class="btn btn-success" onclick="window.location.href='intro.html'">
+            ← Back to Home
+        </button>
+
+        <div class="status" id="status"></div>
+
+        <div class="back-link">
+            <p style="color: #666; font-size: 0.9rem; margin-top: 20px;">
+                To clear server data, run: <code
+                    style="background: #f8f9fa; padding: 5px 10px; border-radius: 5px;">node clear_db.js</code>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Count storage items on load
+        function updateCounts() {
+            document.getElementById('localStorageCount').textContent = localStorage.length;
+            document.getElementById('sessionStorageCount').textContent = sessionStorage.length;
+            document.getElementById('cookiesCount').textContent = document.cookie.split(';').filter(c => c.trim()).length;
+        }
+
+        function clearAllStorage() {
+            const btn = document.getElementById('clearBtn');
+            const status = document.getElementById('status');
+
+            btn.disabled = true;
+            btn.textContent = '🔄 Clearing...';
+
+            try {
+                // Clear localStorage
+                const localCount = localStorage.length;
+                localStorage.clear();
+
+                // Clear sessionStorage
+                const sessionCount = sessionStorage.length;
+                sessionStorage.clear();
+
+                // Clear cookies
+                const cookies = document.cookie.split(';');
+                for (let cookie of cookies) {
+                    const eqPos = cookie.indexOf('=');
+                    const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
+                    document.cookie = name + '=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/';
+                }
+
+                // Show success message
+                status.className = 'status success';
+                status.innerHTML = `
+                    <strong>✅ Success!</strong><br>
+                    Cleared ${localCount} localStorage items<br>
+                    Cleared ${sessionCount} sessionStorage items<br>
+                    Cleared ${cookies.length} cookies<br><br>
+                    <strong>Browser storage is now empty.</strong><br>
+                    You will be redirected to the home page in 3 seconds...
+                `;
+
+                updateCounts();
+
+                // Redirect after 3 seconds
+                setTimeout(() => {
+                    window.location.href = 'intro.html';
+                }, 3000);
+
+            } catch (error) {
+                status.className = 'status error';
+                status.innerHTML = `
+                    <strong>❌ Error!</strong><br>
+                    ${error.message}
+                `;
+                btn.disabled = false;
+                btn.textContent = '🗑️ Clear All Browser Storage';
+            }
+        }
+
+        // Update counts on page load
+        updateCounts();
+    </script>
+</body>
+
+</html>

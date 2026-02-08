@@ -1,0 +1,501 @@
+/* Predict the Price Mini-Game Styles */
+
+.predict-game-container {
+    position: fixed;
+    top: 85px;
+    right: 20px;
+    left: auto;
+    width: 380px;
+    height: auto;
+    min-width: 300px;
+    min-height: 250px;
+    max-width: 90vw;
+    max-height: 80vh;
+    transform: none;
+    z-index: 9999;
+    animation: slideInRight 0.3s ease;
+    
+    /* Resizable properties */
+    resize: both;
+    overflow: auto; /* Changed from hidden to auto to help with handle visibility */
+    padding-bottom: 10px; /* Make space for handle */
+    padding-right: 10px;
+}
+
+.predict-game-container.hidden {
+    display: none !important;
+}
+
+.predict-game-card {
+    background: linear-gradient(135deg, #1a1b2e 0%, #16213e 100%);
+    border: 2px solid rgba(255, 215, 0, 0.3);
+    border-radius: 10px; /* Reduced radius for resize corner */
+    padding: 15px;
+    width: 100%;
+    height: 100%;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(10px);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto; /* Scroll internal content if too small */
+}
+
+/* Ensure content takes available space */
+#predict-game-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+.predict-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid rgba(255, 215, 0, 0.2);
+    cursor: grab; /* Show grab cursor */
+    user-select: none;
+}
+
+.predict-header:active {
+    cursor: grabbing;
+}
+
+.predict-header h3 {
+    color: #FFD700;
+    font-size: 24px;
+    margin: 0;
+    font-weight: 700;
+}
+
+.predict-timer {
+    background: rgba(255, 68, 68, 0.2);
+    border: 2px solid #ff4444;
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: 700;
+    color: #ff4444;
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+.predict-player-info {
+    text-align: center;
+    margin: 20px 0;
+    padding: 20px;
+    background: rgba(255, 215, 0, 0.1);
+    border-radius: 12px;
+}
+
+.predict-player-name {
+    font-size: 28px;
+    font-weight: 700;
+    color: #FFD700;
+    margin-bottom: 8px;
+}
+
+.predict-player-role {
+    font-size: 16px;
+    color: #aaa;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.predict-input-area {
+    margin: 25px 0;
+}
+
+.predict-input-area label {
+    display: block;
+    color: #FFD700;
+    font-size: 14px;
+    margin-bottom: 10px;
+    font-weight: 600;
+}
+
+.predict-input-group {
+    display: flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid rgba(255, 215, 0, 0.3);
+    border-radius: 12px;
+    padding: 5px 15px;
+    transition: all 0.3s ease;
+}
+
+.predict-input-group:focus-within {
+    border-color: #FFD700;
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+}
+
+.predict-currency,
+.predict-unit {
+    color: #FFD700;
+    font-weight: 700;
+    font-size: 18px;
+}
+
+#predict-price-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: white;
+    font-size: 24px;
+    font-weight: 700;
+    padding: 12px;
+    text-align: center;
+    outline: none;
+}
+
+#predict-price-input::placeholder {
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.predict-quick-amounts {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.predict-quick-btn {
+    background: rgba(255, 215, 0, 0.1);
+    border: 1px solid rgba(255, 215, 0, 0.3);
+    color: #FFD700;
+    padding: 10px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.predict-quick-btn:hover {
+    background: rgba(255, 215, 0, 0.2);
+    border-color: #FFD700;
+    transform: translateY(-2px);
+}
+
+.predict-submit-btn {
+    width: 100%;
+    background: linear-gradient(135deg, #FFD700, #FFA500);
+    color: #0b0c15;
+    border: none;
+    padding: 15px;
+    border-radius: 12px;
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 20px;
+}
+
+.predict-submit-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(255, 215, 0, 0.4);
+}
+
+.predict-submit-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Results Modal */
+.predict-results-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    animation: fadeIn 0.3s ease;
+}
+
+.predict-results-content {
+    background: linear-gradient(135deg, #1a1b2e 0%, #16213e 100%);
+    border: 2px solid #FFD700;
+    border-radius: 20px;
+    padding: 40px;
+    max-width: 500px;
+    width: 90%;
+    animation: scaleIn 0.3s ease;
+}
+
+.predict-results-content h2 {
+    color: #FFD700;
+    text-align: center;
+    margin-bottom: 20px;
+    font-size: 32px;
+}
+
+.predict-actual-price {
+    text-align: center;
+    font-size: 20px;
+    color: white;
+    margin: 20px 0;
+    padding: 20px;
+    background: rgba(255, 215, 0, 0.1);
+    border-radius: 12px;
+}
+
+.price-highlight {
+    color: #FFD700;
+    font-size: 32px;
+    font-weight: 700;
+    display: block;
+    margin-top: 10px;
+}
+
+.predict-winners {
+    margin: 25px 0;
+}
+
+.predict-winners h3 {
+    color: #FFD700;
+    margin-bottom: 15px;
+    font-size: 20px;
+}
+
+.predict-winner-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    margin-bottom: 10px;
+    transition: all 0.3s ease;
+}
+
+.predict-winner-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateX(5px);
+}
+
+.predict-winner-item.rank-1 {
+    border: 2px solid #FFD700;
+    background: rgba(255, 215, 0, 0.1);
+}
+
+.predict-winner-item .rank {
+    font-size: 20px;
+    font-weight: 700;
+    color: #FFD700;
+    min-width: 40px;
+}
+
+.predict-winner-item .team-name {
+    flex: 1;
+    color: white;
+    font-weight: 600;
+}
+
+.predict-winner-item .prediction {
+    color: #4CAF50;
+    font-weight: 700;
+}
+
+.predict-winner-item .difference {
+    color: #aaa;
+    font-size: 12px;
+}
+
+.predict-winner-item .points {
+    background: #FFD700;
+    color: #0b0c15;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 14px;
+}
+
+.predict-close-btn {
+    width: 100%;
+    background: linear-gradient(135deg, #FFD700, #FFA500);
+    color: #0b0c15;
+    border: none;
+    padding: 15px;
+    border-radius: 12px;
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 20px;
+    transition: all 0.3s ease;
+}
+
+.predict-close-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(255, 215, 0, 0.4);
+}
+
+/* Leaderboard */
+.predict-leaderboard {
+    margin-top: 20px;
+    padding: 20px;
+    background: rgba(255, 215, 0, 0.05);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 215, 0, 0.2);
+}
+
+.predict-leaderboard h4 {
+    color: #FFD700;
+    margin-bottom: 15px;
+}
+
+.predict-score-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    margin-bottom: 8px;
+}
+
+.score-rank {
+    color: #FFD700;
+    font-weight: 700;
+    min-width: 30px;
+}
+
+.score-team {
+    flex: 1;
+    color: white;
+}
+
+.score-points {
+    color: #4CAF50;
+    font-weight: 700;
+}
+
+/* Notifications */
+.predict-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 15px 25px;
+    border-radius: 10px;
+    font-weight: 600;
+    z-index: 10001;
+    opacity: 0;
+    transform: translateX(100px);
+    transition: all 0.3s ease;
+}
+
+.predict-notification.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.predict-notification.predict-success {
+    background: #4CAF50;
+    color: white;
+}
+
+.predict-notification.predict-error {
+    background: #ff4444;
+    color: white;
+}
+
+.predict-notification.predict-warning {
+    background: #FFA500;
+    color: white;
+}
+
+.predict-notification.predict-info {
+    background: #2196F3;
+    color: white;
+}
+
+/* Animations */
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.predict-minimize-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    color: #fff;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.predict-minimize-btn:hover {
+    background: rgba(255, 68, 68, 0.5);
+    color: white;
+}
+
+@keyframes scaleIn {
+    from {
+        transform: scale(0.8);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .predict-game-container {
+        width: 95%;
+        right: 2.5%;
+        left: 2.5%;
+        top: 70px;
+    }
+
+    .predict-game-card {
+        min-width: unset;
+        width: 100%;
+        padding: 15px;
+    }
+
+    .predict-header h3 {
+        font-size: 20px;
+    }
+
+    .predict-player-name {
+        font-size: 22px;
+    }
+
+    #predict-price-input {
+        font-size: 20px;
+    }
+
+    .predict-quick-amounts {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}

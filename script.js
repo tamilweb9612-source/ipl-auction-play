@@ -1,19 +1,18 @@
-
-
 // ======================================================
 // 🔧 0. PERSISTENT IDENTITY (THE WRISTBAND)
 // ======================================================
-let myPersistentId = sessionStorage.getItem("ipl_auction_player_id");
+let myPersistentId = localStorage.getItem("ipl_auction_player_id");
 
 if (!myPersistentId) {
-  myPersistentId =
-    "user_" + Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
-  sessionStorage.setItem("ipl_auction_player_id", myPersistentId);
+  myPersistentId = localStorage.getItem("ipl_auction_player_id");
+  if (!myPersistentId) {
+    myPersistentId = "user_" + Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
+    localStorage.setItem("ipl_auction_player_id", myPersistentId);
+  }
 }
 
 // Player Name Storage
-let myPlayerName = sessionStorage.getItem("ipl_auction_player_name") || "";
-
+let myPlayerName = localStorage.getItem("ipl_auction_player_name") || "";
 
 // ======================================================
 // 🔊 REALISTIC SOUND & TTS ENGINE
@@ -28,23 +27,43 @@ let knownTakenTeams = new Set();
 // Helper function to convert role key to full name for voice
 function getRoleFullName(roleKey) {
   const roleMap = {
-    'wk': 'Wicket Keeper',
-    'bat': 'Batsman',
-    'bowl': 'Bowler',
-    'ar': 'All-rounder',
-    'allrounder': 'All-rounder'
+    wk: "Wicket Keeper",
+    bat: "Batsman",
+    bowl: "Bowler",
+    ar: "All-rounder",
+    allrounder: "All-rounder",
   };
   return roleMap[roleKey.toLowerCase()] || roleKey;
 }
 
 // Helper function to convert player type
 function getPlayerTypeFullName(playerType) {
-  if (playerType === 'Foreign') return 'Overseas Player';
-  return 'Domestic Player';
+  if (playerType === "Foreign") return "Overseas Player";
+  return "Domestic Player";
 }
 
 // Initialize Sound Toggle
 document.addEventListener("DOMContentLoaded", () => {
+  try {
+    // Sync User Identity from Auth
+    const u = localStorage.getItem("user");
+    const userData = u ? JSON.parse(u) : null;
+    if (userData) {
+      if (document.getElementById("userWelcome") && userData.name) {
+        document.getElementById("userWelcome").innerText =
+          `WELCOME, ${userData.name.toUpperCase()}`;
+      }
+      if (document.getElementById("userEmailDisplay")) {
+        document.getElementById("userEmailDisplay").innerText =
+          userData.email || "";
+      }
+      myPlayerName = userData.name || "";
+      localStorage.setItem("ipl_auction_player_name", myPlayerName);
+    }
+  } catch (err) {
+    console.warn("Failed to parse user data:", err);
+  }
+
   loadVoices();
   if (window.speechSynthesis.onvoiceschanged !== undefined) {
     window.speechSynthesis.onvoiceschanged = loadVoices;
@@ -52,15 +71,68 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Initialize audio button when it becomes available
   initializeSoundButton();
+
+  // Show lobby screen by default
+  const lobby = document.getElementById("lobbyScreen");
+  if (lobby) {
+    lobby.style.setProperty("display", "flex", "important");
+  }
+
+  // ✨ NEW: Auto-reconnect feature
+  checkAutoReconnect();
 });
+
+// NEW: Check for auto-reconnect and join room automatically
+function checkAutoReconnect() {
+  const autoRoomId = localStorage.getItem("auto_reconnect_room");
+  const autoTeamKey = localStorage.getItem("auto_reconnect_team");
+  
+  if (autoRoomId && autoTeamKey) {
+    console.log("🔄 Auto-reconnecting to room:", autoRoomId);
+    
+    // Clear the flags
+    localStorage.removeItem("auto_reconnect_room");
+    localStorage.removeItem("auto_reconnect_team");
+    
+    // Wait for socket to connect
+    if (socket.connected) {
+      performAutoJoin(autoRoomId);
+    } else {
+      socket.on("connect", () => {
+        performAutoJoin(autoRoomId);
+      });
+    }
+  }
+}
+
+// Perform the actual auto-join
+function performAutoJoin(roomId) {
+  // Emit join_room without password (server will recognize the player)
+  const playerName = localStorage.getItem("ipl_auction_player_name") || 
+                     localStorage.getItem("userName") || "";
+  
+  socket.emit("join_room", {
+    roomId: roomId,
+    password: "", // Server will allow reconnect based on playerId
+    playerName: playerName
+  });
+  
+  myRoomId = roomId;
+  
+  // Show loading message
+  if (lobbyError) {
+    lobbyError.innerText = "🔄 Reconnecting to your auction...";
+    lobbyError.style.color = "#4CAF50";
+  }
+}
 
 // Function to initialize sound button (can be called multiple times safely)
 function initializeSoundButton() {
   const btn = document.getElementById("soundToggleBtn");
-  
+
   if (btn && !btn.dataset.initialized) {
     btn.dataset.initialized = "true"; // Mark as initialized
-    
+
     btn.addEventListener("click", () => {
       isSoundEnabled = !isSoundEnabled;
       btn.classList.toggle("active", isSoundEnabled);
@@ -176,7 +248,7 @@ function playHammerSound() {
     const noiseBuffer = audioCtx.createBuffer(
       1,
       bufferSize,
-      audioCtx.sampleRate
+      audioCtx.sampleRate,
     );
     const data = noiseBuffer.getChannelData(0);
 
@@ -246,6 +318,7 @@ const socket = io({
     playerId: myPersistentId,
   },
 });
+window.socket = socket;
 
 const lobbyScreen = document.getElementById("lobbyScreen");
 const gameContainer = document.getElementById("gameContainer");
@@ -253,7 +326,7 @@ const lobbyError = document.getElementById("lobbyError");
 
 // --- GLOBAL VARIABLES ---
 let myRoomId = null;
-let mySelectedTeamKey = null;
+var mySelectedTeamKey = null; // Defined with var to be accessible via window.mySelectedTeamKey
 let isAdmin = false;
 let saleProcessing = false;
 let auctionQueue = [];
@@ -287,8 +360,6 @@ setInterval(() => {
     socket.emit("pingServer");
   }
 }, 25000);
-
-
 
 // --- SOCKET STATUS HANDLERS ---
 socket.on("connect", () => {
@@ -335,220 +406,220 @@ if (!window._beforeUnloadBound) {
 // ======================================================
 const PLAYER_DATABASE = {
   // --- MARQUEE & TOP BATTERS ---
-  "Virat Kohli": { bat: 98, bowl: 10, luck: 90, type: "bat" },
-  "Rohit Sharma": { bat: 95, bowl: 15, luck: 92, type: "bat" },
-  "Shubman Gill": { bat: 92, bowl: 5, luck: 88, type: "bat" },
-  "Suryakumar Yadav": { bat: 96, bowl: 5, luck: 85, type: "bat" },
-  "Travis Head": { bat: 94, bowl: 20, luck: 88, type: "bat" },
-  "Yashasvi Jaiswal": { bat: 90, bowl: 10, luck: 85, type: "bat" },
-  "Ruturaj Gaikwad": { bat: 89, bowl: 5, luck: 88, type: "bat" },
-  "Rinku Singh": { bat: 90, bowl: 5, luck: 95, type: "bat" },
-  "Shreyas Iyer": { bat: 88, bowl: 10, luck: 85, type: "bat" },
-  "Faf du Plessis": { bat: 88, bowl: 5, luck: 82, type: "bat" },
-  "David Warner": { bat: 89, bowl: 5, luck: 78, type: "bat" },
+  "Virat Kohli": { bat: 98, bowl: 10, luck: 90, type: "bat", role: "Opener, Anchor", },
+  "Rohit Sharma": { bat: 95, bowl: 15, luck: 92, type: "bat", role: "Opener, Captain", },
+  "Shubman Gill": { bat: 92, bowl: 5, luck: 88, type: "bat", role: "Opener, Captain", },
+  "Suryakumar Yadav": { bat: 96, bowl: 5, luck: 85, type: "bat", role: "Middle Order, 360, Power Hitter", },
+  "Travis Head": { bat: 94, bowl: 20, luck: 88, type: "bat", role: "Opener, Power Hitter", },
+  "Yashasvi Jaiswal": { bat: 90, bowl: 10, luck: 85, type: "bat", role: "Opener, Powerplay Specialist", },
+  "Ruturaj Gaikwad": { bat: 89, bowl: 5, luck: 88, type: "bat", role: "Opener, Anchor", },
+  "Rinku Singh": { bat: 90, bowl: 5, luck: 95, type: "bat", role: "Finisher, Power Hitter", },
+  "Shreyas Iyer": { bat: 88, bowl: 10, luck: 85, type: "bat", role: "Middle Order, Captain, Spin Basher", },
+  "Faf du Plessis": { bat: 88, bowl: 5, luck: 82, type: "bat", role: "Opener, Captain", },
+  "David Warner": { bat: 89, bowl: 5, luck: 78, type: "bat", role: "Opener" },
 
   // --- FOREIGN BATTERS ---
-  "David Miller": { bat: 89, bowl: 5, luck: 90, type: "bat" },
-  "Harry Brook": { bat: 86, bowl: 10, luck: 75, type: "bat" },
-  "Kane Williamson": { bat: 88, bowl: 15, luck: 82, type: "bat" },
-  "Shimron Hetmyer": { bat: 85, bowl: 5, luck: 85, type: "bat" },
-  "Rovman Powell": { bat: 82, bowl: 15, luck: 80, type: "bat" },
-  "Steve Smith": { bat: 86, bowl: 10, luck: 75, type: "bat" },
-  "Devon Conway": { bat: 89, bowl: 5, luck: 85, type: "bat" },
-  "Jake Fraser-McGurk": { bat: 88, bowl: 5, luck: 88, type: "bat" },
-  "Dewald Brevis": { bat: 80, bowl: 20, luck: 75, type: "bat" },
-  "Tim David": { bat: 86, bowl: 10, luck: 85, type: "bat" },
-  "Finn Allen": { bat: 83, bowl: 5, luck: 75, type: "bat" },
-  "Rilee Rossouw": { bat: 84, bowl: 5, luck: 70, type: "bat" },
-  "Jason Roy": { bat: 85, bowl: 5, luck: 78, type: "bat" },
+  "David Miller": { bat: 89, bowl: 5, luck: 90, type: "bat", role: "Finisher, Power Hitter", },
+  "Harry Brook": { bat: 86, bowl: 10, luck: 75, type: "bat", role: "Middle Order, Power Hitter", },
+  "Kane Williamson": { bat: 88, bowl: 15, luck: 82, type: "bat", role: "Middle Order, Anchor, Captain", },
+  "Shimron Hetmyer": { bat: 85, bowl: 5, luck: 85, type: "bat", role: "Finisher, Power Hitter", },
+  "Rovman Powell": { bat: 82, bowl: 15, luck: 80, type: "bat", role: "Finisher, Power Hitter", },
+  "Steve Smith": { bat: 86, bowl: 10, luck: 75, type: "bat", role: "Middle Order, Anchor", },
+  "Devon Conway": { bat: 89, bowl: 5, luck: 85, type: "bat", role: "Opener, Anchor", },
+  "Jake Fraser-McGurk": { bat: 88, bowl: 5, luck: 88, type: "bat", role: "Opener, Power Hitter", },
+  "Dewald Brevis": { bat: 80, bowl: 20, luck: 75, type: "bat", role: "Middle Order, Power Hitter", },
+  "Tim David": { bat: 86, bowl: 10, luck: 85, type: "bat", role: "Finisher, Power Hitter", },
+  "Finn Allen": { bat: 83, bowl: 5, luck: 75, type: "bat", role: "Opener, Power Hitter", },
+  "Rilee Rossouw": { bat: 84, bowl: 5, luck: 70, type: "bat", role: "Top Order, Power Hitter", },
+  "Jason Roy": { bat: 85, bowl: 5, luck: 78, type: "bat", role: "Opener, Power Hitter", },
 
   // --- INDIAN BATTERS ---
-  "Sai Sudharsan": { bat: 88, bowl: 5, luck: 85, type: "bat" },
-  "Tilak Varma": { bat: 87, bowl: 15, luck: 85, type: "bat" },
-  "Shikhar Dhawan": { bat: 84, bowl: 5, luck: 80, type: "bat" },
-  "Ajinkya Rahane": { bat: 80, bowl: 5, luck: 75, type: "bat" },
-  "Prithvi Shaw": { bat: 82, bowl: 5, luck: 70, type: "bat" },
-  "Rajat Patidar": { bat: 85, bowl: 5, luck: 82, type: "bat" },
-  "Rahul Tripathi": { bat: 81, bowl: 5, luck: 75, type: "bat" },
-  "Shivam Dube": { bat: 88, bowl: 40, luck: 85, type: "bat" },
-  "Manish Pandey": { bat: 78, bowl: 5, luck: 70, type: "bat" },
-  "Devdutt Padikkal": { bat: 80, bowl: 5, luck: 75, type: "bat" },
+  "Sai Sudharsan": { bat: 88, bowl: 5, luck: 85, type: "bat", role: "Middle Order, Anchor", },
+  "Tilak Varma": { bat: 87, bowl: 15, luck: 85, type: "bat", role: "Middle Order, Finisher", },
+  "Shikhar Dhawan": { bat: 84, bowl: 5, luck: 80, type: "bat", role: "Opener, Anchor", },
+  "Ajinkya Rahane": { bat: 80, bowl: 5, luck: 75, type: "bat", role: "Top Order, Anchor", },
+  "Prithvi Shaw": { bat: 82, bowl: 5, luck: 70, type: "bat", role: "Opener, Powerplay Specialist", },
+  "Rajat Patidar": { bat: 85, bowl: 5, luck: 82, type: "bat", role: "Middle Order, Spin Basher", },
+  "Rahul Tripathi": { bat: 81, bowl: 5, luck: 75, type: "bat", role: "Top Order, Aggressor", },
+  "Shivam Dube": { bat: 88, bowl: 40, luck: 85, type: "bat", role: "Finisher, Spin Basher", },
+  "Manish Pandey": { bat: 78, bowl: 5, luck: 70, type: "bat", role: "Middle Order, Anchor", },
+  "Devdutt Padikkal": { bat: 80, bowl: 5, luck: 75, type: "bat", role: "Top Order", },
+  "Abhishek Sharma": { bat: 89, bowl: 50, luck: 85, type: "ar", role: "Opener, Power Hitter", },
 
   // --- DOMESTIC / UNCAPPED BATTERS ---
-  "Sameer Rizvi": { bat: 78, bowl: 10, luck: 75, type: "bat" },
-  "Angkrish Raghuvanshi": { bat: 80, bowl: 10, luck: 78, type: "bat" },
-  "Ashutosh Sharma": { bat: 84, bowl: 5, luck: 88, type: "bat" },
-  "Shashank Singh": { bat: 85, bowl: 10, luck: 88, type: "bat" },
-  "Nehal Wadhera": { bat: 82, bowl: 15, luck: 80, type: "bat" },
-  "Naman Dhir": { bat: 78, bowl: 40, luck: 75, type: "bat" },
-  "Ayush Badoni": { bat: 80, bowl: 10, luck: 80, type: "bat" },
-  "Yash Dhull": { bat: 76, bowl: 5, luck: 75, type: "bat" },
-  "Sarfaraz Khan": { bat: 82, bowl: 5, luck: 75, type: "bat" },
-  "Abdul Samad": { bat: 80, bowl: 15, luck: 80, type: "bat" },
-  "Vaibhav Suryavanshi": { bat: 76, bowl: 10, luck: 85, type: "bat" },
-  "Priyansh Arya": { bat: 80, bowl: 5, luck: 80, type: "bat" },
-  "Swastik Chikara": { bat: 78, bowl: 5, luck: 75, type: "bat" },
-  "Musheer Khan": { bat: 78, bowl: 60, luck: 78, type: "bat" },
-  "Aniket Verma": { bat: 75, bowl: 5, luck: 75, type: "bat" },
+  "Sameer Rizvi": { bat: 78, bowl: 10, luck: 75, type: "bat", role: "Finisher", },
+  "Angkrish Raghuvanshi": { bat: 80, bowl: 10, luck: 78, type: "bat", role: "Top Order", },
+  "Ashutosh Sharma": { bat: 84, bowl: 5, luck: 88, type: "bat", role: "Finisher", },
+  "Shashank Singh": { bat: 85, bowl: 10, luck: 88, type: "bat", role: "Finisher", },
+  "Nehal Wadhera": { bat: 82, bowl: 15, luck: 80, type: "bat", role: "Middle Order, Finisher", },
+  "Naman Dhir": { bat: 78, bowl: 40, luck: 75, type: "bat", role: "Middle Order", },
+  "Ayush Badoni": { bat: 80, bowl: 10, luck: 80, type: "bat", role: "Finisher", },
+  "Yash Dhull": { bat: 76, bowl: 5, luck: 75, type: "bat", role: "Top Order" },
+  "Sarfaraz Khan": { bat: 82, bowl: 5, luck: 75, type: "bat", role: "Middle Order", },
+  "Abdul Samad": { bat: 80, bowl: 15, luck: 80, type: "bat", role: "Finisher" },
+  "Vaibhav Suryavanshi": { bat: 76, bowl: 10, luck: 85, type: "bat", role: "Top Order", },
+  "Priyansh Arya": { bat: 80, bowl: 5, luck: 80, type: "bat", role: "Opener" },
+  "Swastik Chikara": { bat: 78, bowl: 5, luck: 75, type: "bat", role: "Opener", },
+  "Musheer Khan": { bat: 78, bowl: 60, luck: 78, type: "bat", role: "All Rounder", },
+  "Aniket Verma": { bat: 75, bowl: 5, luck: 75, type: "bat", role: "Middle Order", },
 
   // --- WICKETKEEPERS ---
-  "Rishabh Pant": { bat: 92, bowl: 0, luck: 90, type: "wk" },
-  "MS Dhoni": { bat: 85, bowl: 0, luck: 99, type: "wk" },
-  "Jos Buttler": { bat: 93, bowl: 0, luck: 88, type: "wk" },
-  "Heinrich Klaasen": { bat: 95, bowl: 0, luck: 90, type: "wk" },
-  "Sanju Samson": { bat: 90, bowl: 0, luck: 85, type: "wk" },
-  "KL Rahul": { bat: 91, bowl: 0, luck: 85, type: "wk" },
-  "Nicholas Pooran": { bat: 92, bowl: 0, luck: 88, type: "wk" },
-  "Quinton de Kock": { bat: 89, bowl: 0, luck: 85, type: "wk" },
-  "Phil Salt": { bat: 88, bowl: 0, luck: 82, type: "wk" },
-  "Ishan Kishan": { bat: 87, bowl: 0, luck: 80, type: "wk" },
-  "Jitesh Sharma": { bat: 82, bowl: 0, luck: 78, type: "wk" },
-  "Dhruv Jurel": { bat: 82, bowl: 0, luck: 82, type: "wk" },
-  "Dinesh Karthik": { bat: 85, bowl: 0, luck: 88, type: "wk" },
-  "Jonny Bairstow": { bat: 90, bowl: 0, luck: 85, type: "wk" },
-  "Rahmanullah Gurbaz": { bat: 84, bowl: 0, luck: 80, type: "wk" },
-  "Josh Inglis": { bat: 85, bowl: 0, luck: 82, type: "wk" },
-  "Shai Hope": { bat: 83, bowl: 0, luck: 80, type: "wk" },
-  "Tristan Stubbs": { bat: 88, bowl: 15, luck: 85, type: "wk" },
-  "Wriddhiman Saha": { bat: 82, bowl: 0, luck: 80, type: "wk" },
-  "Anuj Rawat": { bat: 78, bowl: 0, luck: 75, type: "wk" },
-  "Prabhsimran Singh": { bat: 84, bowl: 0, luck: 80, type: "wk" },
-  "KS Bharat": { bat: 78, bowl: 0, luck: 75, type: "wk" },
-  "Vishnu Vinod": { bat: 78, bowl: 0, luck: 75, type: "wk" },
-  "Abishek Porel": { bat: 83, bowl: 0, luck: 80, type: "wk" },
-  "Robin Minz": { bat: 80, bowl: 0, luck: 82, type: "wk" },
-  "Kumar Kushagra": { bat: 78, bowl: 0, luck: 78, type: "wk" },
-  "Ryan Rickelton": { bat: 80, bowl: 0, luck: 75, type: "wk" },
-  "Donovan Ferreira": { bat: 82, bowl: 10, luck: 75, type: "wk" },
+  "Rishabh Pant": { bat: 92, bowl: 0, luck: 90, type: "wk", role: "Wicket Keeper, Middle Order, Captain", },
+  "MS Dhoni": { bat: 85, bowl: 0, luck: 99, type: "wk", role: "Wicket Keeper, Finisher, Captain", },
+  "Jos Buttler": { bat: 93, bowl: 0, luck: 88, type: "wk", role: "Wicket Keeper, Opener, Power Hitter", },
+  "Heinrich Klaasen": { bat: 95, bowl: 0, luck: 90, type: "wk", role: "Wicket Keeper, Finisher, Spin Basher", },
+  "Sanju Samson": { bat: 90, bowl: 0, luck: 85, type: "wk", role: "Wicket Keeper, Top Order, Captain", },
+  "KL Rahul": { bat: 91, bowl: 0, luck: 85, type: "wk", role: "Wicket Keeper, Opener, Anchor", },
+  "Nicholas Pooran": { bat: 92, bowl: 0, luck: 88, type: "wk", role: "Wicket Keeper, Finisher", },
+  "Quinton de Kock": { bat: 89, bowl: 0, luck: 85, type: "wk", role: "Wicket Keeper, Opener", },
+  "Phil Salt": { bat: 88, bowl: 0, luck: 82, type: "wk", role: "Wicket Keeper, Opener", },
+  "Ishan Kishan": { bat: 87, bowl: 0, luck: 80, type: "wk", role: "Wicket Keeper, Opener", },
+  "Jitesh Sharma": { bat: 82, bowl: 0, luck: 78, type: "wk", role: "Wicket Keeper, Finisher", },
+  "Dhruv Jurel": { bat: 82, bowl: 0, luck: 82, type: "wk", role: "Wicket Keeper, Finisher", },
+  "Dinesh Karthik": { bat: 85, bowl: 0, luck: 88, type: "wk", role: "Wicket Keeper, Finisher", },
+  "Jonny Bairstow": { bat: 90, bowl: 0, luck: 85, type: "wk", role: "Wicket Keeper, Opener", },
+  "Rahmanullah Gurbaz": { bat: 84, bowl: 0, luck: 80, type: "wk", role: "Wicket Keeper, Opener", },
+  "Josh Inglis": { bat: 85, bowl: 0, luck: 82, type: "wk", role: "Wicket Keeper, Middle Order", },
+  "Shai Hope": { bat: 83, bowl: 0, luck: 80, type: "wk", role: "Wicket Keeper, Anchor", },
+  "Tristan Stubbs": { bat: 88, bowl: 15, luck: 85, type: "wk", role: "Wicket Keeper, Finisher", },
+  "Wriddhiman Saha": { bat: 82, bowl: 0, luck: 80, type: "wk", role: "Wicket Keeper, Opener", },
+  "Anuj Rawat": { bat: 78, bowl: 0, luck: 75, type: "wk", role: "Wicket Keeper", },
+  "Prabhsimran Singh": { bat: 84, bowl: 0, luck: 80, type: "wk", role: "Wicket Keeper, Opener", },
+  "KS Bharat": { bat: 78, bowl: 0, luck: 75, type: "wk", role: "Wicket Keeper", },
+  "Vishnu Vinod": { bat: 78, bowl: 0, luck: 75, type: "wk", role: "Wicket Keeper, Finisher", },
+  "Abishek Porel": { bat: 83, bowl: 0, luck: 80, type: "wk", role: "Wicket Keeper, Top Order", },
+  "Robin Minz": { bat: 80, bowl: 0, luck: 82, type: "wk", role: "Wicket Keeper, Power Hitter", },
+  "Kumar Kushagra": { bat: 78, bowl: 0, luck: 78, type: "wk", role: "Wicket Keeper", },
+  "Ryan Rickelton": { bat: 80, bowl: 0, luck: 75, type: "wk", role: "Wicket Keeper", },
+  "Donovan Ferreira": { bat: 82, bowl: 10, luck: 75, type: "wk", role: "Wicket Keeper, Finisher", },
 
   // --- ALL-ROUNDERS (Top Tier) ---
-  "Hardik Pandya": { bat: 88, bowl: 85, luck: 90, type: "ar" },
-  "Ravindra Jadeja": { bat: 85, bowl: 88, luck: 90, type: "ar" },
-  "Andre Russell": { bat: 94, bowl: 82, luck: 90, type: "ar" },
-  "Glenn Maxwell": { bat: 90, bowl: 75, luck: 80, type: "ar" },
-  "Sunil Narine": { bat: 92, bowl: 90, luck: 92, type: "ar" },
-  "Axar Patel": { bat: 84, bowl: 88, luck: 88, type: "ar" },
-  "Cameron Green": { bat: 87, bowl: 82, luck: 85, type: "ar" },
-  "Liam Livingstone": { bat: 87, bowl: 70, luck: 80, type: "ar" },
-  "Sam Curran": { bat: 78, bowl: 86, luck: 85, type: "ar" },
-  "Marcus Stoinis": { bat: 88, bowl: 75, luck: 88, type: "ar" },
-  "Will Jacks": { bat: 88, bowl: 60, luck: 85, type: "ar" },
-  "Rachin Ravindra": { bat: 85, bowl: 75, luck: 82, type: "ar" },
-  "Moeen Ali": { bat: 82, bowl: 78, luck: 80, type: "ar" },
-  "Mitchell Marsh": { bat: 88, bowl: 78, luck: 82, type: "ar" },
-  "Pat Cummins": { bat: 75, bowl: 92, luck: 95, type: "ar" },
-  "Ravichandran Ashwin": { bat: 72, bowl: 88, luck: 90, type: "ar" },
+  "Hardik Pandya": { bat: 88, bowl: 85, luck: 90, type: "ar", role: "Finisher, All Rounder, Pacer", },
+  "Ravindra Jadeja": { bat: 85, bowl: 88, luck: 90, type: "ar", role: "Spinner, All Rounder, Left Arm Orth", },
+  "Andre Russell": { bat: 94, bowl: 82, luck: 90, type: "ar", role: "Finisher, All Rounder, Pacer", },
+  "Glenn Maxwell": { bat: 90, bowl: 75, luck: 80, type: "ar", role: "Finisher, All Rounder, Spinner", },
+  "Sunil Narine": { bat: 92, bowl: 90, luck: 92, type: "ar", role: "Opener, Spinner, Mystery Spin, All Rounder", },
+  "Axar Patel": { bat: 84, bowl: 88, luck: 88, type: "ar", role: "Spinner, All Rounder, Left Arm Orth", },
+  "Cameron Green": { bat: 87, bowl: 82, luck: 85, type: "ar", role: "Top Order, All Rounder, Pacer", },
+  "Liam Livingstone": { bat: 87, bowl: 70, luck: 80, type: "ar", role: "Finisher, All Rounder, Spinner", },
+  "Sam Curran": { bat: 78, bowl: 86, luck: 85, type: "ar", role: "All Rounder, Pacer, Swing", },
+  "Marcus Stoinis": { bat: 88, bowl: 75, luck: 88, type: "ar", role: "Finisher, All Rounder, Pacer", },
+  "Will Jacks": { bat: 88, bowl: 60, luck: 85, type: "ar", role: "Opener, All Rounder, Spinner", },
+  "Rachin Ravindra": { bat: 85, bowl: 75, luck: 82, type: "ar", role: "Opener, All Rounder, Spinner", },
+  "Moeen Ali": { bat: 82, bowl: 78, luck: 80, type: "ar", role: "Spinner, All Rounder", },
+  "Mitchell Marsh": { bat: 88, bowl: 78, luck: 82, type: "ar", role: "Top Order, All Rounder, Pacer", },
+  "Pat Cummins": { bat: 75, bowl: 92, luck: 95, type: "ar", role: "Pacer, Captain, All Rounder", },
+  "Ravichandran Ashwin": { bat: 72, bowl: 88, luck: 90, type: "ar", role: "Spinner, All Rounder", },
 
   // --- ALL-ROUNDERS (Mid/Domestic) ---
-  "Nitish Kumar Reddy": { bat: 85, bowl: 78, luck: 88, type: "ar" },
-  "Abhishek Sharma": { bat: 89, bowl: 50, luck: 85, type: "ar" },
-  "Azmatullah Omarzai": { bat: 80, bowl: 78, luck: 78, type: "ar" },
-  "Romario Shepherd": { bat: 82, bowl: 75, luck: 78, type: "ar" },
-  "Mohammad Nabi": { bat: 80, bowl: 80, luck: 78, type: "ar" },
-  "Jason Holder": { bat: 75, bowl: 82, luck: 75, type: "ar" },
-  "Krunal Pandya": { bat: 78, bowl: 82, luck: 80, type: "ar" },
-  "Deepak Hooda": { bat: 78, bowl: 30, luck: 75, type: "ar" },
-  "Rahul Tewatia": { bat: 82, bowl: 40, luck: 92, type: "ar" },
-  "Riyan Parag": { bat: 85, bowl: 40, luck: 80, type: "ar" },
-  "Shahrukh Khan": { bat: 82, bowl: 10, luck: 78, type: "ar" },
-  "Chris Woakes": { bat: 65, bowl: 85, luck: 82, type: "ar" },
-  "Daniel Sams": { bat: 60, bowl: 82, luck: 80, type: "ar" },
-  "Kyle Mayers": { bat: 85, bowl: 70, luck: 80, type: "ar" },
-  "Vijay Shankar": { bat: 78, bowl: 60, luck: 75, type: "ar" },
-  "Shahbaz Ahmed": { bat: 75, bowl: 78, luck: 80, type: "ar" },
-  "Ramandeep Singh": { bat: 78, bowl: 65, luck: 80, type: "ar" },
-  "Lalit Yadav": { bat: 72, bowl: 65, luck: 75, type: "ar" },
-  "Washington Sundar": { bat: 75, bowl: 82, luck: 80, type: "ar" },
-  "Nitish Rana": { bat: 82, bowl: 40, luck: 75, type: "ar" },
-  "Venkatesh Iyer": { bat: 84, bowl: 50, luck: 80, type: "ar" },
-  "Daryl Mitchell": { bat: 86, bowl: 50, luck: 82, type: "ar" },
-  "Aiden Markram": { bat: 85, bowl: 45, luck: 82, type: "ar" },
-  "Sikandar Raza": { bat: 84, bowl: 82, luck: 82, type: "ar" },
-  "Mitchell Santner": { bat: 70, bowl: 86, luck: 85, type: "ar" },
-  "Arjun Tendulkar": { bat: 40, bowl: 78, luck: 75, type: "ar" },
-  "Tanush Kotian": { bat: 60, bowl: 75, luck: 75, type: "ar" },
-  "Suryansh Shedge": { bat: 65, bowl: 60, luck: 75, type: "ar" },
-  "Vipraj Nigam": { bat: 60, bowl: 70, luck: 75, type: "ar" },
+  "Nitish Kumar Reddy": { bat: 85, bowl: 78, luck: 88, type: "ar", role: "All Rounder, Pacer", },
+  "Azmatullah Omarzai": { bat: 80, bowl: 78, luck: 78, type: "ar", role: "All Rounder, Pacer", },
+  "Romario Shepherd": { bat: 82, bowl: 75, luck: 78, type: "ar", role: "Finisher, All Rounder, Pacer", },
+  "Mohammad Nabi": { bat: 80, bowl: 80, luck: 78, type: "ar", role: "All Rounder, Spinner", },
+  "Jason Holder": { bat: 75, bowl: 82, luck: 75, type: "ar", role: "All Rounder, Pacer", },
+  "Krunal Pandya": { bat: 78, bowl: 82, luck: 80, type: "ar", role: "All Rounder, Spinner", },
+  "Deepak Hooda": { bat: 78, bowl: 30, luck: 75, type: "ar", role: "Middle Order, All Rounder", },
+  "Rahul Tewatia": { bat: 82, bowl: 40, luck: 92, type: "ar", role: "Finisher, All Rounder", },
+  "Riyan Parag": { bat: 85, bowl: 40, luck: 80, type: "ar", role: "Middle Order, All Rounder", },
+  "Shahrukh Khan": { bat: 82, bowl: 10, luck: 78, type: "ar", role: "Finisher, All Rounder", },
+  "Chris Woakes": { bat: 65, bowl: 85, luck: 82, type: "ar", role: "All Rounder, Pacer", },
+  "Daniel Sams": { bat: 60, bowl: 82, luck: 80, type: "ar", role: "All Rounder, Pacer", },
+  "Kyle Mayers": { bat: 85, bowl: 70, luck: 80, type: "ar", role: "Opener, All Rounder, Pacer", },
+  "Vijay Shankar": { bat: 78, bowl: 60, luck: 75, type: "ar", role: "All Rounder, Pacer", },
+  "Shahbaz Ahmed": { bat: 75, bowl: 78, luck: 80, type: "ar", role: "All Rounder, Spinner", },
+  "Ramandeep Singh": { bat: 78, bowl: 65, luck: 80, type: "ar", role: "All Rounder, Pacer", },
+  "Lalit Yadav": { bat: 72, bowl: 65, luck: 75, type: "ar", role: "All Rounder, Spinner", },
+  "Washington Sundar": { bat: 75, bowl: 82, luck: 80, type: "ar", role: "All Rounder, Spinner", },
+  "Nitish Rana": { bat: 82, bowl: 40, luck: 75, type: "ar", role: "Middle Order, Part-timer", },
+  "Venkatesh Iyer": { bat: 84, bowl: 50, luck: 80, type: "ar", role: "Middle Order, All Rounder", },
+  "Daryl Mitchell": { bat: 86, bowl: 50, luck: 82, type: "ar", role: "Middle Order, All Rounder", },
+  "Aiden Markram": { bat: 85, bowl: 45, luck: 82, type: "ar", role: "Middle Order, Captain", },
+  "Sikandar Raza": { bat: 84, bowl: 82, luck: 82, type: "ar", role: "All Rounder, Spinner", },
+  "Mitchell Santner": { bat: 70, bowl: 86, luck: 85, type: "ar", role: "All Rounder, Spinner", },
+  "Arjun Tendulkar": { bat: 40, bowl: 78, luck: 75, type: "ar", role: "All Rounder, Pacer", },
+  "Tanush Kotian": { bat: 60, bowl: 75, luck: 75, type: "ar", role: "All Rounder, Spinner", },
+  "Suryansh Shedge": { bat: 65, bowl: 60, luck: 75, type: "ar", role: "All Rounder", },
+  "Vipraj Nigam": { bat: 60, bowl: 70, luck: 75, type: "ar", role: "All Rounder", },
 
   // --- FAST BOWLERS (Foreign) ---
-  "Jasprit Bumrah": { bat: 20, bowl: 99, luck: 95, type: "bowl" },
-  "Mitchell Starc": { bat: 30, bowl: 92, luck: 88, type: "bowl" },
-  "Trent Boult": { bat: 20, bowl: 90, luck: 88, type: "bowl" },
-  "Kagiso Rabada": { bat: 25, bowl: 89, luck: 85, type: "bowl" },
-  "Jofra Archer": { bat: 40, bowl: 90, luck: 80, type: "bowl" },
-  "Matheesha Pathirana": { bat: 5, bowl: 91, luck: 88, type: "bowl" },
-  "Gerald Coetzee": { bat: 20, bowl: 86, luck: 85, type: "bowl" },
-  "Lockie Ferguson": { bat: 20, bowl: 88, luck: 85, type: "bowl" },
-  "Mark Wood": { bat: 20, bowl: 89, luck: 85, type: "bowl" },
-  "Anrich Nortje": { bat: 10, bowl: 88, luck: 80, type: "bowl" },
-  "Josh Hazlewood": { bat: 15, bowl: 90, luck: 85, type: "bowl" },
-  "Marco Jansen": { bat: 65, bowl: 86, luck: 82, type: "bowl" },
-  "Spencer Johnson": { bat: 20, bowl: 84, luck: 80, type: "bowl" },
-  "Alzarri Joseph": { bat: 35, bowl: 85, luck: 80, type: "bowl" },
-  "Dilshan Madushanka": { bat: 10, bowl: 84, luck: 80, type: "bowl" },
-  "Nuwan Thushara": { bat: 10, bowl: 83, luck: 80, type: "bowl" },
-  "Mustafizur Rahman": { bat: 10, bowl: 87, luck: 85, type: "bowl" },
-  "Fazalhaq Farooqi": { bat: 10, bowl: 85, luck: 80, type: "bowl" },
-  "Naveen-ul-Haq": { bat: 10, bowl: 86, luck: 82, type: "bowl" },
-  "Nathan Ellis": { bat: 15, bowl: 85, luck: 80, type: "bowl" },
-  "Kwena Maphaka": { bat: 5, bowl: 82, luck: 80, type: "bowl" },
+  "Jasprit Bumrah": { bat: 20, bowl: 99, luck: 95, type: "bowl", role: "Pacer, Death Bowler, Yorker King", },
+  "Mitchell Starc": { bat: 30, bowl: 92, luck: 88, type: "bowl", role: "Pacer, Powerplay Specialist", },
+  "Trent Boult": { bat: 20, bowl: 90, luck: 88, type: "bowl", role: "Pacer, Powerplay Specialist, Swing", },
+  "Kagiso Rabada": { bat: 25, bowl: 89, luck: 85, type: "bowl", role: "Pacer, Express", },
+  "Jofra Archer": { bat: 40, bowl: 90, luck: 80, type: "bowl", role: "Pacer, Express", },
+  "Matheesha Pathirana": { bat: 5, bowl: 91, luck: 88, type: "bowl", role: "Pacer, Death Bowler", },
+  "Gerald Coetzee": { bat: 20, bowl: 86, luck: 85, type: "bowl", role: "Pacer", },
+  "Lockie Ferguson": { bat: 20, bowl: 88, luck: 85, type: "bowl", role: "Pacer, Express", },
+  "Mark Wood": { bat: 20, bowl: 89, luck: 85, type: "bowl", role: "Pacer, Express", },
+  "Anrich Nortje": { bat: 10, bowl: 88, luck: 80, type: "bowl", role: "Pacer, Express", },
+  "Josh Hazlewood": { bat: 15, bowl: 90, luck: 85, type: "bowl", role: "Pacer, Line & Length", },
+  "Marco Jansen": { bat: 65, bowl: 86, luck: 82, type: "bowl", role: "Pacer, Powerplay Specialist", },
+  "Spencer Johnson": { bat: 20, bowl: 84, luck: 80, type: "bowl", role: "Pacer", },
+  "Alzarri Joseph": { bat: 35, bowl: 85, luck: 80, type: "bowl", role: "Pacer", },
+  "Dilshan Madushanka": { bat: 10, bowl: 84, luck: 80, type: "bowl", role: "Pacer", },
+  "Nuwan Thushara": { bat: 10, bowl: 83, luck: 80, type: "bowl", role: "Pacer, Sling", },
+  "Mustafizur Rahman": { bat: 10, bowl: 87, luck: 85, type: "bowl", role: "Pacer, Cutter Specialist", },
+  "Fazalhaq Farooqi": { bat: 10, bowl: 85, luck: 80, type: "bowl", role: "Pacer", },
+  "Naveen-ul-Haq": { bat: 10, bowl: 86, luck: 82, type: "bowl", role: "Pacer, Slower Ball", },
+  "Nathan Ellis": { bat: 15, bowl: 85, luck: 80, type: "bowl", role: "Pacer" },
+  "Kwena Maphaka": { bat: 5, bowl: 82, luck: 80, type: "bowl", role: "Pacer" },
 
   // --- FAST BOWLERS (Indian) ---
-  "Mohammed Shami": { bat: 15, bowl: 91, luck: 85, type: "bowl" },
-  "Mohammed Siraj": { bat: 10, bowl: 88, luck: 85, type: "bowl" },
-  "Arshdeep Singh": { bat: 10, bowl: 88, luck: 85, type: "bowl" },
-  "Deepak Chahar": { bat: 30, bowl: 85, luck: 82, type: "bowl" },
-  "Shardul Thakur": { bat: 45, bowl: 82, luck: 90, type: "bowl" },
-  "Bhuvneshwar Kumar": { bat: 30, bowl: 86, luck: 85, type: "bowl" },
-  "T Natarajan": { bat: 5, bowl: 87, luck: 82, type: "bowl" },
-  "Mohit Sharma": { bat: 10, bowl: 86, luck: 85, type: "bowl" },
-  "Harshal Patel": { bat: 40, bowl: 88, luck: 88, type: "bowl" },
-  "Mayank Yadav": { bat: 10, bowl: 88, luck: 85, type: "bowl" },
-  "Avesh Khan": { bat: 15, bowl: 85, luck: 80, type: "bowl" },
-  "Khaleel Ahmed": { bat: 10, bowl: 86, luck: 82, type: "bowl" },
-  "Mukesh Kumar": { bat: 10, bowl: 85, luck: 82, type: "bowl" },
-  "Ishant Sharma": { bat: 20, bowl: 83, luck: 80, type: "bowl" },
-  "Umesh Yadav": { bat: 30, bowl: 84, luck: 80, type: "bowl" },
-  "Prasidh Krishna": { bat: 10, bowl: 85, luck: 80, type: "bowl" },
-  "Umran Malik": { bat: 10, bowl: 84, luck: 75, type: "bowl" },
-  "Harshit Rana": { bat: 40, bowl: 85, luck: 85, type: "bowl" },
-  "Akash Deep": { bat: 20, bowl: 84, luck: 80, type: "bowl" },
-  "Yash Dayal": { bat: 10, bowl: 83, luck: 80, type: "bowl" },
-  "Akash Madhwal": { bat: 10, bowl: 84, luck: 80, type: "bowl" },
-  "Vidwath Kaverappa": { bat: 10, bowl: 80, luck: 75, type: "bowl" },
-  "Tushar Deshpande": { bat: 15, bowl: 84, luck: 82, type: "bowl" },
-  "Vaibhav Arora": { bat: 15, bowl: 82, luck: 80, type: "bowl" },
-  "Yash Thakur": { bat: 10, bowl: 83, luck: 80, type: "bowl" },
-  "Kartik Tyagi": { bat: 20, bowl: 82, luck: 75, type: "bowl" },
-  "Chetan Sakariya": { bat: 20, bowl: 82, luck: 80, type: "bowl" },
-  "Simarjeet Singh": { bat: 15, bowl: 82, luck: 75, type: "bowl" },
-  "Rasikh Salam": { bat: 10, bowl: 82, luck: 80, type: "bowl" },
-  "Ashwani Kumar": { bat: 10, bowl: 78, luck: 75, type: "bowl" },
+  "Mohammed Shami": { bat: 15, bowl: 91, luck: 85, type: "bowl", role: "Pacer, Seam", },
+  "Mohammed Siraj": { bat: 10, bowl: 88, luck: 85, type: "bowl", role: "Pacer, Powerplay Specialist", },
+  "Arshdeep Singh": { bat: 10, bowl: 88, luck: 85, type: "bowl", role: "Pacer, Death Bowler", },
+  "Deepak Chahar": { bat: 30, bowl: 85, luck: 82, type: "bowl", role: "Pacer, Swing", },
+  "Shardul Thakur": { bat: 45, bowl: 82, luck: 90, type: "bowl", role: "Pacer, Golden Arm", },
+  "Bhuvneshwar Kumar": { bat: 30, bowl: 86, luck: 85, type: "bowl", role: "Pacer, Swing", },
+  "T Natarajan": { bat: 5, bowl: 87, luck: 82, type: "bowl", role: "Pacer, Death Bowler", },
+  "Mohit Sharma": { bat: 10, bowl: 86, luck: 85, type: "bowl", role: "Pacer, Slower Ball", },
+  "Harshal Patel": { bat: 40, bowl: 88, luck: 88, type: "bowl", role: "Pacer, Death Bowler, Slower Ball", },
+  "Mayank Yadav": { bat: 10, bowl: 88, luck: 85, type: "bowl", role: "Pacer, Express", },
+  "Avesh Khan": { bat: 15, bowl: 85, luck: 80, type: "bowl", role: "Pacer" },
+  "Khaleel Ahmed": { bat: 10, bowl: 86, luck: 82, type: "bowl", role: "Pacer" },
+  "Mukesh Kumar": { bat: 10, bowl: 85, luck: 82, type: "bowl", role: "Pacer, Death Bowler", },
+  "Ishant Sharma": { bat: 20, bowl: 83, luck: 80, type: "bowl", role: "Pacer" },
+  "Umesh Yadav": { bat: 30, bowl: 84, luck: 80, type: "bowl", role: "Pacer" },
+  "Prasidh Krishna": { bat: 10, bowl: 85, luck: 80, type: "bowl", role: "Pacer", },
+  "Umran Malik": { bat: 10, bowl: 84, luck: 75, type: "bowl", role: "Pacer, Express", },
+  "Harshit Rana": { bat: 40, bowl: 85, luck: 85, type: "bowl", role: "Pacer" },
+  "Akash Deep": { bat: 20, bowl: 84, luck: 80, type: "bowl", role: "Pacer" },
+  "Yash Dayal": { bat: 10, bowl: 83, luck: 80, type: "bowl", role: "Pacer" },
+  "Akash Madhwal": { bat: 10, bowl: 84, luck: 80, type: "bowl", role: "Pacer" },
+  "Vidwath Kaverappa": { bat: 10, bowl: 80, luck: 75, type: "bowl", role: "Pacer", },
+  "Tushar Deshpande": { bat: 15, bowl: 84, luck: 82, type: "bowl", role: "Pacer", },
+  "Vaibhav Arora": { bat: 15, bowl: 82, luck: 80, type: "bowl", role: "Pacer" },
+  "Yash Thakur": { bat: 10, bowl: 83, luck: 80, type: "bowl", role: "Pacer" },
+  "Kartik Tyagi": { bat: 20, bowl: 82, luck: 75, type: "bowl", role: "Pacer" },
+  "Chetan Sakariya": { bat: 20, bowl: 82, luck: 80, type: "bowl", role: "Pacer", },
+  "Simarjeet Singh": { bat: 15, bowl: 82, luck: 75, type: "bowl", role: "Pacer", },
+  "Rasikh Salam": { bat: 10, bowl: 82, luck: 80, type: "bowl", role: "Pacer" },
+  "Ashwani Kumar": { bat: 10, bowl: 78, luck: 75, type: "bowl", role: "Pacer" },
 
   // --- SPINNERS ---
-  "Rashid Khan": { bat: 60, bowl: 96, luck: 92, type: "bowl" },
-  "Yuzvendra Chahal": { bat: 5, bowl: 93, luck: 88, type: "bowl" },
-  "Kuldeep Yadav": { bat: 10, bowl: 93, luck: 88, type: "bowl" },
-  "Ravi Bishnoi": { bat: 10, bowl: 88, luck: 85, type: "bowl" },
-  "Varun Chakravarthy": { bat: 5, bowl: 89, luck: 82, type: "bowl" },
-  "Wanindu Hasaranga": { bat: 50, bowl: 90, luck: 85, type: "bowl" },
-  "Maheesh Theekshana": { bat: 20, bowl: 87, luck: 80, type: "bowl" },
-  "Adam Zampa": { bat: 10, bowl: 87, luck: 80, type: "bowl" },
-  "Mujeeb Ur Rahman": { bat: 20, bowl: 86, luck: 80, type: "bowl" },
-  "Noor Ahmad": { bat: 15, bowl: 87, luck: 85, type: "bowl" },
-  "Keshav Maharaj": { bat: 40, bowl: 85, luck: 80, type: "bowl" },
-  "Adil Rashid": { bat: 30, bowl: 86, luck: 82, type: "bowl" },
-  "Tabraiz Shamsi": { bat: 10, bowl: 85, luck: 80, type: "bowl" },
-  "Rahul Chahar": { bat: 20, bowl: 84, luck: 80, type: "bowl" },
-  "Amit Mishra": { bat: 25, bowl: 83, luck: 85, type: "bowl" },
-  "Piyush Chawla": { bat: 35, bowl: 85, luck: 88, type: "bowl" },
-  "Karn Sharma": { bat: 30, bowl: 82, luck: 80, type: "bowl" },
-  "Mayank Markande": { bat: 20, bowl: 83, luck: 80, type: "bowl" },
-  "R Sai Kishore": { bat: 25, bowl: 85, luck: 82, type: "bowl" },
-  "Suyash Sharma": { bat: 5, bowl: 84, luck: 80, type: "bowl" },
-  "Manimaran Siddharth": { bat: 10, bowl: 80, luck: 75, type: "bowl" },
-  "Allah Ghazanfar": { bat: 10, bowl: 82, luck: 82, type: "bowl" },
-  "Digvesh Rathi": { bat: 5, bowl: 80, luck: 78, type: "bowl" },
+  "Rashid Khan": { bat: 60, bowl: 96, luck: 92, type: "bowl", role: "Spinner, Leg Spin, Mystery Spin", },
+  "Yuzvendra Chahal": { bat: 5, bowl: 93, luck: 88, type: "bowl", role: "Spinner, Leg Spin", },
+  "Kuldeep Yadav": { bat: 10, bowl: 93, luck: 88, type: "bowl", role: "Spinner, Chinaman", },
+  "Ravi Bishnoi": { bat: 10, bowl: 88, luck: 85, type: "bowl", role: "Spinner, Leg Spin", },
+  "Varun Chakravarthy": { bat: 5, bowl: 89, luck: 82, type: "bowl", role: "Spinner, Mystery Spin", },
+  "Wanindu Hasaranga": { bat: 50, bowl: 90, luck: 85, type: "bowl", role: "Spinner, Leg Spin", },
+  "Maheesh Theekshana": { bat: 20, bowl: 87, luck: 80, type: "bowl", role: "Spinner, Mystery Spin", },
+  "Adam Zampa": { bat: 10, bowl: 87, luck: 80, type: "bowl", role: "Spinner, Leg Spin", },
+  "Mujeeb Ur Rahman": { bat: 20, bowl: 86, luck: 80, type: "bowl", role: "Spinner, Mystery Spin", },
+  "Noor Ahmad": { bat: 15, bowl: 87, luck: 85, type: "bowl", role: "Spinner, Chinaman", },
+  "Keshav Maharaj": { bat: 40, bowl: 85, luck: 80, type: "bowl", role: "Spinner, Left Arm Orth", },
+  "Adil Rashid": { bat: 30, bowl: 86, luck: 82, type: "bowl", role: "Spinner, Leg Spin", },
+  "Tabraiz Shamsi": { bat: 10, bowl: 85, luck: 80, type: "bowl", role: "Spinner, Chinaman", },
+  "Rahul Chahar": { bat: 20, bowl: 84, luck: 80, type: "bowl", role: "Spinner, Leg Spin", },
+  "Amit Mishra": { bat: 25, bowl: 83, luck: 85, type: "bowl", role: "Spinner, Leg Spin", },
+  "Piyush Chawla": { bat: 35, bowl: 85, luck: 88, type: "bowl", role: "Spinner, Leg Spin", },
+  "Karn Sharma": { bat: 30, bowl: 82, luck: 80, type: "bowl", role: "Spinner, Leg Spin", },
+  "Mayank Markande": { bat: 20, bowl: 83, luck: 80, type: "bowl", role: "Spinner, Leg Spin", },
+  "R Sai Kishore": { bat: 25, bowl: 85, luck: 82, type: "bowl", role: "Spinner, Left Arm Orth", },
+  "Suyash Sharma": { bat: 5, bowl: 84, luck: 80, type: "bowl", role: "Spinner, Mystery Spin", },
+  "Manimaran Siddharth": { bat: 10, bowl: 80, luck: 75, type: "bowl", role: "Spinner, Left Arm Orth", },
+  "Allah Ghazanfar": { bat: 10, bowl: 82, luck: 82, type: "bowl", role: "Spinner, Mystery Spin", },
+  "Digvesh Rathi": { bat: 5, bowl: 80, luck: 78, type: "bowl", role: "Spinner", },
 };
 
 const MARQUEE_PLAYERS = {
@@ -1057,7 +1128,6 @@ const PLAYER_IMAGE_MAP = {
     "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ96_gVuW8JTbxirRPH9mVAjB59jbtQRt6UtQ&s",
 };
 
-
 // FIX: Runtime Normalization of Image Keys to Lowercase
 const NORMALIZED_IMAGE_MAP = {};
 Object.keys(PLAYER_IMAGE_MAP).forEach((k) => {
@@ -1120,7 +1190,7 @@ function logEvent(message, highlight = false) {
   div.className = highlight ? "text-warning mb-1" : "mb-1";
   div.innerHTML = `<span class="text-secondary me-2">[${new Date().toLocaleTimeString(
     "en-GB",
-    { hour12: false }
+    { hour12: false },
   )}]</span> ${message}`;
   logEl.prepend(div);
 }
@@ -1131,7 +1201,7 @@ function getPlayerStats(name, roleHint = "bat") {
       bat: PLAYER_DATABASE[name].bat,
       bowl: PLAYER_DATABASE[name].bowl,
       luck: PLAYER_DATABASE[name].luck,
-      role: PLAYER_DATABASE[name].type,
+      role: PLAYER_DATABASE[name].role || PLAYER_DATABASE[name].type,
     };
   let hash = 0;
   for (let i = 0; i < name.length; i++)
@@ -1165,15 +1235,16 @@ function getPlayerStats(name, roleHint = "bat") {
 document.getElementById("doCreateBtn").addEventListener("click", () => {
   if (!socketAlive)
     return (lobbyError.innerText = "Connection lost. Reconnecting...");
-  
+
   const roomId = document.getElementById("createRoomId").value.toUpperCase();
   const pass = document.getElementById("createPass").value;
-  
+
   if (!roomId || pass.length !== 4)
     return (lobbyError.innerText = "Invalid Room ID or Password");
 
   localStorage.setItem("ipl_last_room", roomId);
   localStorage.setItem("ipl_last_pass", pass);
+  if (typeof Auth !== 'undefined') Auth.syncSessionToMongoDB();
 
   socket.emit("create_room", { roomId, password: pass, config: {} });
 });
@@ -1182,15 +1253,16 @@ document.getElementById("doCreateBtn").addEventListener("click", () => {
 document.getElementById("doJoinBtn").addEventListener("click", () => {
   if (!socketAlive)
     return (lobbyError.innerText = "Connection lost. Reconnecting...");
-  
+
   const roomId = document.getElementById("joinRoomId").value.toUpperCase();
   const pass = document.getElementById("joinPass").value;
-  
+
   if (!roomId || pass.length !== 4)
     return (lobbyError.innerText = "Check Credentials");
 
   localStorage.setItem("ipl_last_room", roomId);
   localStorage.setItem("ipl_last_pass", pass);
+  if (typeof Auth !== 'undefined') Auth.syncSessionToMongoDB();
 
   socket.emit("join_room", { roomId, password: pass });
 });
@@ -1205,7 +1277,7 @@ socket.on("roomcreated", (roomId) => {
   document.getElementById("waitingText").style.display = "none";
   document.getElementById("startBtn").style.display = "block";
   initLobbyState();
-  
+
   // Always show name entry for confirmation
   setTimeout(() => {
     const nameSection = document.getElementById("nameEntrySection");
@@ -1243,7 +1315,7 @@ socket.on("room_joined", (data) => {
       socket.emit("reclaim_team", savedTeamKey);
     } else {
       const myTeam = globalTeams.find(
-        (t) => t.ownerPlayerId === myPersistentId
+        (t) => t.ownerPlayerId === myPersistentId,
       );
       if (myTeam) mySelectedTeamKey = myTeam.bidKey;
     }
@@ -1254,7 +1326,7 @@ socket.on("room_joined", (data) => {
 
     renderLobbyTeams();
   }
-  
+
   // Always show name entry for confirmation
   setTimeout(() => {
     const nameSection = document.getElementById("nameEntrySection");
@@ -1292,32 +1364,36 @@ function initLobbyState() {
 }
 
 // Update all team budgets when admin changes purse amount
-window.updateAllTeamBudgets = function() {
+window.updateAllTeamBudgets = function () {
   if (!isAdmin) return;
-  
+
   const newBudget = parseInt(document.getElementById("budget").value);
-  
+
   // Update all teams' budgets
-  globalTeams.forEach(team => {
+  globalTeams.forEach((team) => {
     team.budget = newBudget;
   });
-  
+
   // Broadcast to all players
   socket.emit("update_lobby_teams", globalTeams);
   renderLobbyTeams();
-  
+
   logEvent(`💰 Host changed team purse to ${formatAmount(newBudget)}`, true);
-}
+};
 
 // FIX: Add missing sync_data listener
 socket.off("sync_data");
 socket.on("sync_data", (data) => {
   if (data.teams) {
     globalTeams = data.teams;
-    switchToAuctionMode(globalTeams);
+    if (data.isActive) {
+      switchToAuctionMode(globalTeams);
+    } else {
+      renderLobbyTeams();
+    }
   }
   if (data.queue) auctionQueue = data.queue;
-  
+
   if (data.currentLot) {
     // Restore current lot view
     // Simulate 'update_lot' behavior
@@ -1327,7 +1403,9 @@ socket.on("sync_data", (data) => {
 
     // Update UI elements manually or trigger logic
     document.getElementById("currentSet").innerText = p.set;
-    document.getElementById("lotNoDisplay").innerText = `LOT #${(data.auctionIndex + 1)
+    document.getElementById("lotNoDisplay").innerText = `LOT #${(
+      data.auctionIndex + 1
+    )
       .toString()
       .padStart(3, "0")}`;
     document.getElementById("pName").innerText = p.name;
@@ -1343,39 +1421,42 @@ socket.on("sync_data", (data) => {
       avatar.style.backgroundImage = "none";
       avatar.innerText = p.name.substring(0, 2).toUpperCase();
     }
-    
+
     document.getElementById("pBid").innerText = formatAmount(data.currentBid);
-    
+
     // Update Bidder/Team Info
     if (data.currentBidder) {
-        const bidderTeam = globalTeams.find(t => t.bidKey === data.currentBidder);
-        if (bidderTeam) {
-            document.getElementById("pTeam").innerHTML = `<span class="text-warning">${bidderTeam.name}</span>`;
-            currentHighestBidderKey = data.currentBidder;
-            document.getElementById("skipBtn").disabled = true;
-            document.getElementById("soldBtn").disabled = false;
-        }
+      const bidderTeam = globalTeams.find(
+        (t) => t.bidKey === data.currentBidder,
+      );
+      if (bidderTeam) {
+        document.getElementById("pTeam").innerHTML =
+          `<span class="text-warning">${bidderTeam.name}</span>`;
+        currentHighestBidderKey = data.currentBidder;
+        document.getElementById("skipBtn").disabled = true;
+        document.getElementById("soldBtn").disabled = false;
+      }
     } else {
-        document.getElementById("pTeam").innerHTML = `<span class="text-white-50">Opening Bid</span>`;
-        currentHighestBidderKey = null;
-        document.getElementById("skipBtn").disabled = false;
-        document.getElementById("soldBtn").disabled = true;
+      document.getElementById("pTeam").innerHTML =
+        `<span class="text-white-50">Opening Bid</span>`;
+      currentHighestBidderKey = null;
+      document.getElementById("skipBtn").disabled = false;
+      document.getElementById("soldBtn").disabled = true;
     }
-    
+
     // Resume Timer
     const timerEl = document.getElementById("auctionTimer");
     if (timerEl) {
-        timerEl.innerText = data.timer;
-        if (data.timerPaused) timerEl.classList.add("timer-paused");
-        else timerEl.classList.remove("timer-paused");
+      timerEl.innerText = data.timer;
+      if (data.timerPaused) timerEl.classList.add("timer-paused");
+      else timerEl.classList.remove("timer-paused");
     }
-    
+
     const bidBtn = document.getElementById("placeBidBtn");
     bidBtn.disabled = false;
     updateBidControlsState(p);
   }
 });
-
 
 function escapeHtml(text) {
   if (typeof text !== "string") return text;
@@ -1421,20 +1502,20 @@ function renderLobbyTeams() {
     let nameInput = isAdmin
       ? `<input type="text" class="form-control form-control-sm text-center bg-dark text-white border-secondary" value="${safeName}" onchange="adminRenameTeam('${t.bidKey}', this.value)">`
       : `<div class="fs-4 fw-bold text-white">${safeName}</div>`;
-    
+
     // Display player name if team is taken
-    const playerNameDisplay = t.playerName 
-      ? `<div class="small text-warning mt-1" style="font-size: 0.85rem;">${t.playerName}</div>` 
-      : '';
+    const playerNameDisplay = t.playerName
+      ? `<div class="small text-warning mt-1" style="font-size: 0.85rem;">${t.playerName}</div>`
+      : "";
 
     container.innerHTML += `<div class="lobby-team-card ${statusClass}" ${clickAction}><span class="lobby-status-badge ${
       statusClass === "available"
         ? "bg-success"
         : statusClass === "my-choice"
-        ? "bg-warning text-dark"
-        : "bg-danger"
+          ? "bg-warning text-dark"
+          : "bg-danger"
     }">${statusText}</span>${nameInput}${playerNameDisplay}<div class="small text-white-50">Budget: ${formatAmount(
-      t.budget
+      t.budget,
     )}</div></div>`;
   });
 
@@ -1474,7 +1555,9 @@ socket.on("auction_started", (data) => {
   auctionQueue = data.queue;
   logEvent(`<strong>AUCTION STARTED</strong>`, true);
   playHammerSound();
-  speakText("Ladies and Gentlemen, welcome to the IPL Mega Auction. Let the bidding begin!");
+  speakText(
+    "Ladies and Gentlemen, welcome to the IPL Mega Auction. Let the bidding begin!",
+  );
 });
 
 function enterGame(roomId) {
@@ -1483,7 +1566,7 @@ function enterGame(roomId) {
   lobbyScreen.style.display = "none";
   gameContainer.style.display = "block";
   document.getElementById("setupSection").style.display = "flex";
-  
+
   // Initialize sound button now that gameContainer is visible
   initializeSoundButton();
 }
@@ -1493,21 +1576,21 @@ function claimLobbyTeam(key) {
     alert("You have already joined a team!");
     return;
   }
-  
+
   // Check if name input field has a value (user might not have pressed Enter yet)
   const nameInput = document.getElementById("lobbyPlayerName");
   if (nameInput && nameInput.value.trim()) {
     const name = nameInput.value.trim();
     myPlayerName = name;
-    sessionStorage.setItem("ipl_auction_player_name", name);
-    
+    localStorage.setItem("ipl_auction_player_name", name);
+
     // Hide name entry section
     const nameSection = document.getElementById("nameEntrySection");
     if (nameSection) {
       nameSection.style.display = "none";
     }
   }
-  
+
   // Send player name to server first if we have one
   if (myPlayerName) {
     socket.emit("update_player_name", { playerName: myPlayerName });
@@ -1521,10 +1604,10 @@ function claimLobbyTeam(key) {
     }
     return;
   }
-  
+
   // Small delay to ensure name is received before claiming
   setTimeout(() => {
-    const userEmail = localStorage.getItem('userEmail') || '';
+    const userEmail = localStorage.getItem("userEmail") || "";
     socket.emit("claim_lobby_team", { key, email: userEmail });
   }, 100);
 }
@@ -1532,7 +1615,7 @@ function claimLobbyTeam(key) {
 function requestReclaim(bidKey) {
   if (
     confirm(
-      "This team is taken. Do you want to request the Host to reclaim it?"
+      "This team is taken. Do you want to request the Host to reclaim it?",
     )
   ) {
     socket.emit("request_reclaim_manual", { teamKey: bidKey });
@@ -1559,12 +1642,20 @@ socket.on("lobby_update", (data) => {
     });
   }
   renderLobbyTeams();
+  // Update sidebar if auction is active
+  if (document.getElementById("auctionDashboard").style.display !== "none") {
+    updateTeamSidebar(globalTeams);
+  }
 });
 
 socket.off("team_claim_success");
 socket.on("team_claim_success", (key) => {
   mySelectedTeamKey = key;
-  if (myRoomId) localStorage.setItem(`ipl_team_${myRoomId}`, key);
+  if (myRoomId) {
+      localStorage.setItem(`ipl_team_${myRoomId}`, key);
+      // ✨ Sync to MongoDB immediately
+      if (typeof Auth !== 'undefined') Auth.syncSessionToMongoDB();
+  }
   renderLobbyTeams();
   lobbyError.innerText = "✅ Team ownership granted!";
   logEvent("✅ Team ownership restored.", true);
@@ -1609,20 +1700,20 @@ function buildAuctionQueue() {
   };
 
   const marqueeBat = MARQUEE_PLAYERS.batter.map((p) =>
-    createPlayer(p, "Marquee Set (Bat)", "batter", 20000000, 2500000)
+    createPlayer(p, "Marquee Set (Bat)", "batter", 20000000, 2500000),
   );
   const marqueeBowl = MARQUEE_PLAYERS.bowler.map((p) =>
-    createPlayer(p, "Marquee Set (Bowl)", "bowler", 20000000, 2500000)
+    createPlayer(p, "Marquee Set (Bowl)", "bowler", 20000000, 2500000),
   );
   const marqueeAR = MARQUEE_PLAYERS.allrounder.map((p) =>
-    createPlayer(p, "Marquee Set (AR)", "allrounder", 20000000, 2500000)
+    createPlayer(p, "Marquee Set (AR)", "allrounder", 20000000, 2500000),
   );
   const marqueeWK = MARQUEE_PLAYERS.wicketkeeper.map((p) =>
-    createPlayer(p, "Marquee Set (WK)", "wk", 20000000, 2500000)
+    createPlayer(p, "Marquee Set (WK)", "wk", 20000000, 2500000),
   );
 
   safePush(
-    shuffle([...marqueeBat, ...marqueeBowl, ...marqueeAR, ...marqueeWK])
+    shuffle([...marqueeBat, ...marqueeBowl, ...marqueeAR, ...marqueeWK]),
   );
 
   const processCategory = (categoryName, roleName, foreignList, indianList) => {
@@ -1632,8 +1723,8 @@ function buildAuctionQueue() {
         `${categoryName} (Foreign)`,
         roleName,
         15000000,
-        2500000
-      )
+        2500000,
+      ),
     );
     const i = indianList.map((n) =>
       createPlayer(
@@ -1641,8 +1732,8 @@ function buildAuctionQueue() {
         `${categoryName} (Indian)`,
         roleName,
         10000000,
-        2500000
-      )
+        2500000,
+      ),
     );
     return shuffle([...f, ...i]);
   };
@@ -1652,41 +1743,41 @@ function buildAuctionQueue() {
       "Batters",
       "batter",
       RAW_DATA["Batsmen"].foreign,
-      RAW_DATA["Batsmen"].indian
-    )
+      RAW_DATA["Batsmen"].indian,
+    ),
   );
   safePush(
     processCategory(
       "Fast Bowlers",
       "fast",
       RAW_DATA["Fast Bowlers"].foreign,
-      RAW_DATA["Fast Bowlers"].indian
-    )
+      RAW_DATA["Fast Bowlers"].indian,
+    ),
   );
-  
+
   safePush(
     processCategory(
       "Spinners",
       "spinner",
       RAW_DATA["Spinners"].foreign,
-      RAW_DATA["Spinners"].indian
-    )
+      RAW_DATA["Spinners"].indian,
+    ),
   );
   safePush(
     processCategory(
       "Wicketkeepers",
       "wk",
       RAW_DATA["Wicketkeeper"].foreign,
-      RAW_DATA["Wicketkeeper"].indian
-    )
+      RAW_DATA["Wicketkeeper"].indian,
+    ),
   );
   safePush(
     processCategory(
       "All-Rounders",
       "allrounder",
       RAW_DATA["All-rounders"].foreign,
-      RAW_DATA["All-rounders"].indian
-    )
+      RAW_DATA["All-rounders"].indian,
+    ),
   );
 
   const domBat = RAW_DATA["Domestic"].batsmen.map((n) =>
@@ -1695,8 +1786,8 @@ function buildAuctionQueue() {
       "Domestic Set",
       "batter",
       2500000,
-      500000
-    )
+      500000,
+    ),
   );
   const domBowl = RAW_DATA["Domestic"].bowlers.map((n) =>
     createPlayer(
@@ -1704,8 +1795,8 @@ function buildAuctionQueue() {
       "Domestic Set",
       "bowler",
       2500000,
-      500000
-    )
+      500000,
+    ),
   );
   safePush(shuffle([...domBat, ...domBowl]));
 
@@ -1752,9 +1843,8 @@ socket.on("update_lot", (data) => {
   }
 
   document.getElementById("pBid").innerText = formatAmount(data.currentBid);
-  document.getElementById(
-    "pTeam"
-  ).innerHTML = `<span class="text-white-50">Opening Bid</span>`;
+  document.getElementById("pTeam").innerHTML =
+    `<span class="text-white-50">Opening Bid</span>`;
   currentHighestBidderKey = null;
 
   const bidBtn = document.getElementById("placeBidBtn");
@@ -1771,23 +1861,23 @@ socket.on("update_lot", (data) => {
 
   if (lastAnnouncedLotId !== data.lotNumber) {
     lastAnnouncedLotId = data.lotNumber;
-    
+
     // Build announcement text
     let announcement = "";
-    
+
     // Check if set has changed - announce the new set
     if (lastAnnouncedSet !== p.category) {
       lastAnnouncedSet = p.category;
       announcement = `${p.category} Set. `;
     }
-    
+
     // Player details
     const roleName = getRoleFullName(p.roleKey);
     const playerTypeName = getPlayerTypeFullName(p.playerType);
     const priceInCrores = (p.basePrice / 10000000).toFixed(2);
-    
+
     announcement += `Next player. ${p.name}. ${roleName}. ${playerTypeName}. Base price ${priceInCrores} crore rupees.`;
-    
+
     speakText(announcement);
   }
 });
@@ -1800,9 +1890,8 @@ socket.on("bid_update", (data) => {
   bidEl.classList.add("price-pulse");
   setTimeout(() => bidEl.classList.remove("price-pulse"), 200);
 
-  document.getElementById(
-    "pTeam"
-  ).innerHTML = `<span class="text-warning">${data.team.name}</span>`;
+  document.getElementById("pTeam").innerHTML =
+    `<span class="text-warning">${data.team.name}</span>`;
   currentHighestBidderKey = data.team.bidKey;
 
   document.getElementById("skipBtn").disabled = true;
@@ -1828,7 +1917,7 @@ socket.on("bid_update", (data) => {
     const inc = parseInt(document.getElementById("customBidInput").value);
     const nextBid = data.amount + inc;
     bidBtn.innerHTML = `BID ${formatAmount(
-      nextBid
+      nextBid,
     )} <i class="bi bi-hammer"></i>`;
     bidBtn.style.background = "";
     bidBtn.style.color = "";
@@ -1836,7 +1925,7 @@ socket.on("bid_update", (data) => {
   updateTeamSidebar(globalTeams);
   logEvent(`${data.team.name} bids ${formatAmount(data.amount)}`);
   playBidSound();
-  
+
   // Voice announcement for bid (only amount, no team name)
   const bidInCrores = (data.amount / 10000000).toFixed(2);
   speakText(`${bidInCrores} crores.`);
@@ -1878,7 +1967,7 @@ function submitMyBid() {
   const inc = parseInt(document.getElementById("customBidInput").value);
 
   let bidAmount;
-  
+
   // Check if this is the FIRST bid (no one has bid yet)
   if (currentHighestBidderKey === null) {
     // First bid = exactly base price (no increment)
@@ -1905,9 +1994,13 @@ function submitMyBid() {
 document.getElementById("placeBidBtn").addEventListener("click", submitMyBid);
 document.addEventListener("keydown", (e) => {
   if (lobbyScreen.style.display !== "none") return;
-  
+
   // Prevent actions if typing in an input field (except custom bid)
-  if(document.activeElement.tagName === "INPUT" && document.activeElement.id !== "customBidInput") return;
+  if (
+    document.activeElement.tagName === "INPUT" &&
+    document.activeElement.id !== "customBidInput"
+  )
+    return;
 
   // BID SHORTCUTS (Space/Enter)
   if (e.code === "Space" || e.code === "Enter") {
@@ -1917,12 +2010,12 @@ document.addEventListener("keydown", (e) => {
 
   // HOST SHORTCUTS (S = Sold, U = Unsold/Skip)
   if (isAdmin) {
-      if (e.key.toLowerCase() === 's') {
-          document.getElementById("soldBtn").click();
-      }
-      if (e.key.toLowerCase() === 'u') {
-          document.getElementById("skipBtn").click();
-      }
+    if (e.key.toLowerCase() === "s") {
+      document.getElementById("soldBtn").click();
+    }
+    if (e.key.toLowerCase() === "u") {
+      document.getElementById("skipBtn").click();
+    }
   }
 });
 
@@ -1976,14 +2069,14 @@ socket.on("sale_finalized", (data) => {
   if (!data.isUnsold) {
     logEvent(
       `<strong>SOLD:</strong> ${data.soldPlayer.name} to ${data.soldDetails.soldTeam}`,
-      true
+      true,
     );
     document.getElementById("soldToSection").style.display = "block";
     document.getElementById("soldPriceSection").style.display = "block";
     document.getElementById("soldTeamName").innerText =
       data.soldDetails.soldTeam;
     document.getElementById("soldFinalPrice").innerText = formatAmount(
-      data.price
+      data.price,
     );
     stamp.innerText = "SOLD";
     stamp.className = "stamp-overlay";
@@ -1991,7 +2084,7 @@ socket.on("sale_finalized", (data) => {
     playHammerSound();
     const priceInCrores = (data.price / 10000000).toFixed(2);
     speakText(
-      `${data.soldPlayer.name}. Sold to ${data.soldDetails.soldTeam} for ${priceInCrores} crore rupees.`
+      `${data.soldPlayer.name}. Sold to ${data.soldDetails.soldTeam} for ${priceInCrores} crore rupees.`,
     );
   } else {
     logEvent(`<strong>UNSOLD:</strong> ${data.soldPlayer.name}`, true);
@@ -2046,7 +2139,7 @@ function adjustIncrement(isIncrease) {
     if (currentPrice < 0) currentPrice = 0;
     const nextPrice = currentPrice + val;
     bidBtn.innerHTML = `BID ${formatAmount(
-      nextPrice
+      nextPrice,
     )} <i class="bi bi-hammer"></i>`;
   }
 }
@@ -2068,19 +2161,26 @@ function updateTeamSidebar(teams) {
       card.id = `team-card-${t.bidKey}`;
       card.className = "franchise-card";
       if (isMine) card.classList.add("my-team");
-      
+
       // Display player name if available
-      const playerNameDisplay = t.playerName 
-        ? `<div style="font-size: 0.65rem; color: #888; margin-top: 2px;">${t.playerName}</div>` 
-        : '';
-      
+      const playerNameDisplay = t.playerName
+        ? `<div style="font-size: 0.65rem; color: #888; margin-top: 2px;">${t.playerName}</div>`
+        : "";
+
+      const clickAction = (!isMine && !t.isTaken && !mySelectedTeamKey) 
+        ? `onclick="claimLobbyTeam('${t.bidKey}')" style="cursor: pointer;"` 
+        : "";
+
       card.innerHTML = `
-                <div class="f-header">
+                <div class="f-header" ${clickAction}>
                     <div class="f-name text-white text-truncate" style="max-width: 120px;">
                         ${t.name} ${
-        isMine ? '<i class="bi bi-person-fill text-success"></i>' : ""
-      }
+                          isMine
+                            ? '<i class="bi bi-person-fill text-success"></i>'
+                            : ""
+                        }
                         ${playerNameDisplay}
+                        ${(!isMine && !t.isTaken && !mySelectedTeamKey) ? '<br><span class="badge bg-success" style="font-size:0.5rem">JOIN FREE TEAM</span>' : ''}
                     </div>
                     <div class="f-budget">${formatAmount(t.budget)}</div> 
                 </div>
@@ -2142,15 +2242,16 @@ document.getElementById("skipBtn").addEventListener("click", () => {
   socket.emit("finalize_sale", { isUnsold: true });
 });
 
-document
-  .getElementById("timerToggleBtn")
-  .addEventListener("click", () => isAdmin && socket.emit("toggle_timer"));
+document.getElementById("timerToggleBtn").addEventListener("click", () => {
+  console.log("⏯️ Timer Toggle Clicked. Admin?", isAdmin);
+  if (isAdmin) socket.emit("toggle_timer");
+});
 document
   .getElementById("endAuctionBtn")
   .addEventListener(
     "click",
     () =>
-      isAdmin && confirm("End Auction?") && socket.emit("end_auction_trigger")
+      isAdmin && confirm("End Auction?") && socket.emit("end_auction_trigger"),
   );
 
 function updatePauseButtonState(isPaused) {
@@ -2172,24 +2273,29 @@ let mySelectedCaptain = null;
 socket.off("open_squad_selection");
 socket.on("open_squad_selection", (data) => {
   console.log("📢 SQUAD SELECTION OPENED", data);
-  
+
   if (data && data.teams) {
-      globalTeams = data.teams;
-      
-      // Auto-recover mySelectedTeamKey if lost/mismatch
-      const myTeam = globalTeams.find(t => t.ownerPlayerId === myPersistentId || t.ownerSocketId === socket.id);
-      if (myTeam) {
-          mySelectedTeamKey = myTeam.bidKey;
-          console.log("✅ Recovered Team Key:", mySelectedTeamKey);
-      }
+    globalTeams = data.teams;
+
+    // Auto-recover mySelectedTeamKey if lost/mismatch
+    const myTeam = globalTeams.find(
+      (t) =>
+        t.ownerPlayerId === myPersistentId || t.ownerSocketId === socket.id,
+    );
+    if (myTeam) {
+      mySelectedTeamKey = myTeam.bidKey;
+      console.log("✅ Recovered Team Key:", mySelectedTeamKey);
+    }
   }
 
   document
     .getElementById("squadSelectionScreen")
     .classList.add("overlay-active");
-    
+
   renderMySquadSelection();
-  speakText("The auction has ended. All teams, please select your playing eleven and impact players.");
+  speakText(
+    "The auction has ended. All teams, please select your playing eleven and impact players.",
+  );
 });
 
 function countForeigners(list) {
@@ -2197,7 +2303,8 @@ function countForeigners(list) {
 }
 function countKeepers(list) {
   // FIXED: Strict check as requested
-  return list.filter(p => p.roleKey && p.roleKey.toLowerCase() === "wk").length;
+  return list.filter((p) => p.roleKey && p.roleKey.toLowerCase() === "wk")
+    .length;
 }
 
 // --- GLOBAL HELPERS (Moved from socket handlers) ---
@@ -2208,7 +2315,7 @@ function normalizeTeamStats(team) {
     l: team.stats?.lost ?? 0,
     pts: team.stats?.pts ?? 0,
     nrr: team.stats?.nrr?.toFixed?.(3) ?? "0.000",
-    name: team.name
+    name: team.name,
   };
 }
 
@@ -2230,15 +2337,17 @@ function renderMySquadSelection() {
   const myTeam = globalTeams.find((t) => t.bidKey === mySelectedTeamKey);
   const list = document.getElementById("playing11List");
   const impList = document.getElementById("impactList");
-  list.innerHTML = '<small class="text-warning d-block mb-2 text-center" style="font-size:0.75rem;">Select 12 Players (Batting Order Priority)</small>';
-  impList.innerHTML = '<small class="text-warning d-block mb-2 text-center" style="font-size:0.75rem;">Assign Roles (Bat Impact & Bowl Impact)</small>';
+  list.innerHTML =
+    '<small class="text-warning d-block mb-2 text-center" style="font-size:0.75rem;">Select 12 Players (Batting Order Priority)</small>';
+  impList.innerHTML =
+    '<small class="text-warning d-block mb-2 text-center" style="font-size:0.75rem;">Assign Roles (Bat Impact & Bowl Impact)</small>';
 
   if (!myTeam || !myTeam.roster || myTeam.roster.length === 0)
     return (list.innerHTML =
       "<div class='text-white-50 text-center mt-5'>No players bought!</div>");
 
   const sortedRoster = [...myTeam.roster].sort(
-    (a, b) => getRolePriority(a.roleKey) - getRolePriority(b.roleKey)
+    (a, b) => getRolePriority(a.roleKey) - getRolePriority(b.roleKey),
   );
 
   sortedRoster.forEach((p, i) => {
@@ -2265,15 +2374,15 @@ function renderMySquadSelection() {
 
   // Render Role Selection (Only from Selected Squad)
   mySelectedSquad.forEach((p, i) => {
-      const isBatImp = myBattingImpact && myBattingImpact.name === p.name;
-      const isBowlImp = myBowlingImpact && myBowlingImpact.name === p.name;
-      const roleIcon = getRoleIcon(p.roleKey);
-      
-      impList.innerHTML += `
+    const isBatImp = myBattingImpact && myBattingImpact.name === p.name;
+    const isBowlImp = myBowlingImpact && myBowlingImpact.name === p.name;
+    const roleIcon = getRoleIcon(p.roleKey);
+
+    impList.innerHTML += `
       <div class="player-check-card impact-card d-flex gap-2 align-items-center p-1" style="cursor:default;">
          <div class="fw-bold text-white small flex-grow-1 text-truncate">${p.name}</div>
-         <button class="btn btn-xs ${isBatImp ? 'btn-danger' : 'btn-outline-danger'} small-impact-btn" onclick="setBatImpact('${p.name}')">BAT IMP</button>
-         <button class="btn btn-xs ${isBowlImp ? 'btn-primary' : 'btn-outline-primary'} small-impact-btn" onclick="setBowlImpact('${p.name}')">BOWL IMP</button>
+         <button class="btn btn-xs ${isBatImp ? "btn-danger" : "btn-outline-danger"} small-impact-btn" onclick="setBatImpact('${p.name}')">BAT IMP</button>
+         <button class="btn btn-xs ${isBowlImp ? "btn-primary" : "btn-outline-primary"} small-impact-btn" onclick="setBowlImpact('${p.name}')">BOWL IMP</button>
       </div>`;
   });
 
@@ -2283,8 +2392,8 @@ function renderMySquadSelection() {
 function toggleSquadMember(i, name) {
   const team = globalTeams.find((t) => t.bidKey === mySelectedTeamKey);
   const p = team.roster.find((x) => x.name === name);
-  
-  if (!p) return; 
+
+  if (!p) return;
 
   const idx = mySelectedSquad.findIndex((x) => x.name === name);
   if (idx > -1) {
@@ -2292,11 +2401,14 @@ function toggleSquadMember(i, name) {
     mySelectedSquad.splice(idx, 1);
     // Clear roles if removed
     if (mySelectedCaptain === name) mySelectedCaptain = null;
-    if (myBattingImpact && myBattingImpact.name === name) myBattingImpact = null;
-    if (myBowlingImpact && myBowlingImpact.name === name) myBowlingImpact = null;
+    if (myBattingImpact && myBattingImpact.name === name)
+      myBattingImpact = null;
+    if (myBowlingImpact && myBowlingImpact.name === name)
+      myBowlingImpact = null;
   } else {
     // Add
-    if (mySelectedSquad.length >= 12) return alert("Max 12 Players (11 + Impact Pair)");
+    if (mySelectedSquad.length >= 12)
+      return alert("Max 12 Players (11 + Impact Pair)");
     const currentForeignCount = countForeigners(mySelectedSquad);
     if (p.playerType === "Foreign" && currentForeignCount >= 4)
       return alert("MAX 4 FOREIGN PLAYERS ALLOWED IN SQUAD!");
@@ -2306,21 +2418,21 @@ function toggleSquadMember(i, name) {
 }
 
 function setBatImpact(name) {
-    const p = mySelectedSquad.find(x => x.name === name);
-    if(myBowlingImpact && myBowlingImpact.name === name) {
-        myBowlingImpact = null; // Swap roles if clicking same
-    }
-    myBattingImpact = (myBattingImpact && myBattingImpact.name === name) ? null : p;
-    renderMySquadSelection();
+  const p = mySelectedSquad.find((x) => x.name === name);
+  if (myBowlingImpact && myBowlingImpact.name === name) {
+    myBowlingImpact = null; // Swap roles if clicking same
+  }
+  myBattingImpact = myBattingImpact && myBattingImpact.name === name ? null : p;
+  renderMySquadSelection();
 }
 
 function setBowlImpact(name) {
-    const p = mySelectedSquad.find(x => x.name === name);
-    if(myBattingImpact && myBattingImpact.name === name) {
-        myBattingImpact = null;
-    }
-    myBowlingImpact = (myBowlingImpact && myBowlingImpact.name === name) ? null : p;
-    renderMySquadSelection();
+  const p = mySelectedSquad.find((x) => x.name === name);
+  if (myBattingImpact && myBattingImpact.name === name) {
+    myBattingImpact = null;
+  }
+  myBowlingImpact = myBowlingImpact && myBowlingImpact.name === name ? null : p;
+  renderMySquadSelection();
 }
 
 function setCaptain(name) {
@@ -2340,15 +2452,18 @@ function updateSquadUI() {
   const wkCount = countKeepers(mySelectedSquad);
   const wkColor = wkCount < 1 ? "text-danger" : "text-white-50";
 
-  document.getElementById("p11Count").innerText = `${mySelectedSquad.length}/12 Selected`;
-  document.getElementById("foreignCountDisplay").innerHTML = `<span class="${fColor}">Foreign: ${fCount}/4</span>`;
-  document.getElementById("wkCountDisplay").innerHTML = `<span class="${wkColor}">WK: ${wkCount}/1</span>`;
-  
+  document.getElementById("p11Count").innerText =
+    `${mySelectedSquad.length}/12 Selected`;
+  document.getElementById("foreignCountDisplay").innerHTML =
+    `<span class="${fColor}">Foreign: ${fCount}/4</span>`;
+  document.getElementById("wkCountDisplay").innerHTML =
+    `<span class="${wkColor}">WK: ${wkCount}/1</span>`;
+
   // Impact Count Display Update
   const impactReady = myBattingImpact && myBowlingImpact;
-  document.getElementById("impactCount").innerHTML = impactReady 
-      ? "<span class='text-success'>Roles Set</span>" 
-      : "<span class='text-danger'>Select Batsman & Bowler Impact</span>";
+  document.getElementById("impactCount").innerHTML = impactReady
+    ? "<span class='text-success'>Roles Set</span>"
+    : "<span class='text-danger'>Select Batsman & Bowler Impact</span>";
 
   const isValid =
     mySelectedSquad.length === 12 &&
@@ -2359,8 +2474,8 @@ function updateSquadUI() {
 }
 
 document.getElementById("submitSquadBtn").addEventListener("click", () => {
-    // Ensure removal of old listener if any (though usually one-shot)
-    socket.emit("submit_squad", {
+  // Ensure removal of old listener if any (though usually one-shot)
+  socket.emit("submit_squad", {
     teamKey: mySelectedTeamKey,
     squad: mySelectedSquad,
     batImpact: myBattingImpact,
@@ -2387,7 +2502,7 @@ socket.off("squad_submission_update");
 socket.on("squad_submission_update", (d) => {
   const msgEl = document.getElementById("waitingMsg");
   msgEl.innerHTML = `WAITING... (${d.submittedCount}/${d.totalTeams} SUBMITTED)`;
-  
+
   if (isAdmin) {
     // Check if button already exists to prevent duplicates
     if (!document.getElementById("forceStartBtn")) {
@@ -2438,30 +2553,34 @@ socket.on("tournamentComplete", (results) => {
   // Save results to session storage for play.html to pick up
   sessionStorage.setItem("IPL_RESULTS", JSON.stringify(results));
   sessionStorage.setItem("currentRoomId", myRoomId);
-  
+
   // Redirect to play.html
   window.location.href = `play.html?room=${myRoomId}`;
 });
 
-
-
 // --- MATCH FILTER LOGIC ---
-window.filterMatchLogs = function(teamName) {
-    const mLog = document.getElementById("matchLogContainer");
-    mLog.innerHTML = "";
-    
-    if (!lastTournamentData || !lastTournamentData.leagueMatches) return;
+window.filterMatchLogs = function (teamName) {
+  const mLog = document.getElementById("matchLogContainer");
+  mLog.innerHTML = "";
 
-    const allMatches = lastTournamentData.leagueMatches;
-    const filtered = teamName === "ALL" 
-        ? allMatches 
-        : allMatches.filter(m => m.t1 === teamName || m.t2 === teamName);
+  if (!lastTournamentData || !lastTournamentData.leagueMatches) return;
 
-    if (filtered.length > 0) {
-        filtered.forEach((m, i) => mLog.innerHTML += createMatchCard(m, false, i));
-    } else {
-        mLog.innerHTML = "<div class='text-center text-white-50 p-4'>No matches found for " + teamName + "</div>";
-    }
+  const allMatches = lastTournamentData.leagueMatches;
+  const filtered =
+    teamName === "ALL"
+      ? allMatches
+      : allMatches.filter((m) => m.t1 === teamName || m.t2 === teamName);
+
+  if (filtered.length > 0) {
+    filtered.forEach(
+      (m, i) => (mLog.innerHTML += createMatchCard(m, false, i)),
+    );
+  } else {
+    mLog.innerHTML =
+      "<div class='text-center text-white-50 p-4'>No matches found for " +
+      teamName +
+      "</div>";
+  }
 };
 
 function renderAllTeams(teamsData) {
@@ -2482,7 +2601,7 @@ function renderAllTeams(teamsData) {
       p11Html += `<div class="team-player-row" style="border-left: 3px solid #00E676; padding-left:8px;"><span class="text-white">${icon} ${
         p.name
       } ${isCapt}</span><span class="text-white-50">${formatAmount(
-        p.price || 0
+        p.price || 0,
       )}</span></div>`;
     });
 
@@ -2493,7 +2612,7 @@ function renderAllTeams(teamsData) {
         benchHtml += `<div class="team-player-row" style="opacity:0.5;"><span class="text-white">${icon} ${
           p.name
         } (Bench)</span><span class="text-white-50">${formatAmount(
-          p.price || 0
+          p.price || 0,
         )}</span></div>`;
       }
     });
@@ -2547,27 +2666,26 @@ function createMatchCard(m, isPlayoff = false, index) {
 // --- OPEN SCORECARD (DETAILED) ---
 function openScorecard(type, index) {
   if (!lastTournamentData) return;
-  
+
   // 1. Fetch Data
   const matchData =
     type === "league"
       ? lastTournamentData.leagueMatches[index]
       : lastTournamentData.playoffs[index];
-  
+
   if (!matchData) {
-      console.error("Match data not found for", type, index);
-      return;
+    console.error("Match data not found for", type, index);
+    return;
   }
-  
+
   // 2. Delegate to the global UI renderer (defined in play.html)
-  if (typeof window.showScorecard === 'function') {
-      window.showScorecard(matchData);
+  if (typeof window.showScorecard === "function") {
+    window.showScorecard(matchData);
   } else {
-      console.error("showScorecard function not found!");
-      alert("Error: Scorecard viewer not loaded.");
+    console.error("showScorecard function not found!");
+    alert("Error: Scorecard viewer not loaded.");
   }
 }
-
 
 function renderPlayerPool() {
   const a = document.getElementById("availableList"),
@@ -2584,7 +2702,7 @@ function renderPlayerPool() {
     }</div><div class="text-white-50 small">${p.category} [${p.set}]</div>${
       p.status === "SOLD"
         ? `<div class="text-success small">Sold: ${formatAmount(
-            p.soldPrice
+            p.soldPrice,
           )}</div>`
         : ""
     }</div></div></div>`;
@@ -2603,13 +2721,13 @@ function renderSquads() {
     if (t.roster)
       t.roster.forEach(
         (p) =>
-          (h += `<tr><td>${p.name}</td><td>${formatAmount(p.price)}</td></tr>`)
+          (h += `<tr><td>${p.name}</td><td>${formatAmount(p.price)}</td></tr>`),
       );
     h += "</tbody></table></div>";
     mb.innerHTML += `<div class="card bg-black border-secondary mb-3"><div class="card-header white border-secondary d-flex justify-content-between"><span class="text-warning fw-bold">${
       t.name
     }</span><span class="text-warning fw-bold">Spent: ${formatAmount(
-      t.totalSpent
+      t.totalSpent,
     )}</span></div><div class="card-body p-2">${h}</div></div>`;
   });
 }
@@ -2644,66 +2762,115 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-
 /* =========================================
    AUTO TEST FEATURE (SKIP AUCTION)
    ========================================= */
 
-const AUTO_RCB_NAMES = ["Virat Kohli", "Faf du Plessis", "Rajat Patidar", "Suyash Prabhudessai", "Dinesh Karthik", "Anuj Rawat", "Glenn Maxwell", "Will Jacks", "Cameron Green", "Mahipal Lomror", "Mohammed Siraj", "Reece Topley", "Akash Deep"];
-const AUTO_CSK_NAMES = ["Ruturaj Gaikwad", "Devon Conway", "Ajinkya Rahane", "Sameer Rizvi", "MS Dhoni", "Ravindra Jadeja", "Moeen Ali", "Shivam Dube", "Rachin Ravindra", "Matheesha Pathirana", "Maheesh Theekshana", "Tushar Deshpande"];
+const AUTO_RCB_NAMES = [
+  "Virat Kohli",
+  "Faf du Plessis",
+  "Rajat Patidar",
+  "Glenn Maxwell",
+  "Cameron Green",
+  "Dinesh Karthik",
+  "Wanindu Hasaranga",
+  "Harshal Patel",
+  "Mohammed Siraj",
+  "Reece Topley",
+  "Karn Sharma",
+  "Mahipal Lomror",
+  "Anuj Rawat"
+];
+
+const AUTO_CSK_NAMES = [
+  "Ruturaj Gaikwad",
+  "Devon Conway",
+  "Ajinkya Rahane",
+  "Shivam Dube",
+  "Moeen Ali",
+  "Ravindra Jadeja",
+  "MS Dhoni",
+  "Mitchell Santner",
+  "Deepak Chahar",
+  "Matheesha Pathirana",
+  "Tushar Deshpande",
+  "Maheesh Theekshana",
+  "Sameer Rizvi"
+];
+
+
+
+
+
+// Explanation
 
 function getPlayerForTest(name) {
-    const db = PLAYER_DATABASE[name] || { bat: 75, bowl: 75, luck: 75, type: 'bat' }; // fallback stats
-    
-    let region = "Indian"; 
-    let roleKey = db.type || 'bat';
+  const db = PLAYER_DATABASE[name] || {
+    bat: 75,
+    bowl: 75,
+    luck: 75,
+    type: "bat",
+  }; // fallback stats
 
-    // Determine Region (Foreign/Indian) from RAW_DATA
-    for (const cat in RAW_DATA) {
-        if (RAW_DATA[cat].foreign && RAW_DATA[cat].foreign.includes(name)) region = "Foreign";
-        if (RAW_DATA[cat].indian && RAW_DATA[cat].indian.includes(name)) region = "Indian";
-        
-        // Also check if role matches category loose check
-        if(RAW_DATA[cat].foreign && RAW_DATA[cat].foreign.includes(name) || RAW_DATA[cat].indian && RAW_DATA[cat].indian.includes(name)) {
-             if(cat.toLowerCase().includes('keep')) roleKey = 'wk';
-             else if(cat.toLowerCase().includes('round')) roleKey = 'ar';
-             else if(cat.toLowerCase().includes('bowl')) roleKey = 'bowl';
-             else roleKey = 'bat';
-        }
+  let region = "Indian";
+  let roleKey = db.type || "bat";
+
+  // Determine Region (Foreign/Indian) from RAW_DATA
+  for (const cat in RAW_DATA) {
+    if (RAW_DATA[cat].foreign && RAW_DATA[cat].foreign.includes(name))
+      region = "Foreign";
+    if (RAW_DATA[cat].indian && RAW_DATA[cat].indian.includes(name))
+      region = "Indian";
+
+    // Also check if role matches category loose check
+    if (
+      (RAW_DATA[cat].foreign && RAW_DATA[cat].foreign.includes(name)) ||
+      (RAW_DATA[cat].indian && RAW_DATA[cat].indian.includes(name))
+    ) {
+      if (cat.toLowerCase().includes("keep")) roleKey = "wk";
+      else if (cat.toLowerCase().includes("round")) roleKey = "ar";
+      else if (cat.toLowerCase().includes("bowl")) roleKey = "bowl";
+      else roleKey = "bat";
     }
-    
-    // Override roleKey from DB if explicit
-    if(db.type) roleKey = db.type;
+  }
 
-    return {
-        name: name,
-        price: 10000000, // Dummy price
-        roleKey: roleKey,
-        playerType: region, 
-        stats: db,
-        cat: roleKey.toUpperCase(),
-        set: 1
-    };
+  // Override roleKey from DB if explicit
+  if (db.type) roleKey = db.type;
+
+  return {
+    name: name,
+    price: 10000000, // Dummy price
+    roleKey: roleKey,
+    playerType: region,
+    stats: db,
+    cat: roleKey.toUpperCase(),
+    set: 1,
+  };
 }
 
 document.getElementById("autoTestBtn")?.addEventListener("click", () => {
-    if (!isAdmin) {
-        alert("Only Host can run auto test.");
-        return;
-    }
-    
-    if(!confirm("⚠️ FORCE SKIP to Squad Selection with Auto-Filled Teams?\n(This skips the auction completely)")) return;
+  if (!isAdmin) {
+    alert("Only Host can run auto test.");
+    return;
+  }
 
-    const rcbRoster = AUTO_RCB_NAMES.map(name => getPlayerForTest(name));
-    const cskRoster = AUTO_CSK_NAMES.map(name => getPlayerForTest(name));
+  if (
+    !confirm(
+      "⚠️ FORCE SKIP to Squad Selection with Auto-Filled Teams?\n(This skips the auction completely)",
+    )
+  )
+    return;
 
-    socket.emit("admin_auto_test", { rcb: rcbRoster, csk: cskRoster });
+  const rcbRoster = AUTO_RCB_NAMES.map((name) => getPlayerForTest(name));
+  const cskRoster = AUTO_CSK_NAMES.map((name) => getPlayerForTest(name));
+
+  socket.emit("admin_auto_test", { rcb: rcbRoster, csk: cskRoster });
 });
 function formatOver(balls) {
-    if (!balls) return "0.0";
-    const o = Math.floor(balls / 6);
-    const b = balls % 6;
-    return `${o}.${b}`;
+  if (!balls) return "0.0";
+  const o = Math.floor(balls / 6);
+  const b = balls % 6;
+  return `${o}.${b}`;
 }
 window.formatOver = formatOver;
 
@@ -2715,7 +2882,7 @@ window.formatOver = formatOver;
 function sendChatMessage() {
   const input = document.getElementById("chatInput");
   const message = input.value.trim();
-  
+
   if (!message) return;
   if (!myPlayerName) {
     // Alert user to enter name first
@@ -2729,14 +2896,14 @@ function sendChatMessage() {
     input.value = "";
     return;
   }
-  
+
   // Emit chat message to server
   socket.emit("chat_message", {
     playerName: myPlayerName,
     message: message,
-    timestamp: Date.now()
+    timestamp: Date.now(),
   });
-  
+
   // Clear input
   input.value = "";
 }
@@ -2746,18 +2913,18 @@ socket.off("chat_message");
 socket.on("chat_message", (data) => {
   const chatContainer = document.getElementById("chatMessages");
   if (!chatContainer) return;
-  
+
   // Create message element
   const messageDiv = document.createElement("div");
   messageDiv.className = "chat-message";
-  
+
   messageDiv.innerHTML = `
     <div class="chat-name">${escapeHtml(data.playerName)}:</div>
     <div class="chat-text">${escapeHtml(data.message)}</div>
   `;
-  
+
   chatContainer.appendChild(messageDiv);
-  
+
   // Auto-scroll to bottom
   chatContainer.scrollTop = chatContainer.scrollHeight;
 });
@@ -2766,11 +2933,11 @@ socket.on("chat_message", (data) => {
 document.addEventListener("DOMContentLoaded", () => {
   const sendBtn = document.getElementById("sendChatBtn");
   const chatInput = document.getElementById("chatInput");
-  
+
   if (sendBtn) {
     sendBtn.addEventListener("click", sendChatMessage);
   }
-  
+
   if (chatInput) {
     // Send on Enter key
     chatInput.addEventListener("keypress", (e) => {
@@ -2780,10 +2947,10 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   }
-  
+
   // Name Entry System
   const lobbyPlayerName = document.getElementById("lobbyPlayerName");
-  
+
   if (lobbyPlayerName) {
     const submitName = () => {
       const name = lobbyPlayerName.value.trim();
@@ -2791,21 +2958,21 @@ document.addEventListener("DOMContentLoaded", () => {
         // Just return if empty, no alert
         return;
       }
-      
+
       // Store name
       myPlayerName = name;
-      sessionStorage.setItem("ipl_auction_player_name", name);
-      
+      localStorage.setItem("ipl_auction_player_name", name);
+
       // Hide name entry section
       document.getElementById("nameEntrySection").style.display = "none";
-      
+
       // Send name to server
       socket.emit("update_player_name", { playerName: name });
-      
+
       // Show success message
       logEvent(`✅ Welcome, ${name}!`, true);
     };
-    
+
     // Enter key support
     lobbyPlayerName.addEventListener("keypress", (e) => {
       if (e.key === "Enter") {

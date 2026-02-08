@@ -443,8 +443,8 @@
 <body>
     <div class="profile-container">
         <div class="header-section">
-            <a href="ipl.html" class="back-btn">
-                <i class="bi bi-arrow-left"></i> BACK TO LOBBY
+            <a href="dashboard.html" class="back-btn">
+                <i class="bi bi-speedometer2"></i> DASHBOARD
             </a>
             <button class="logout-btn" onclick="logout()">
                 <i class="bi bi-box-arrow-right"></i> LOGOUT
@@ -514,16 +514,239 @@
         </div>
     </div>
 
+    <!-- Edit Profile Modal -->
+    <div id="editProfileModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Edit Profile</h3>
+                <button class="close-modal" onclick="closeEditModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Profile Image</label>
+                    <div class="avatar-upload">
+                        <div class="avatar-preview" id="avatarPreview">
+                            <i class="bi bi-person-fill"></i>
+                        </div>
+                        <input type="file" id="avatarInput" accept="image/*" onchange="previewImage(this)" hidden>
+                        <button class="upload-btn" onclick="document.getElementById('avatarInput').click()">
+                            <i class="bi bi-camera"></i> Change Photo
+                        </button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Display Name</label>
+                    <input type="text" id="editNameInput" class="form-input" placeholder="Enter your name">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeEditModal()">Cancel</button>
+                <button class="btn-save" onclick="saveProfile()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background: #1a1a2e;
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            border-radius: 15px;
+            width: 90%;
+            max-width: 500px;
+            padding: 25px;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+            animation: modalSlideIn 0.3s ease-out;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 10px;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            color: #FFD700;
+            font-family: 'Teko', sans-serif;
+            font-size: 1.8rem;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+
+        .close-modal:hover {
+            color: #f44336;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: #fff;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .form-input:focus {
+            border-color: #FFD700;
+        }
+
+        .avatar-upload {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .avatar-preview {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: #2a2a40;
+            border: 2px solid #FFD700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            font-size: 2.5rem;
+            color: #fff;
+        }
+
+        .avatar-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .upload-btn {
+            background: rgba(255, 215, 0, 0.1);
+            border: 1px solid #FFD700;
+            color: #FFD700;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s;
+        }
+
+        .upload-btn:hover {
+            background: #FFD700;
+            color: #000;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .btn-cancel {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-cancel:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .btn-save {
+            background: #FFD700;
+            border: none;
+            color: #000;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-save:hover {
+            background: #FFA500;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 165, 0, 0.4);
+        }
+
+        .edit-btn {
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.5);
+            cursor: pointer;
+            font-size: 1rem;
+            margin-left: 10px;
+            transition: color 0.3s;
+        }
+
+        .edit-btn:hover {
+            color: #FFD700;
+        }
+    </style>
+
     <script>
         // Global variables
         let currentUserEmail = null;
         let searchTimeout = null;
+        let currentAvatarBase64 = null;
 
         // Load user profile on page load
         document.addEventListener('DOMContentLoaded', async () => {
             const user = JSON.parse(localStorage.getItem('user'));
             if (!user || !user.email) {
-                window.location.href = 'ipl.html';
+                window.location.href = 'login.html';
                 return;
             }
             currentUserEmail = user.email;
@@ -534,9 +757,8 @@
         async function loadProfile(email) {
             try {
                 const response = await fetch(`/api/auth/profile/${email}`);
-                const data = await response.json();
-
                 if (response.ok) {
+                    const data = await response.json();
                     document.getElementById('loadingSection').style.display = 'none';
                     document.getElementById('profileContent').style.display = 'block';
                     displayProfile(data);
@@ -548,22 +770,51 @@
                     } else {
                         document.getElementById('viewingProfile').style.display = 'none';
                     }
-                } else {
-                    document.getElementById('loadingSection').innerHTML =
-                        '<div style="color: #f44336;"><i class="bi bi-exclamation-triangle"></i> Failed to load profile</div>';
+                    return;
                 }
+                throw new Error('Profile fetch failed');
             } catch (error) {
-                console.error('Error loading profile:', error);
+                console.warn('Error loading profile API, trying fallback:', error);
+
+                // Fallback: Use local storage if it's my profile
+                if (email === currentUserEmail) {
+                    const savedUser = JSON.parse(localStorage.getItem('user'));
+                    if (savedUser) {
+                        document.getElementById('loadingSection').style.display = 'none';
+                        document.getElementById('profileContent').style.display = 'block';
+                        displayProfile(savedUser);
+                        document.getElementById('viewingProfile').style.display = 'none';
+                        return;
+                    }
+                }
+
                 document.getElementById('loadingSection').innerHTML =
-                    '<div style="color: #f44336;"><i class="bi bi-exclamation-triangle"></i> Error loading profile</div>';
+                    '<div style="color: #f44336;"><i class="bi bi-exclamation-triangle"></i> Error loading profile. Please check your connection.</div>';
             }
         }
 
         function displayProfile(profile) {
             // Display user info
-            const initials = profile.name.split(' ').map(n => n[0]).join('').toUpperCase();
-            document.getElementById('userAvatar').innerHTML = initials;
-            document.getElementById('userName').textContent = profile.name.toUpperCase();
+            const userNameEl = document.getElementById('userName');
+
+            // Add edit button if it's my profile
+            let nameHtml = profile.name.toUpperCase();
+            if (profile.email === currentUserEmail) {
+                nameHtml += ` <button class="edit-btn" onclick="openEditModal('${profile.name}', '${profile.avatar || ''}')"><i class="bi bi-pencil-square"></i></button>`;
+            }
+            userNameEl.innerHTML = nameHtml;
+
+            // Avatar logic
+            const avatarContainer = document.getElementById('userAvatar');
+            if (profile.avatar) {
+                avatarContainer.innerHTML = `<img src="${profile.avatar}" alt="Avatar" style="width:100%; height:100%; border-radius:50%; object-fit:cover;">`;
+                avatarContainer.style.background = 'none'; // Remove gradient background if image exists
+            } else {
+                const initials = profile.name.split(' ').map(n => n[0]).join('').toUpperCase();
+                avatarContainer.innerHTML = initials;
+                avatarContainer.style.background = 'linear-gradient(135deg, #FFD700, #FFA500)';
+            }
+
             document.getElementById('userEmail').textContent = profile.email;
 
             const joinDate = new Date(profile.createdAt).toLocaleDateString('en-US', {
@@ -744,12 +995,82 @@
         }
 
         function logout() {
-            localStorage.removeItem('token');
-            localStorage.removeItem('user');
-            localStorage.removeItem('userEmail');
-            window.location.href = 'ipl.html';
+            if (window.Auth) {
+                window.Auth.logout();
+            } else {
+                localStorage.clear();
+                window.location.href = 'login.html';
+            }
+        }
+
+        // --- EDIT PROFILE FUNCTIONS ---
+        function openEditModal(currentName, currentAvatar) {
+            const modal = document.getElementById('editProfileModal');
+            document.getElementById('editNameInput').value = currentName;
+
+            const preview = document.getElementById('avatarPreview');
+            if (currentAvatar) {
+                preview.innerHTML = `<img src="${currentAvatar}">`;
+                currentAvatarBase64 = currentAvatar;
+            } else {
+                preview.innerHTML = `<i class="bi bi-person-fill"></i>`;
+                currentAvatarBase64 = null;
+            }
+
+            modal.style.display = 'flex';
+        }
+
+        function closeEditModal() {
+            document.getElementById('editProfileModal').style.display = 'none';
+        }
+
+        function previewImage(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    currentAvatarBase64 = e.target.result;
+                    document.getElementById('avatarPreview').innerHTML = `<img src="${currentAvatarBase64}">`;
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        async function saveProfile() {
+            const newName = document.getElementById('editNameInput').value;
+            if (!newName) return alert('Name cannot be empty');
+
+            try {
+                const response = await fetch('/api/auth/profile', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: currentUserEmail,
+                        name: newName,
+                        avatar: currentAvatarBase64
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    // Update LocalStorage
+                    const user = JSON.parse(localStorage.getItem('user'));
+                    user.name = newName;
+                    localStorage.setItem('user', JSON.stringify(user));
+
+                    // Reload Profile
+                    await loadProfile(currentUserEmail);
+                    closeEditModal();
+                } else {
+                    alert('Failed to update profile: ' + result.message);
+                }
+            } catch (e) {
+                console.error(e);
+                alert('Error updating profile');
+            }
         }
     </script>
+    <script src="auth.js"></script>
 </body>
 
 </html>

@@ -1,19 +1,18 @@
-
-
 // ======================================================
 // 🔧 0. PERSISTENT IDENTITY (THE WRISTBAND)
 // ======================================================
-let myPersistentId = sessionStorage.getItem("ipl_auction_player_id");
+let myPersistentId = localStorage.getItem("ipl_auction_player_id");
 
 if (!myPersistentId) {
-  myPersistentId =
-    "user_" + Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
-  sessionStorage.setItem("ipl_auction_player_id", myPersistentId);
+  myPersistentId = localStorage.getItem("ipl_auction_player_id");
+  if (!myPersistentId) {
+    myPersistentId = "user_" + Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
+    localStorage.setItem("ipl_auction_player_id", myPersistentId);
+  }
 }
 
 // Player Name Storage
-let myPlayerName = sessionStorage.getItem("ipl_auction_player_name") || "";
-
+let myPlayerName = localStorage.getItem("ipl_auction_player_name") || "";
 
 // ======================================================
 // 🔊 REALISTIC SOUND & TTS ENGINE
@@ -28,23 +27,43 @@ let knownTakenTeams = new Set();
 // Helper function to convert role key to full name for voice
 function getRoleFullName(roleKey) {
   const roleMap = {
-    'wk': 'Wicket Keeper',
-    'bat': 'Batsman',
-    'bowl': 'Bowler',
-    'ar': 'All-rounder',
-    'allrounder': 'All-rounder'
+    wk: "Wicket Keeper",
+    bat: "Batsman",
+    bowl: "Bowler",
+    ar: "All-rounder",
+    allrounder: "All-rounder",
   };
   return roleMap[roleKey.toLowerCase()] || roleKey;
 }
 
 // Helper function to convert player type
 function getPlayerTypeFullName(playerType) {
-  if (playerType === 'Foreign') return 'Overseas Player';
-  return 'Domestic Player';
+  if (playerType === "Foreign") return "Overseas Player";
+  return "Domestic Player";
 }
 
 // Initialize Sound Toggle
 document.addEventListener("DOMContentLoaded", () => {
+  try {
+    // Sync User Identity from Auth
+    const u = localStorage.getItem("user");
+    const userData = u ? JSON.parse(u) : null;
+    if (userData) {
+      if (document.getElementById("userWelcome") && userData.name) {
+        document.getElementById("userWelcome").innerText =
+          `WELCOME, ${userData.name.toUpperCase()}`;
+      }
+      if (document.getElementById("userEmailDisplay")) {
+        document.getElementById("userEmailDisplay").innerText =
+          userData.email || "";
+      }
+      myPlayerName = userData.name || "";
+      localStorage.setItem("ipl_auction_player_name", myPlayerName);
+    }
+  } catch (err) {
+    console.warn("Failed to parse user data:", err);
+  }
+
   loadVoices();
   if (window.speechSynthesis.onvoiceschanged !== undefined) {
     window.speechSynthesis.onvoiceschanged = loadVoices;
@@ -52,15 +71,68 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Initialize audio button when it becomes available
   initializeSoundButton();
+
+  // Show lobby screen by default
+  const lobby = document.getElementById("lobbyScreen");
+  if (lobby) {
+    lobby.style.setProperty("display", "flex", "important");
+  }
+
+  // ✨ NEW: Auto-reconnect feature
+  checkAutoReconnect();
 });
+
+// NEW: Check for auto-reconnect and join room automatically
+function checkAutoReconnect() {
+  const autoRoomId = localStorage.getItem("auto_reconnect_room");
+  const autoTeamKey = localStorage.getItem("auto_reconnect_team");
+  
+  if (autoRoomId && autoTeamKey) {
+    console.log("🔄 Auto-reconnecting to room:", autoRoomId);
+    
+    // Clear the flags
+    localStorage.removeItem("auto_reconnect_room");
+    localStorage.removeItem("auto_reconnect_team");
+    
+    // Wait for socket to connect
+    if (socket.connected) {
+      performAutoJoin(autoRoomId);
+    } else {
+      socket.on("connect", () => {
+        performAutoJoin(autoRoomId);
+      });
+    }
+  }
+}
+
+// Perform the actual auto-join
+function performAutoJoin(roomId) {
+  // Emit join_room without password (server will recognize the player)
+  const playerName = localStorage.getItem("ipl_auction_player_name") || 
+                     localStorage.getItem("userName") || "";
+  
+  socket.emit("join_room", {
+    roomId: roomId,
+    password: "", // Server will allow reconnect based on playerId
+    playerName: playerName
+  });
+  
+  myRoomId = roomId;
+  
+  // Show loading message
+  if (lobbyError) {
+    lobbyError.innerText = "🔄 Reconnecting to your auction...";
+    lobbyError.style.color = "#4CAF50";
+  }
+}
 
 // Function to initialize sound button (can be called multiple times safely)
 function initializeSoundButton() {
   const btn = document.getElementById("soundToggleBtn");
-  
+
   if (btn && !btn.dataset.initialized) {
     btn.dataset.initialized = "true"; // Mark as initialized
-    
+
     btn.addEventListener("click", () => {
       isSoundEnabled = !isSoundEnabled;
       btn.classList.toggle("active", isSoundEnabled);
@@ -176,7 +248,7 @@ function playHammerSound() {
     const noiseBuffer = audioCtx.createBuffer(
       1,
       bufferSize,
-      audioCtx.sampleRate
+      audioCtx.sampleRate,
     );
     const data = noiseBuffer.getChannelData(0);
 
@@ -246,6 +318,7 @@ const socket = io({
     playerId: myPersistentId,
   },
 });
+window.socket = socket;
 
 const lobbyScreen = document.getElementById("lobbyScreen");
 const gameContainer = document.getElementById("gameContainer");
@@ -253,7 +326,7 @@ const lobbyError = document.getElementById("lobbyError");
 
 // --- GLOBAL VARIABLES ---
 let myRoomId = null;
-let mySelectedTeamKey = null;
+var mySelectedTeamKey = null; // Defined with var to be accessible via window.mySelectedTeamKey
 let isAdmin = false;
 let saleProcessing = false;
 let auctionQueue = [];
@@ -263,6 +336,48 @@ let auctionStarted = false;
 let currentHighestBidderKey = null;
 let connectedUsersCount = 1;
 let lastTournamentData = null;
+
+// ======================================================
+// 🍞 TOAST NOTIFICATION SYSTEM
+// ======================================================
+window.showToast = function(message, type = 'info') {
+    // Remove existing toasts
+    document.querySelectorAll('.pwa-toast').forEach(t => t.remove());
+
+    const toast = document.createElement('div');
+    toast.className = 'pwa-toast';
+    
+    // Icon based on type
+    let icon = '🔔';
+    if (type === 'error') icon = '⚠️';
+    if (type === 'success') icon = '✅';
+    if (type === 'warning') icon = '⚠️';
+
+    toast.innerHTML = `
+        <div class="d-flex align-items-center gap-2">
+            <span style="font-size: 1.2em;">${icon}</span>
+            <span>${message}</span>
+        </div>
+    `;
+
+    document.body.appendChild(toast);
+
+    // Trigger animation
+    requestAnimationFrame(() => {
+        toast.classList.add('show');
+    });
+
+    // Auto dismiss
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+// Override window.alert to use toast (Global Safety)
+window.alert = function(msg) {
+    showToast(msg, 'warning');
+};
 
 const ALL_IPL_TEAMS = [
   "CSK",
@@ -288,8 +403,6 @@ setInterval(() => {
   }
 }, 25000);
 
-
-
 // --- SOCKET STATUS HANDLERS ---
 socket.on("connect", () => {
   socketAlive = true;
@@ -299,7 +412,11 @@ socket.on("connect", () => {
 socket.on("disconnect", (reason) => {
   socketAlive = false;
   console.warn("⚠️ Socket disconnected:", reason);
-  logEvent("⚠️ Connection lost. Reconnecting...", true);
+  showToast("⚠️ Connection lost. Reconnecting...", "error");
+});
+
+socket.on("error_message", (msg) => {
+  showToast(msg, "error");
 });
 
 socket.on("reconnect", () => {
@@ -335,220 +452,139 @@ if (!window._beforeUnloadBound) {
 // ======================================================
 const PLAYER_DATABASE = {
   // --- MARQUEE & TOP BATTERS ---
-  "Virat Kohli": { bat: 98, bowl: 10, luck: 90, type: "bat" },
-  "Rohit Sharma": { bat: 95, bowl: 15, luck: 92, type: "bat" },
-  "Shubman Gill": { bat: 92, bowl: 5, luck: 88, type: "bat" },
-  "Suryakumar Yadav": { bat: 96, bowl: 5, luck: 85, type: "bat" },
-  "Travis Head": { bat: 94, bowl: 20, luck: 88, type: "bat" },
-  "Yashasvi Jaiswal": { bat: 90, bowl: 10, luck: 85, type: "bat" },
-  "Ruturaj Gaikwad": { bat: 89, bowl: 5, luck: 88, type: "bat" },
-  "Rinku Singh": { bat: 90, bowl: 5, luck: 95, type: "bat" },
-  "Shreyas Iyer": { bat: 88, bowl: 10, luck: 85, type: "bat" },
-  "Faf du Plessis": { bat: 88, bowl: 5, luck: 82, type: "bat" },
-  "David Warner": { bat: 89, bowl: 5, luck: 78, type: "bat" },
 
-  // --- FOREIGN BATTERS ---
-  "David Miller": { bat: 89, bowl: 5, luck: 90, type: "bat" },
-  "Harry Brook": { bat: 86, bowl: 10, luck: 75, type: "bat" },
-  "Kane Williamson": { bat: 88, bowl: 15, luck: 82, type: "bat" },
-  "Shimron Hetmyer": { bat: 85, bowl: 5, luck: 85, type: "bat" },
-  "Rovman Powell": { bat: 82, bowl: 15, luck: 80, type: "bat" },
-  "Steve Smith": { bat: 86, bowl: 10, luck: 75, type: "bat" },
-  "Devon Conway": { bat: 89, bowl: 5, luck: 85, type: "bat" },
-  "Jake Fraser-McGurk": { bat: 88, bowl: 5, luck: 88, type: "bat" },
-  "Dewald Brevis": { bat: 80, bowl: 20, luck: 75, type: "bat" },
-  "Tim David": { bat: 86, bowl: 10, luck: 85, type: "bat" },
-  "Finn Allen": { bat: 83, bowl: 5, luck: 75, type: "bat" },
-  "Rilee Rossouw": { bat: 84, bowl: 5, luck: 70, type: "bat" },
-  "Jason Roy": { bat: 85, bowl: 5, luck: 78, type: "bat" },
+  // --- INDIAN BATTERS (Tier 1) ---
+  "Virat Kohli": { bat: 98, bowl: 10, luck: 90, type: "bat", role: "Opener, Anchor" },
+  "Rohit Sharma": { bat: 95, bowl: 15, luck: 92, type: "bat", role: "Opener, Captain" },
+  "Shubman Gill": { bat: 92, bowl: 5, luck: 88, type: "bat", role: "Opener, Captain" },
+  "Suryakumar Yadav": { bat: 96, bowl: 5, luck: 85, type: "bat", role: "Middle Order, 360, Power Hitter" },
+  "Yashasvi Jaiswal": { bat: 91, bowl: 10, luck: 85, type: "bat", role: "Opener, Powerplay Specialist" },
+  "Ruturaj Gaikwad": { bat: 89, bowl: 5, luck: 88, type: "bat", role: "Opener, Anchor, Captain" },
+  "Rinku Singh": { bat: 90, bowl: 5, luck: 95, type: "bat", role: "Finisher, Power Hitter" },
+  "Shreyas Iyer": { bat: 89, bowl: 10, luck: 88, type: "bat", role: "Middle Order, Captain, Spin Basher" },
+  "Sanju Samson": { bat: 91, bowl: 0, luck: 85, type: "wk", role: "Wicket Keeper, Top Order, Captain" },
+  "Rishabh Pant": { bat: 92, bowl: 0, luck: 90, type: "wk", role: "Wicket Keeper, Middle Order, Captain" },
+  "KL Rahul": { bat: 90, bowl: 0, luck: 85, type: "wk", role: "Wicket Keeper, Opener, Anchor" },
+  "Ishan Kishan": { bat: 87, bowl: 0, luck: 80, type: "wk", role: "Wicket Keeper, Opener" },
+  "Abhishek Sharma": { bat: 89, bowl: 50, luck: 85, type: "ar", role: "Opener, Power Hitter" },
+  "Tilak Varma": { bat: 88, bowl: 15, luck: 85, type: "bat", role: "Middle Order, Finisher" },
+  "Shyam Khan": { bat: 80, bowl: 80, luck: 85, type: "ar", role: "Finisher, All Rounder, Spinner" },
+  "Siva": { bat: 85, bowl: 85, luck: 85, type: "ar", role: "Finisher, All Rounder, Spinner" },
 
-  // --- INDIAN BATTERS ---
-  "Sai Sudharsan": { bat: 88, bowl: 5, luck: 85, type: "bat" },
-  "Tilak Varma": { bat: 87, bowl: 15, luck: 85, type: "bat" },
-  "Shikhar Dhawan": { bat: 84, bowl: 5, luck: 80, type: "bat" },
-  "Ajinkya Rahane": { bat: 80, bowl: 5, luck: 75, type: "bat" },
-  "Prithvi Shaw": { bat: 82, bowl: 5, luck: 70, type: "bat" },
-  "Rajat Patidar": { bat: 85, bowl: 5, luck: 82, type: "bat" },
-  "Rahul Tripathi": { bat: 81, bowl: 5, luck: 75, type: "bat" },
-  "Shivam Dube": { bat: 88, bowl: 40, luck: 85, type: "bat" },
-  "Manish Pandey": { bat: 78, bowl: 5, luck: 70, type: "bat" },
-  "Devdutt Padikkal": { bat: 80, bowl: 5, luck: 75, type: "bat" },
-
-  // --- DOMESTIC / UNCAPPED BATTERS ---
-  "Sameer Rizvi": { bat: 78, bowl: 10, luck: 75, type: "bat" },
-  "Angkrish Raghuvanshi": { bat: 80, bowl: 10, luck: 78, type: "bat" },
-  "Ashutosh Sharma": { bat: 84, bowl: 5, luck: 88, type: "bat" },
-  "Shashank Singh": { bat: 85, bowl: 10, luck: 88, type: "bat" },
-  "Nehal Wadhera": { bat: 82, bowl: 15, luck: 80, type: "bat" },
-  "Naman Dhir": { bat: 78, bowl: 40, luck: 75, type: "bat" },
-  "Ayush Badoni": { bat: 80, bowl: 10, luck: 80, type: "bat" },
-  "Yash Dhull": { bat: 76, bowl: 5, luck: 75, type: "bat" },
-  "Sarfaraz Khan": { bat: 82, bowl: 5, luck: 75, type: "bat" },
-  "Abdul Samad": { bat: 80, bowl: 15, luck: 80, type: "bat" },
-  "Vaibhav Suryavanshi": { bat: 76, bowl: 10, luck: 85, type: "bat" },
-  "Priyansh Arya": { bat: 80, bowl: 5, luck: 80, type: "bat" },
-  "Swastik Chikara": { bat: 78, bowl: 5, luck: 75, type: "bat" },
-  "Musheer Khan": { bat: 78, bowl: 60, luck: 78, type: "bat" },
-  "Aniket Verma": { bat: 75, bowl: 5, luck: 75, type: "bat" },
-
-  // --- WICKETKEEPERS ---
-  "Rishabh Pant": { bat: 92, bowl: 0, luck: 90, type: "wk" },
-  "MS Dhoni": { bat: 85, bowl: 0, luck: 99, type: "wk" },
-  "Jos Buttler": { bat: 93, bowl: 0, luck: 88, type: "wk" },
-  "Heinrich Klaasen": { bat: 95, bowl: 0, luck: 90, type: "wk" },
-  "Sanju Samson": { bat: 90, bowl: 0, luck: 85, type: "wk" },
-  "KL Rahul": { bat: 91, bowl: 0, luck: 85, type: "wk" },
-  "Nicholas Pooran": { bat: 92, bowl: 0, luck: 88, type: "wk" },
-  "Quinton de Kock": { bat: 89, bowl: 0, luck: 85, type: "wk" },
-  "Phil Salt": { bat: 88, bowl: 0, luck: 82, type: "wk" },
-  "Ishan Kishan": { bat: 87, bowl: 0, luck: 80, type: "wk" },
-  "Jitesh Sharma": { bat: 82, bowl: 0, luck: 78, type: "wk" },
-  "Dhruv Jurel": { bat: 82, bowl: 0, luck: 82, type: "wk" },
-  "Dinesh Karthik": { bat: 85, bowl: 0, luck: 88, type: "wk" },
-  "Jonny Bairstow": { bat: 90, bowl: 0, luck: 85, type: "wk" },
-  "Rahmanullah Gurbaz": { bat: 84, bowl: 0, luck: 80, type: "wk" },
-  "Josh Inglis": { bat: 85, bowl: 0, luck: 82, type: "wk" },
-  "Shai Hope": { bat: 83, bowl: 0, luck: 80, type: "wk" },
-  "Tristan Stubbs": { bat: 88, bowl: 15, luck: 85, type: "wk" },
-  "Wriddhiman Saha": { bat: 82, bowl: 0, luck: 80, type: "wk" },
-  "Anuj Rawat": { bat: 78, bowl: 0, luck: 75, type: "wk" },
-  "Prabhsimran Singh": { bat: 84, bowl: 0, luck: 80, type: "wk" },
-  "KS Bharat": { bat: 78, bowl: 0, luck: 75, type: "wk" },
-  "Vishnu Vinod": { bat: 78, bowl: 0, luck: 75, type: "wk" },
-  "Abishek Porel": { bat: 83, bowl: 0, luck: 80, type: "wk" },
-  "Robin Minz": { bat: 80, bowl: 0, luck: 82, type: "wk" },
-  "Kumar Kushagra": { bat: 78, bowl: 0, luck: 78, type: "wk" },
-  "Ryan Rickelton": { bat: 80, bowl: 0, luck: 75, type: "wk" },
-  "Donovan Ferreira": { bat: 82, bowl: 10, luck: 75, type: "wk" },
+  // --- FOREIGN BATTERS (Tier 1) ---
+  "Travis Head": { bat: 94, bowl: 20, luck: 88, type: "bat", role: "Opener, Power Hitter" },
+  "Heinrich Klaasen": { bat: 96, bowl: 0, luck: 90, type: "wk", role: "Wicket Keeper, Finisher, Spin Basher" },
+  "Jos Buttler": { bat: 93, bowl: 0, luck: 88, type: "wk", role: "Wicket Keeper, Opener, Power Hitter" },
+  "Faf du Plessis": { bat: 88, bowl: 5, luck: 82, type: "bat", role: "Opener, Captain" },
+  "David Warner": { bat: 84, bowl: 5, luck: 75, type: "bat", role: "Opener, Legend" }, // Nerfed due to age/form
+  "Nicholas Pooran": { bat: 92, bowl: 0, luck: 88, type: "wk", role: "Wicket Keeper, Finisher" },
+  "Glenn Maxwell": { bat: 90, bowl: 75, luck: 80, type: "ar", role: "Finisher, All Rounder, Spinner" },
+  "Quinton de Kock": { bat: 88, bowl: 0, luck: 85, type: "wk", role: "Wicket Keeper, Opener" },
+  "David Miller": { bat: 89, bowl: 5, luck: 90, type: "bat", role: "Finisher, Power Hitter" },
+  "Phil Salt": { bat: 89, bowl: 0, luck: 82, type: "wk", role: "Wicket Keeper, Opener, Power Hitter" },
+  "Tristan Stubbs": { bat: 90, bowl: 15, luck: 85, type: "wk", role: "Wicket Keeper, Finisher, Power Hitter" }, // Buffed (Delhi standout)
+  "Jake Fraser-McGurk": { bat: 89, bowl: 5, luck: 88, type: "bat", role: "Opener, Power Hitter" },
+  "Will Jacks": { bat: 88, bowl: 60, luck: 85, type: "ar", role: "Opener, All Rounder, Spinner" },
+  "Rachin Ravindra": { bat: 85, bowl: 75, luck: 82, type: "ar", role: "Opener, All Rounder, Spinner" },
 
   // --- ALL-ROUNDERS (Top Tier) ---
-  "Hardik Pandya": { bat: 88, bowl: 85, luck: 90, type: "ar" },
-  "Ravindra Jadeja": { bat: 85, bowl: 88, luck: 90, type: "ar" },
-  "Andre Russell": { bat: 94, bowl: 82, luck: 90, type: "ar" },
-  "Glenn Maxwell": { bat: 90, bowl: 75, luck: 80, type: "ar" },
-  "Sunil Narine": { bat: 92, bowl: 90, luck: 92, type: "ar" },
-  "Axar Patel": { bat: 84, bowl: 88, luck: 88, type: "ar" },
-  "Cameron Green": { bat: 87, bowl: 82, luck: 85, type: "ar" },
-  "Liam Livingstone": { bat: 87, bowl: 70, luck: 80, type: "ar" },
-  "Sam Curran": { bat: 78, bowl: 86, luck: 85, type: "ar" },
-  "Marcus Stoinis": { bat: 88, bowl: 75, luck: 88, type: "ar" },
-  "Will Jacks": { bat: 88, bowl: 60, luck: 85, type: "ar" },
-  "Rachin Ravindra": { bat: 85, bowl: 75, luck: 82, type: "ar" },
-  "Moeen Ali": { bat: 82, bowl: 78, luck: 80, type: "ar" },
-  "Mitchell Marsh": { bat: 88, bowl: 78, luck: 82, type: "ar" },
-  "Pat Cummins": { bat: 75, bowl: 92, luck: 95, type: "ar" },
-  "Ravichandran Ashwin": { bat: 72, bowl: 88, luck: 90, type: "ar" },
+  "Sunil Narine": { bat: 92, bowl: 90, luck: 92, type: "ar", role: "Opener, Spinner, Mystery Spin, MVP" }, // Role Updated
+  "Andre Russell": { bat: 94, bowl: 82, luck: 90, type: "ar", role: "Finisher, All Rounder, Pacer" },
+  "Hardik Pandya": { bat: 85, bowl: 80, luck: 85, type: "ar", role: "Finisher, All Rounder, Pacer" }, // Nerfed slightly
+  "Ravindra Jadeja": { bat: 85, bowl: 88, luck: 90, type: "ar", role: "Spinner, All Rounder, Left Arm Orth" },
+  "Axar Patel": { bat: 85, bowl: 88, luck: 88, type: "ar", role: "Spinner, All Rounder, Left Arm Orth" },
+  "Marcus Stoinis": { bat: 88, bowl: 75, luck: 88, type: "ar", role: "Finisher, All Rounder, Pacer" },
+  "Liam Livingstone": { bat: 87, bowl: 70, luck: 80, type: "ar", role: "Finisher, All Rounder, Spinner" },
+  "Sam Curran": { bat: 80, bowl: 85, luck: 85, type: "ar", role: "All Rounder, Pacer, Swing" },
+  "Cameron Green": { bat: 86, bowl: 82, luck: 85, type: "ar", role: "Top Order, All Rounder, Pacer" },
+  "Pat Cummins": { bat: 78, bowl: 92, luck: 95, type: "ar", role: "Pacer, Captain, All Rounder" },
+  "Nitish Kumar Reddy": { bat: 85, bowl: 78, luck: 88, type: "ar", role: "Middle Order, All Rounder, Pacer" }, // Added/Buffed
 
-  // --- ALL-ROUNDERS (Mid/Domestic) ---
-  "Nitish Kumar Reddy": { bat: 85, bowl: 78, luck: 88, type: "ar" },
-  "Abhishek Sharma": { bat: 89, bowl: 50, luck: 85, type: "ar" },
-  "Azmatullah Omarzai": { bat: 80, bowl: 78, luck: 78, type: "ar" },
-  "Romario Shepherd": { bat: 82, bowl: 75, luck: 78, type: "ar" },
-  "Mohammad Nabi": { bat: 80, bowl: 80, luck: 78, type: "ar" },
-  "Jason Holder": { bat: 75, bowl: 82, luck: 75, type: "ar" },
-  "Krunal Pandya": { bat: 78, bowl: 82, luck: 80, type: "ar" },
-  "Deepak Hooda": { bat: 78, bowl: 30, luck: 75, type: "ar" },
-  "Rahul Tewatia": { bat: 82, bowl: 40, luck: 92, type: "ar" },
-  "Riyan Parag": { bat: 85, bowl: 40, luck: 80, type: "ar" },
-  "Shahrukh Khan": { bat: 82, bowl: 10, luck: 78, type: "ar" },
-  "Chris Woakes": { bat: 65, bowl: 85, luck: 82, type: "ar" },
-  "Daniel Sams": { bat: 60, bowl: 82, luck: 80, type: "ar" },
-  "Kyle Mayers": { bat: 85, bowl: 70, luck: 80, type: "ar" },
-  "Vijay Shankar": { bat: 78, bowl: 60, luck: 75, type: "ar" },
-  "Shahbaz Ahmed": { bat: 75, bowl: 78, luck: 80, type: "ar" },
-  "Ramandeep Singh": { bat: 78, bowl: 65, luck: 80, type: "ar" },
-  "Lalit Yadav": { bat: 72, bowl: 65, luck: 75, type: "ar" },
-  "Washington Sundar": { bat: 75, bowl: 82, luck: 80, type: "ar" },
-  "Nitish Rana": { bat: 82, bowl: 40, luck: 75, type: "ar" },
-  "Venkatesh Iyer": { bat: 84, bowl: 50, luck: 80, type: "ar" },
-  "Daryl Mitchell": { bat: 86, bowl: 50, luck: 82, type: "ar" },
-  "Aiden Markram": { bat: 85, bowl: 45, luck: 82, type: "ar" },
-  "Sikandar Raza": { bat: 84, bowl: 82, luck: 82, type: "ar" },
-  "Mitchell Santner": { bat: 70, bowl: 86, luck: 85, type: "ar" },
-  "Arjun Tendulkar": { bat: 40, bowl: 78, luck: 75, type: "ar" },
-  "Tanush Kotian": { bat: 60, bowl: 75, luck: 75, type: "ar" },
-  "Suryansh Shedge": { bat: 65, bowl: 60, luck: 75, type: "ar" },
-  "Vipraj Nigam": { bat: 60, bowl: 70, luck: 75, type: "ar" },
+  // --- INDIAN BATTERS (Mid/Domestic) ---
+  "Sai Sudharsan": { bat: 89, bowl: 5, luck: 85, type: "bat", role: "Middle Order, Anchor" },
+  "Rajat Patidar": { bat: 86, bowl: 5, luck: 82, type: "bat", role: "Middle Order, Spin Basher" },
+  "Shivam Dube": { bat: 88, bowl: 40, luck: 85, type: "bat", role: "Finisher, Spin Basher" },
+  "Riyan Parag": { bat: 86, bowl: 40, luck: 82, type: "ar", role: "Middle Order, All Rounder" }, // Buffed
+  "Rahul Tripathi": { bat: 81, bowl: 5, luck: 75, type: "bat", role: "Top Order, Aggressor" },
+  "Ajinkya Rahane": { bat: 80, bowl: 5, luck: 75, type: "bat", role: "Top Order, Anchor" },
+  "Prithvi Shaw": { bat: 80, bowl: 5, luck: 70, type: "bat", role: "Opener, Powerplay Specialist" },
+  "Nehal Wadhera": { bat: 82, bowl: 15, luck: 80, type: "bat", role: "Middle Order, Finisher" },
+  "Ashutosh Sharma": { bat: 84, bowl: 5, luck: 88, type: "bat", role: "Finisher" },
+  "Shashank Singh": { bat: 85, bowl: 10, luck: 88, type: "bat", role: "Finisher" },
+  "Sameer Rizvi": { bat: 78, bowl: 10, luck: 75, type: "bat", role: "Finisher" },
+  "Dhruv Jurel": { bat: 84, bowl: 0, luck: 82, type: "wk", role: "Wicket Keeper, Finisher" },
+  "Jitesh Sharma": { bat: 82, bowl: 0, luck: 78, type: "wk", role: "Wicket Keeper, Finisher" },
 
-  // --- FAST BOWLERS (Foreign) ---
-  "Jasprit Bumrah": { bat: 20, bowl: 99, luck: 95, type: "bowl" },
-  "Mitchell Starc": { bat: 30, bowl: 92, luck: 88, type: "bowl" },
-  "Trent Boult": { bat: 20, bowl: 90, luck: 88, type: "bowl" },
-  "Kagiso Rabada": { bat: 25, bowl: 89, luck: 85, type: "bowl" },
-  "Jofra Archer": { bat: 40, bowl: 90, luck: 80, type: "bowl" },
-  "Matheesha Pathirana": { bat: 5, bowl: 91, luck: 88, type: "bowl" },
-  "Gerald Coetzee": { bat: 20, bowl: 86, luck: 85, type: "bowl" },
-  "Lockie Ferguson": { bat: 20, bowl: 88, luck: 85, type: "bowl" },
-  "Mark Wood": { bat: 20, bowl: 89, luck: 85, type: "bowl" },
-  "Anrich Nortje": { bat: 10, bowl: 88, luck: 80, type: "bowl" },
-  "Josh Hazlewood": { bat: 15, bowl: 90, luck: 85, type: "bowl" },
-  "Marco Jansen": { bat: 65, bowl: 86, luck: 82, type: "bowl" },
-  "Spencer Johnson": { bat: 20, bowl: 84, luck: 80, type: "bowl" },
-  "Alzarri Joseph": { bat: 35, bowl: 85, luck: 80, type: "bowl" },
-  "Dilshan Madushanka": { bat: 10, bowl: 84, luck: 80, type: "bowl" },
-  "Nuwan Thushara": { bat: 10, bowl: 83, luck: 80, type: "bowl" },
-  "Mustafizur Rahman": { bat: 10, bowl: 87, luck: 85, type: "bowl" },
-  "Fazalhaq Farooqi": { bat: 10, bowl: 85, luck: 80, type: "bowl" },
-  "Naveen-ul-Haq": { bat: 10, bowl: 86, luck: 82, type: "bowl" },
-  "Nathan Ellis": { bat: 15, bowl: 85, luck: 80, type: "bowl" },
-  "Kwena Maphaka": { bat: 5, bowl: 82, luck: 80, type: "bowl" },
+  // --- FOREIGN BATTERS (Mid) ---
+  "Harry Brook": { bat: 85, bowl: 10, luck: 75, type: "bat", role: "Middle Order, Power Hitter" },
+  "Kane Williamson": { bat: 86, bowl: 15, luck: 82, type: "bat", role: "Middle Order, Anchor, Captain" },
+  "Shimron Hetmyer": { bat: 85, bowl: 5, luck: 85, type: "bat", role: "Finisher, Power Hitter" },
+  "Rovman Powell": { bat: 82, bowl: 15, luck: 80, type: "bat", role: "Finisher, Power Hitter" },
+  "Tim David": { bat: 86, bowl: 10, luck: 85, type: "bat", role: "Finisher, Power Hitter" },
+  "Finn Allen": { bat: 83, bowl: 5, luck: 75, type: "bat", role: "Opener, Power Hitter" },
+  "Jonny Bairstow": { bat: 88, bowl: 0, luck: 85, type: "wk", role: "Wicket Keeper, Opener" },
+  "Aiden Markram": { bat: 84, bowl: 45, luck: 82, type: "ar", role: "Middle Order, Captain" },
+  "Daryl Mitchell": { bat: 85, bowl: 50, luck: 82, type: "ar", role: "Middle Order, All Rounder" },
 
-  // --- FAST BOWLERS (Indian) ---
-  "Mohammed Shami": { bat: 15, bowl: 91, luck: 85, type: "bowl" },
-  "Mohammed Siraj": { bat: 10, bowl: 88, luck: 85, type: "bowl" },
-  "Arshdeep Singh": { bat: 10, bowl: 88, luck: 85, type: "bowl" },
-  "Deepak Chahar": { bat: 30, bowl: 85, luck: 82, type: "bowl" },
-  "Shardul Thakur": { bat: 45, bowl: 82, luck: 90, type: "bowl" },
-  "Bhuvneshwar Kumar": { bat: 30, bowl: 86, luck: 85, type: "bowl" },
-  "T Natarajan": { bat: 5, bowl: 87, luck: 82, type: "bowl" },
-  "Mohit Sharma": { bat: 10, bowl: 86, luck: 85, type: "bowl" },
-  "Harshal Patel": { bat: 40, bowl: 88, luck: 88, type: "bowl" },
-  "Mayank Yadav": { bat: 10, bowl: 88, luck: 85, type: "bowl" },
-  "Avesh Khan": { bat: 15, bowl: 85, luck: 80, type: "bowl" },
-  "Khaleel Ahmed": { bat: 10, bowl: 86, luck: 82, type: "bowl" },
-  "Mukesh Kumar": { bat: 10, bowl: 85, luck: 82, type: "bowl" },
-  "Ishant Sharma": { bat: 20, bowl: 83, luck: 80, type: "bowl" },
-  "Umesh Yadav": { bat: 30, bowl: 84, luck: 80, type: "bowl" },
-  "Prasidh Krishna": { bat: 10, bowl: 85, luck: 80, type: "bowl" },
-  "Umran Malik": { bat: 10, bowl: 84, luck: 75, type: "bowl" },
-  "Harshit Rana": { bat: 40, bowl: 85, luck: 85, type: "bowl" },
-  "Akash Deep": { bat: 20, bowl: 84, luck: 80, type: "bowl" },
-  "Yash Dayal": { bat: 10, bowl: 83, luck: 80, type: "bowl" },
-  "Akash Madhwal": { bat: 10, bowl: 84, luck: 80, type: "bowl" },
-  "Vidwath Kaverappa": { bat: 10, bowl: 80, luck: 75, type: "bowl" },
-  "Tushar Deshpande": { bat: 15, bowl: 84, luck: 82, type: "bowl" },
-  "Vaibhav Arora": { bat: 15, bowl: 82, luck: 80, type: "bowl" },
-  "Yash Thakur": { bat: 10, bowl: 83, luck: 80, type: "bowl" },
-  "Kartik Tyagi": { bat: 20, bowl: 82, luck: 75, type: "bowl" },
-  "Chetan Sakariya": { bat: 20, bowl: 82, luck: 80, type: "bowl" },
-  "Simarjeet Singh": { bat: 15, bowl: 82, luck: 75, type: "bowl" },
-  "Rasikh Salam": { bat: 10, bowl: 82, luck: 80, type: "bowl" },
-  "Ashwani Kumar": { bat: 10, bowl: 78, luck: 75, type: "bowl" },
+  // --- BOWLERS (Fast - Tier 1) ---
+  "Jasprit Bumrah": { bat: 20, bowl: 99, luck: 95, type: "bowl", role: "Pacer, Death Bowler, Yorker King" },
+  "Trent Boult": { bat: 20, bowl: 90, luck: 88, type: "bowl", role: "Pacer, Powerplay Specialist, Swing" },
+  "Mitchell Starc": { bat: 30, bowl: 92, luck: 88, type: "bowl", role: "Pacer, Powerplay Specialist" },
+  "Matheesha Pathirana": { bat: 5, bowl: 92, luck: 88, type: "bowl", role: "Pacer, Death Bowler" },
+  "Mohammed Shami": { bat: 15, bowl: 91, luck: 85, type: "bowl", role: "Pacer, Seam" },
+  "Mohammed Siraj": { bat: 10, bowl: 88, luck: 85, type: "bowl", role: "Pacer, Powerplay Specialist" },
+  "Kagiso Rabada": { bat: 25, bowl: 89, luck: 85, type: "bowl", role: "Pacer, Express" },
+  "Jofra Archer": { bat: 40, bowl: 89, luck: 80, type: "bowl", role: "Pacer, Express" },
+  "Arshdeep Singh": { bat: 10, bowl: 88, luck: 85, type: "bowl", role: "Pacer, Death Bowler" },
+  "Harshit Rana": { bat: 45, bowl: 88, luck: 85, type: "bowl", role: "Pacer, Death Bowler, Aggressor" }, // Major Buff
+  "T Natarajan": { bat: 5, bowl: 88, luck: 82, type: "bowl", role: "Pacer, Death Bowler" },
 
-  // --- SPINNERS ---
-  "Rashid Khan": { bat: 60, bowl: 96, luck: 92, type: "bowl" },
-  "Yuzvendra Chahal": { bat: 5, bowl: 93, luck: 88, type: "bowl" },
-  "Kuldeep Yadav": { bat: 10, bowl: 93, luck: 88, type: "bowl" },
-  "Ravi Bishnoi": { bat: 10, bowl: 88, luck: 85, type: "bowl" },
-  "Varun Chakravarthy": { bat: 5, bowl: 89, luck: 82, type: "bowl" },
-  "Wanindu Hasaranga": { bat: 50, bowl: 90, luck: 85, type: "bowl" },
-  "Maheesh Theekshana": { bat: 20, bowl: 87, luck: 80, type: "bowl" },
-  "Adam Zampa": { bat: 10, bowl: 87, luck: 80, type: "bowl" },
-  "Mujeeb Ur Rahman": { bat: 20, bowl: 86, luck: 80, type: "bowl" },
-  "Noor Ahmad": { bat: 15, bowl: 87, luck: 85, type: "bowl" },
-  "Keshav Maharaj": { bat: 40, bowl: 85, luck: 80, type: "bowl" },
-  "Adil Rashid": { bat: 30, bowl: 86, luck: 82, type: "bowl" },
-  "Tabraiz Shamsi": { bat: 10, bowl: 85, luck: 80, type: "bowl" },
-  "Rahul Chahar": { bat: 20, bowl: 84, luck: 80, type: "bowl" },
-  "Amit Mishra": { bat: 25, bowl: 83, luck: 85, type: "bowl" },
-  "Piyush Chawla": { bat: 35, bowl: 85, luck: 88, type: "bowl" },
-  "Karn Sharma": { bat: 30, bowl: 82, luck: 80, type: "bowl" },
-  "Mayank Markande": { bat: 20, bowl: 83, luck: 80, type: "bowl" },
-  "R Sai Kishore": { bat: 25, bowl: 85, luck: 82, type: "bowl" },
-  "Suyash Sharma": { bat: 5, bowl: 84, luck: 80, type: "bowl" },
-  "Manimaran Siddharth": { bat: 10, bowl: 80, luck: 75, type: "bowl" },
-  "Allah Ghazanfar": { bat: 10, bowl: 82, luck: 82, type: "bowl" },
-  "Digvesh Rathi": { bat: 5, bowl: 80, luck: 78, type: "bowl" },
+  // --- BOWLERS (Fast - Tier 2/Mid) ---
+  "Mayank Yadav": { bat: 10, bowl: 88, luck: 85, type: "bowl", role: "Pacer, Express" },
+  "Gerald Coetzee": { bat: 20, bowl: 86, luck: 85, type: "bowl", role: "Pacer" },
+  "Lockie Ferguson": { bat: 20, bowl: 87, luck: 85, type: "bowl", role: "Pacer, Express" },
+  "Anrich Nortje": { bat: 10, bowl: 86, luck: 80, type: "bowl", role: "Pacer, Express" },
+  "Bhuvneshwar Kumar": { bat: 30, bowl: 85, luck: 85, type: "bowl", role: "Pacer, Swing" },
+  "Deepak Chahar": { bat: 30, bowl: 84, luck: 82, type: "bowl", role: "Pacer, Swing" },
+  "Mohit Sharma": { bat: 10, bowl: 85, luck: 85, type: "bowl", role: "Pacer, Slower Ball" },
+  "Harshal Patel": { bat: 40, bowl: 88, luck: 88, type: "bowl", role: "Pacer, Death Bowler, Slower Ball" }, // Purple Cap Contender
+  "Avesh Khan": { bat: 15, bowl: 85, luck: 80, type: "bowl", role: "Pacer" },
+  "Khaleel Ahmed": { bat: 10, bowl: 86, luck: 82, type: "bowl", role: "Pacer" },
+  "Mukesh Kumar": { bat: 10, bowl: 85, luck: 82, type: "bowl", role: "Pacer, Death Bowler" },
+  "Yash Dayal": { bat: 10, bowl: 84, luck: 80, type: "bowl", role: "Pacer" },
+  "Vaibhav Arora": { bat: 15, bowl: 83, luck: 80, type: "bowl", role: "Pacer" },
+  "Akash Madhwal": { bat: 10, bowl: 83, luck: 80, type: "bowl", role: "Pacer" },
+  "Simarjeet Singh": { bat: 15, bowl: 82, luck: 75, type: "bowl", role: "Pacer" },
+  "Nuwan Thushara": { bat: 10, bowl: 83, luck: 80, type: "bowl", role: "Pacer, Sling" },
+  "Mustafizur Rahman": { bat: 10, bowl: 86, luck: 85, type: "bowl", role: "Pacer, Cutter Specialist" },
+  "Naveen-ul-Haq": { bat: 10, bowl: 86, luck: 82, type: "bowl", role: "Pacer, Slower Ball" },
+  "Spencer Johnson": { bat: 20, bowl: 84, luck: 80, type: "bowl", role: "Pacer" },
+  "Azmatullah Omarzai": { bat: 80, bowl: 78, luck: 78, type: "ar", role: "All Rounder, Pacer" },
+
+  // --- SPINNERS (Tier 1) ---
+  "Rashid Khan": { bat: 65, bowl: 96, luck: 92, type: "bowl", role: "Spinner, Leg Spin, Mystery Spin" },
+  "Varun Chakravarthy": { bat: 10, bowl: 94, luck: 85, type: "bowl", role: "Spinner, Mystery Spin, Death Bowler" }, // Major Buff
+  "Kuldeep Yadav": { bat: 10, bowl: 93, luck: 88, type: "bowl", role: "Spinner, Chinaman" },
+  "Yuzvendra Chahal": { bat: 5, bowl: 93, luck: 88, type: "bowl", role: "Spinner, Leg Spin" },
+  "Ravi Bishnoi": { bat: 10, bowl: 90, luck: 85, type: "bowl", role: "Spinner, Leg Spin" },
+  "Wanindu Hasaranga": { bat: 50, bowl: 90, luck: 85, type: "bowl", role: "Spinner, Leg Spin" },
+  "Maheesh Theekshana": { bat: 20, bowl: 87, luck: 80, type: "bowl", role: "Spinner, Mystery Spin" },
+  "Noor Ahmad": { bat: 15, bowl: 88, luck: 85, type: "bowl", role: "Spinner, Chinaman" },
+
+  // --- SPINNERS (Tier 2/Mid) ---
+  "Rahul Chahar": { bat: 20, bowl: 84, luck: 80, type: "bowl", role: "Spinner, Leg Spin" },
+  "Piyush Chawla": { bat: 35, bowl: 85, luck: 88, type: "bowl", role: "Spinner, Leg Spin" },
+  "R Sai Kishore": { bat: 25, bowl: 86, luck: 82, type: "bowl", role: "Spinner, Left Arm Orth" },
+  "Suyash Sharma": { bat: 5, bowl: 84, luck: 80, type: "bowl", role: "Spinner, Mystery Spin" },
+  "Washington Sundar": { bat: 75, bowl: 84, luck: 80, type: "ar", role: "All Rounder, Spinner" },
+  "Krunal Pandya": { bat: 78, bowl: 82, luck: 80, type: "ar", role: "All Rounder, Spinner" },
+  "Abishek Porel": { bat: 84, bowl: 0, luck: 80, type: "wk", role: "Wicket Keeper, Top Order" },
+  "Manimaran Siddharth": { bat: 10, bowl: 80, luck: 75, type: "bowl", role: "Spinner, Left Arm Orth" },
+  "Allah Ghazanfar": { bat: 10, bowl: 82, luck: 82, type: "bowl", role: "Spinner, Mystery Spin" },
+
+  // --- LEGENDS (Active in Spirit/Impact Player) ---
+  "MS Dhoni": { bat: 85, bowl: 0, luck: 99, type: "wk", role: "Wicket Keeper, Finisher, Captain, Legend" }
+
 };
 
 const MARQUEE_PLAYERS = {
@@ -588,6 +624,8 @@ const MARQUEE_PLAYERS = {
     { name: "Cameron Green", type: "Foreign" },
     { name: "Sam Curran", type: "Foreign" },
     { name: "Marcus Stoinis", type: "Foreign" },
+    { name: "Shyam Khan", type: "Indian" },
+    { name: "Siva", type: "Indian" },
   ],
   wicketkeeper: [
     { name: "MS Dhoni", type: "Indian" },
@@ -812,6 +850,8 @@ const PLAYER_IMAGE_MAP = {
     "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRy2UoIz9RctCjtDw0iTDr9W8lq_jMqGo0JpQ&s",
   "Virat Kohli":
     "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSXd7IOQ0NKyGMznUdvuNfPqT1PjyLLWs2PlA&s",
+  "Shyam Khan": "IMG-20260204-WA0000.jpg",
+  "Siva": "IMG-20260204-WA0001.jpg",
   "rohit sharma":
     "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ3sfdazCnce91FbLAu66M2aa49A2OJ_UfWRg&s",
   "rishabh pant":
@@ -1055,8 +1095,8 @@ const PLAYER_IMAGE_MAP = {
     "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQgVBnKUGvBQjHnNvaw_A9lKO7c6MwP2EqHlQ&s",
   "Josh Inglis":
     "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ96_gVuW8JTbxirRPH9mVAjB59jbtQRt6UtQ&s",
+    "Shyam Khan":"IMG"
 };
-
 
 // FIX: Runtime Normalization of Image Keys to Lowercase
 const NORMALIZED_IMAGE_MAP = {};
@@ -1120,7 +1160,7 @@ function logEvent(message, highlight = false) {
   div.className = highlight ? "text-warning mb-1" : "mb-1";
   div.innerHTML = `<span class="text-secondary me-2">[${new Date().toLocaleTimeString(
     "en-GB",
-    { hour12: false }
+    { hour12: false },
   )}]</span> ${message}`;
   logEl.prepend(div);
 }
@@ -1131,7 +1171,7 @@ function getPlayerStats(name, roleHint = "bat") {
       bat: PLAYER_DATABASE[name].bat,
       bowl: PLAYER_DATABASE[name].bowl,
       luck: PLAYER_DATABASE[name].luck,
-      role: PLAYER_DATABASE[name].type,
+      role: PLAYER_DATABASE[name].role || PLAYER_DATABASE[name].type,
     };
   let hash = 0;
   for (let i = 0; i < name.length; i++)
@@ -1162,38 +1202,84 @@ function getPlayerStats(name, roleHint = "bat") {
 // --- DOM EVENT LISTENERS ---
 
 // 1. HOST: Create Room
-document.getElementById("doCreateBtn").addEventListener("click", () => {
-  if (!socketAlive)
-    return (lobbyError.innerText = "Connection lost. Reconnecting...");
-  
-  const roomId = document.getElementById("createRoomId").value.toUpperCase();
-  const pass = document.getElementById("createPass").value;
-  
-  if (!roomId || pass.length !== 4)
-    return (lobbyError.innerText = "Invalid Room ID or Password");
+function attachCreateRoomListener() {
+  const btn = document.getElementById("doCreateBtn");
+  if (!btn) {
+    setTimeout(attachCreateRoomListener, 300);
+    return;
+  }
 
-  localStorage.setItem("ipl_last_room", roomId);
-  localStorage.setItem("ipl_last_pass", pass);
+  if (btn.dataset.listenerAttached) return;
+  btn.dataset.listenerAttached = "true";
 
-  socket.emit("create_blind_room", { roomId, password: pass, config: {}, gameType: 'blind' });
-});
+  btn.addEventListener("click", () => {
+    if (!socketAlive)
+      return (lobbyError.innerText = "Connection lost. Reconnecting...");
+
+    const roomId = document.getElementById("createRoomId").value.toUpperCase();
+    const pass = document.getElementById("createPass").value;
+
+    if (!roomId || pass.length !== 4)
+      return (lobbyError.innerText = "Invalid Room ID or Password");
+
+    localStorage.setItem("ipl_last_room", roomId);
+    localStorage.setItem("ipl_last_pass", pass);
+
+    // Get player name from session if available
+    const savedName = sessionStorage.getItem("ipl_auction_player_name") || localStorage.getItem("userName") || "";
+    
+    socket.emit("create_blind_room", {
+      roomId,
+      password: pass,
+      config: {},
+      gameType: "blind",
+      playerName: savedName,
+    });
+  });
+}
 
 // 2. JOIN: Join Room
-document.getElementById("doJoinBtn").addEventListener("click", () => {
-  if (!socketAlive)
-    return (lobbyError.innerText = "Connection lost. Reconnecting...");
-  
-  const roomId = document.getElementById("joinRoomId").value.toUpperCase();
-  const pass = document.getElementById("joinPass").value;
-  
-  if (!roomId || pass.length !== 4)
-    return (lobbyError.innerText = "Check Credentials");
+function attachJoinRoomListener() {
+  const btn = document.getElementById("doJoinBtn");
+  if (!btn) {
+    setTimeout(attachJoinRoomListener, 300);
+    return;
+  }
 
-  localStorage.setItem("ipl_last_room", roomId);
-  localStorage.setItem("ipl_last_pass", pass);
+  if (btn.dataset.listenerAttached) return;
+  btn.dataset.listenerAttached = "true";
 
-  socket.emit("join_blind_room", { roomId, password: pass });
-});
+  btn.addEventListener("click", () => {
+    if (!socketAlive)
+      return (lobbyError.innerText = "Connection lost. Reconnecting...");
+
+    const roomId = document.getElementById("joinRoomId").value.toUpperCase();
+    const pass = document.getElementById("joinPass").value;
+
+    if (!roomId || pass.length !== 4)
+      return (lobbyError.innerText = "Check Credentials");
+
+    localStorage.setItem("ipl_last_room", roomId);
+    localStorage.setItem("ipl_last_pass", pass);
+
+    // Get player name from session if available
+    const savedName = sessionStorage.getItem("ipl_auction_player_name") || localStorage.getItem("userName") || "";
+    
+    socket.emit("join_blind_room", { roomId, password: pass, playerName: savedName });
+  });
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", () => {
+    attachCreateRoomListener();
+    attachJoinRoomListener();
+  });
+} else {
+  setTimeout(() => {
+    attachCreateRoomListener();
+    attachJoinRoomListener();
+  }, 100);
+}
 
 // --- SOCKET EVENTS ---
 
@@ -1205,7 +1291,7 @@ socket.on("roomcreated", (roomId) => {
   document.getElementById("waitingText").style.display = "none";
   document.getElementById("startBtn").style.display = "block";
   initLobbyState();
-  
+
   // Always show name entry for confirmation
   setTimeout(() => {
     const nameSection = document.getElementById("nameEntrySection");
@@ -1243,7 +1329,7 @@ socket.on("room_joined", (data) => {
       socket.emit("reclaim_team", savedTeamKey);
     } else {
       const myTeam = globalTeams.find(
-        (t) => t.ownerPlayerId === myPersistentId
+        (t) => t.ownerPlayerId === myPersistentId,
       );
       if (myTeam) mySelectedTeamKey = myTeam.bidKey;
     }
@@ -1254,7 +1340,7 @@ socket.on("room_joined", (data) => {
 
     renderLobbyTeams();
   }
-  
+
   // Always show name entry for confirmation
   setTimeout(() => {
     const nameSection = document.getElementById("nameEntrySection");
@@ -1292,32 +1378,36 @@ function initLobbyState() {
 }
 
 // Update all team budgets when admin changes purse amount
-window.updateAllTeamBudgets = function() {
+window.updateAllTeamBudgets = function () {
   if (!isAdmin) return;
-  
+
   const newBudget = parseInt(document.getElementById("budget").value);
-  
+
   // Update all teams' budgets
-  globalTeams.forEach(team => {
+  globalTeams.forEach((team) => {
     team.budget = newBudget;
   });
-  
+
   // Broadcast to all players
   socket.emit("update_lobby_teams", globalTeams);
   renderLobbyTeams();
-  
+
   logEvent(`💰 Host changed team purse to ${formatAmount(newBudget)}`, true);
-}
+};
 
 // FIX: Add missing sync_data listener
 socket.off("sync_data");
 socket.on("sync_data", (data) => {
   if (data.teams) {
     globalTeams = data.teams;
-    switchToAuctionMode(globalTeams);
+    if (data.isActive) {
+      switchToAuctionMode(globalTeams);
+    } else {
+      renderLobbyTeams();
+    }
   }
   if (data.queue) auctionQueue = data.queue;
-  
+
   if (data.currentLot) {
     // Restore current lot view
     // Simulate 'update_lot' behavior
@@ -1327,7 +1417,9 @@ socket.on("sync_data", (data) => {
 
     // Update UI elements manually or trigger logic
     document.getElementById("currentSet").innerText = p.set;
-    document.getElementById("lotNoDisplay").innerText = `LOT #${(data.auctionIndex + 1)
+    document.getElementById("lotNoDisplay").innerText = `LOT #${(
+      data.auctionIndex + 1
+    )
       .toString()
       .padStart(3, "0")}`;
     document.getElementById("pName").innerText = p.name;
@@ -1343,39 +1435,53 @@ socket.on("sync_data", (data) => {
       avatar.style.backgroundImage = "none";
       avatar.innerText = p.name.substring(0, 2).toUpperCase();
     }
-    
+
     document.getElementById("pBid").innerText = formatAmount(data.currentBid);
-    
+
     // Update Bidder/Team Info
     if (data.currentBidder) {
-        const bidderTeam = globalTeams.find(t => t.bidKey === data.currentBidder);
-        if (bidderTeam) {
-            document.getElementById("pTeam").innerHTML = `<span class="text-warning">${bidderTeam.name}</span>`;
-            currentHighestBidderKey = data.currentBidder;
-            document.getElementById("skipBtn").disabled = true;
-            document.getElementById("soldBtn").disabled = false;
-        }
+      const bidderTeam = globalTeams.find(
+        (t) => t.bidKey === data.currentBidder,
+      );
+      if (bidderTeam) {
+        document.getElementById("pTeam").innerHTML =
+          `<span class="text-warning">${bidderTeam.name}</span>`;
+        currentHighestBidderKey = data.currentBidder;
+        document.getElementById("skipBtn").disabled = true;
+        document.getElementById("soldBtn").disabled = false;
+      }
     } else {
-        document.getElementById("pTeam").innerHTML = `<span class="text-white-50">Opening Bid</span>`;
-        currentHighestBidderKey = null;
-        document.getElementById("skipBtn").disabled = false;
-        document.getElementById("soldBtn").disabled = true;
+      document.getElementById("pTeam").innerHTML =
+        `<span class="text-white-50">Opening Bid</span>`;
+      currentHighestBidderKey = null;
+      document.getElementById("skipBtn").disabled = false;
+      document.getElementById("soldBtn").disabled = true;
     }
-    
+
     // Resume Timer
     const timerEl = document.getElementById("auctionTimer");
     if (timerEl) {
-        timerEl.innerText = data.timer;
-        if (data.timerPaused) timerEl.classList.add("timer-paused");
-        else timerEl.classList.remove("timer-paused");
+      timerEl.innerText = data.timer;
+      if (data.timerPaused) timerEl.classList.add("timer-paused");
+      else timerEl.classList.remove("timer-paused");
+
+      // SYNC PAUSE BUTTON STATE
+      if (isAdmin && typeof updatePauseButtonState === "function") {
+        updatePauseButtonState(data.timerPaused);
+      }
     }
-    
+
     const bidBtn = document.getElementById("placeBidBtn");
     bidBtn.disabled = false;
     updateBidControlsState(p);
   }
 });
 
+// 🔧 GLOBAL ERROR HANDLER
+socket.on("error_message", (msg) => {
+  alert("⚠️ ERROR: " + msg);
+  logEvent("❌ " + msg, true);
+});
 
 function escapeHtml(text) {
   if (typeof text !== "string") return text;
@@ -1421,20 +1527,20 @@ function renderLobbyTeams() {
     let nameInput = isAdmin
       ? `<input type="text" class="form-control form-control-sm text-center bg-dark text-white border-secondary" value="${safeName}" onchange="adminRenameTeam('${t.bidKey}', this.value)">`
       : `<div class="fs-4 fw-bold text-white">${safeName}</div>`;
-    
+
     // Display player name if team is taken
-    const playerNameDisplay = t.playerName 
-      ? `<div class="small text-warning mt-1" style="font-size: 0.85rem;">${t.playerName}</div>` 
-      : '';
+    const playerNameDisplay = t.playerName
+      ? `<div class="small text-warning mt-1" style="font-size: 0.85rem;">${t.playerName}</div>`
+      : "";
 
     container.innerHTML += `<div class="lobby-team-card ${statusClass}" ${clickAction}><span class="lobby-status-badge ${
       statusClass === "available"
         ? "bg-success"
         : statusClass === "my-choice"
-        ? "bg-warning text-dark"
-        : "bg-danger"
+          ? "bg-warning text-dark"
+          : "bg-danger"
     }">${statusText}</span>${nameInput}${playerNameDisplay}<div class="small text-white-50">Budget: ${formatAmount(
-      t.budget
+      t.budget,
     )}</div></div>`;
   });
 
@@ -1456,37 +1562,91 @@ function renderLobbyTeams() {
   }
 }
 
-document.getElementById("startBtn").addEventListener("click", () => {
-  if (!isAdmin) return;
-  const activeTeams = globalTeams.filter((t) => t.isTaken);
-  if (activeTeams.length < 2) {
-    alert("Need at least 2 active teams to start!");
+// Safely attach startBtn listener with proper null checks
+function attachStartBtnListener() {
+  const startBtn = document.getElementById("startBtn");
+  if (!startBtn) {
+    console.warn("⚠️ startBtn not found in DOM, retrying in 500ms...");
+    setTimeout(attachStartBtnListener, 500);
     return;
   }
-  auctionQueue = buildAuctionQueue();
-  socket.emit("start_blind_auction", { 
-    exchangeEnabled: true,
-    queue: auctionQueue 
+
+  if (startBtn.dataset.listenerAttached) {
+    console.log("✓ startBtn listener already attached");
+    return;
+  }
+
+  startBtn.dataset.listenerAttached = "true";
+
+  startBtn.addEventListener("click", () => {
+    if (!isAdmin) {
+      alert("Only the host can start the auction!");
+      return;
+    }
+    const activeTeams = globalTeams.filter((t) => t.isTaken);
+    console.log("DEBUG: Active Teams Count:", activeTeams.length);
+
+    // Relaxed check to unblock user if sync is slightly off
+    if (activeTeams.length < 1) {
+      console.warn(
+        "⚠️ Warning: Client thinks there are 0 active teams, but DOM says otherwise. Sending request anyway.",
+      );
+      console.log("DEBUG: globalTeams dump:", JSON.stringify(globalTeams));
+      // Continue instead of returning, relying on Server validation
+    }
+
+    try {
+      console.log("🏗️ Building Auction Queue...");
+      auctionQueue = buildAuctionQueue();
+      console.log(`✅ Queue Built: ${auctionQueue.length} players`);
+
+      socket.emit("start_blind_auction", {
+        exchangeEnabled: true,
+        queue: auctionQueue,
+      });
+      console.log("🚀 Sent 'start_blind_auction' event");
+
+      // Visual Feedback
+      startBtn.innerText = "STARTING...";
+      startBtn.disabled = true;
+    } catch (e) {
+      console.error("❌ Error building queue:", e);
+      alert("Error starting auction: " + e.message);
+      logEvent("Error starting auction: " + e.message);
+    }
   });
-});
+
+  console.log("✓ startBtn listener attached successfully");
+}
+
+// Try to attach listener immediately and also on DOMContentLoaded
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", attachStartBtnListener);
+} else {
+  setTimeout(attachStartBtnListener, 100);
+}
 
 socket.off("auction_started");
+socket.off("blind_auction_started");
 socket.on("blind_auction_started", (data) => {
+  console.log("✓ blind_auction_started event received", data);
   auctionStarted = true;
   switchToAuctionMode(data.teams);
   // auctionQueue is managed by server, we just wait for new_blind_player
   logEvent(`<strong>BLIND AUCTION STARTED</strong>`, true);
   playHammerSound();
-  speakText("Ladies and Gentlemen, welcome to the Blind Auction. Get your bids ready!");
+  speakText(
+    "Ladies and Gentlemen, welcome to the Blind Auction. Get your bids ready!",
+  );
 });
 
 function enterGame(roomId) {
   myRoomId = roomId;
   document.getElementById("currentRoomDisplay").innerText = roomId;
-  lobbyScreen.style.display = "none";
+  lobbyScreen.style.setProperty("display", "none", "important");
   gameContainer.style.display = "block";
   document.getElementById("setupSection").style.display = "flex";
-  
+
   // Initialize sound button now that gameContainer is visible
   initializeSoundButton();
 }
@@ -1496,21 +1656,21 @@ function claimLobbyTeam(key) {
     alert("You have already joined a team!");
     return;
   }
-  
+
   // Check if name input field has a value (user might not have pressed Enter yet)
   const nameInput = document.getElementById("lobbyPlayerName");
   if (nameInput && nameInput.value.trim()) {
     const name = nameInput.value.trim();
     myPlayerName = name;
-    sessionStorage.setItem("ipl_auction_player_name", name);
-    
+    localStorage.setItem("ipl_auction_player_name", name);
+
     // Hide name entry section
     const nameSection = document.getElementById("nameEntrySection");
     if (nameSection) {
       nameSection.style.display = "none";
     }
   }
-  
+
   // Send player name to server first if we have one
   if (myPlayerName) {
     socket.emit("update_player_name", { playerName: myPlayerName });
@@ -1524,10 +1684,10 @@ function claimLobbyTeam(key) {
     }
     return;
   }
-  
+
   // Small delay to ensure name is received before claiming
   setTimeout(() => {
-    const userEmail = localStorage.getItem('userEmail') || '';
+    const userEmail = localStorage.getItem("userEmail") || "";
     socket.emit("claim_lobby_team", { key, email: userEmail });
   }, 100);
 }
@@ -1535,7 +1695,7 @@ function claimLobbyTeam(key) {
 function requestReclaim(bidKey) {
   if (
     confirm(
-      "This team is taken. Do you want to request the Host to reclaim it?"
+      "This team is taken. Do you want to request the Host to reclaim it?",
     )
   ) {
     socket.emit("request_reclaim_manual", { teamKey: bidKey });
@@ -1612,20 +1772,20 @@ function buildAuctionQueue() {
   };
 
   const marqueeBat = MARQUEE_PLAYERS.batter.map((p) =>
-    createPlayer(p, "Marquee Set (Bat)", "batter", 20000000, 2500000)
+    createPlayer(p, "Marquee Set (Bat)", "batter", 20000000, 2500000),
   );
   const marqueeBowl = MARQUEE_PLAYERS.bowler.map((p) =>
-    createPlayer(p, "Marquee Set (Bowl)", "bowler", 20000000, 2500000)
+    createPlayer(p, "Marquee Set (Bowl)", "bowler", 20000000, 2500000),
   );
   const marqueeAR = MARQUEE_PLAYERS.allrounder.map((p) =>
-    createPlayer(p, "Marquee Set (AR)", "allrounder", 20000000, 2500000)
+    createPlayer(p, "Marquee Set (AR)", "allrounder", 20000000, 2500000),
   );
   const marqueeWK = MARQUEE_PLAYERS.wicketkeeper.map((p) =>
-    createPlayer(p, "Marquee Set (WK)", "wk", 20000000, 2500000)
+    createPlayer(p, "Marquee Set (WK)", "wk", 20000000, 2500000),
   );
 
   safePush(
-    shuffle([...marqueeBat, ...marqueeBowl, ...marqueeAR, ...marqueeWK])
+    shuffle([...marqueeBat, ...marqueeBowl, ...marqueeAR, ...marqueeWK]),
   );
 
   const processCategory = (categoryName, roleName, foreignList, indianList) => {
@@ -1635,8 +1795,8 @@ function buildAuctionQueue() {
         `${categoryName} (Foreign)`,
         roleName,
         15000000,
-        2500000
-      )
+        2500000,
+      ),
     );
     const i = indianList.map((n) =>
       createPlayer(
@@ -1644,8 +1804,8 @@ function buildAuctionQueue() {
         `${categoryName} (Indian)`,
         roleName,
         10000000,
-        2500000
-      )
+        2500000,
+      ),
     );
     return shuffle([...f, ...i]);
   };
@@ -1655,41 +1815,41 @@ function buildAuctionQueue() {
       "Batters",
       "batter",
       RAW_DATA["Batsmen"].foreign,
-      RAW_DATA["Batsmen"].indian
-    )
+      RAW_DATA["Batsmen"].indian,
+    ),
   );
   safePush(
     processCategory(
       "Fast Bowlers",
       "fast",
       RAW_DATA["Fast Bowlers"].foreign,
-      RAW_DATA["Fast Bowlers"].indian
-    )
+      RAW_DATA["Fast Bowlers"].indian,
+    ),
   );
-  
+
   safePush(
     processCategory(
       "Spinners",
       "spinner",
       RAW_DATA["Spinners"].foreign,
-      RAW_DATA["Spinners"].indian
-    )
+      RAW_DATA["Spinners"].indian,
+    ),
   );
   safePush(
     processCategory(
       "Wicketkeepers",
       "wk",
       RAW_DATA["Wicketkeeper"].foreign,
-      RAW_DATA["Wicketkeeper"].indian
-    )
+      RAW_DATA["Wicketkeeper"].indian,
+    ),
   );
   safePush(
     processCategory(
       "All-Rounders",
       "allrounder",
       RAW_DATA["All-rounders"].foreign,
-      RAW_DATA["All-rounders"].indian
-    )
+      RAW_DATA["All-rounders"].indian,
+    ),
   );
 
   const domBat = RAW_DATA["Domestic"].batsmen.map((n) =>
@@ -1698,8 +1858,8 @@ function buildAuctionQueue() {
       "Domestic Set",
       "batter",
       2500000,
-      500000
-    )
+      500000,
+    ),
   );
   const domBowl = RAW_DATA["Domestic"].bowlers.map((n) =>
     createPlayer(
@@ -1707,8 +1867,8 @@ function buildAuctionQueue() {
       "Domestic Set",
       "bowler",
       2500000,
-      500000
-    )
+      500000,
+    ),
   );
   safePush(shuffle([...domBat, ...domBowl]));
 
@@ -1736,7 +1896,9 @@ socket.on("new_blind_player", (data) => {
   document.getElementById("pName").innerText = p.name;
   document.getElementById("pCat").innerText = p.category;
   document.getElementById("pBase").innerText = formatAmount(p.basePrice);
-  document.getElementById("pTypeBadge").innerText = p.roleKey ? p.roleKey.toUpperCase() : "UNK";
+  document.getElementById("pTypeBadge").innerText = p.roleKey
+    ? p.roleKey.toUpperCase()
+    : "UNK";
 
   // Image
   const avatar = document.getElementById("pInitials");
@@ -1749,9 +1911,10 @@ socket.on("new_blind_player", (data) => {
   }
 
   // Reset Bid Display
-  document.getElementById("pBid").innerText = "SEALED";
-  document.getElementById("pTeam").innerHTML = `<span class="text-white-50">Waiting for Bids...</span>`;
-  
+  document.getElementById("pBid").innerText = formatAmount(p.basePrice);
+  document.getElementById("pTeam").innerHTML =
+    `<span class="text-white-50">Waiting for Bids...</span>`;
+
   // Controls
   const bidBtn = document.getElementById("placeBidBtn");
   bidBtn.disabled = false;
@@ -1763,9 +1926,9 @@ socket.on("new_blind_player", (data) => {
   // Input Setup
   const input = document.getElementById("customBidInput");
   if (input) {
-      input.value = p.basePrice;
-      input.min = p.basePrice;
-      input.step = 500000;
+    input.value = p.basePrice;
+    input.min = p.basePrice;
+    input.step = 500000;
   }
 
   // Admin Controls
@@ -1778,9 +1941,44 @@ socket.on("new_blind_player", (data) => {
   overlay.classList.remove("overlay-visible");
 
   updateTeamSidebar(globalTeams);
-  
+
   // Re-setup controls with current player data
   setupBidControls(p);
+
+  // RESET INPUT AREA (Re-enable)
+  const bidInputArea = document.getElementById("bidInputArea");
+  if (bidInputArea) {
+    bidInputArea.style.opacity = "1";
+    bidInputArea.style.pointerEvents = "auto";
+  }
+
+  // AUTO-CLOSE BID INPUT AFTER 10 SECONDS
+  if (window.bidInputTimeoutId) {
+    clearTimeout(window.bidInputTimeoutId);
+  }
+  // Sync with server's blind auction timer (12 seconds by default)
+  window.bidInputTimeoutId = setTimeout(() => {
+    // Close/disable bid input after 10 seconds
+    const bidInputArea = document.getElementById("bidInputArea");
+    if (bidInputArea) {
+      bidInputArea.style.opacity = "0.5";
+      bidInputArea.style.pointerEvents = "none";
+    }
+    const bidInputEl = document.getElementById("customBidInput");
+    if (bidInputEl) {
+      bidInputEl.disabled = true;
+    }
+    const placeBidBtn = document.getElementById("placeBidBtn");
+    if (placeBidBtn) {
+      placeBidBtn.disabled = true;
+      placeBidBtn.innerHTML = 'BIDDING CLOSED <i class="bi bi-lock"></i>';
+    }
+    const passBidBtn = document.getElementById("passBidBtn");
+    if (passBidBtn) {
+      passBidBtn.disabled = true;
+    }
+    logEvent("Bidding input closed - time's up!", true);
+  }, 12000);
 
   logEvent(`<strong>LOT UP:</strong> ${p.name}`, true);
   speakText(`Next player. ${p.name}. Base price ${formatAmount(p.basePrice)}.`);
@@ -1789,93 +1987,113 @@ socket.on("new_blind_player", (data) => {
 // 🔧 BLIND TIMER TICK
 socket.off("blind_timer_tick");
 socket.on("blind_timer_tick", (timeLeft) => {
-    const timerEl = document.getElementById("auctionTimer");
-    if (timerEl) {
-        timerEl.innerText = timeLeft;
-        if (timeLeft <= 3) timerEl.classList.add("timer-danger");
-        else timerEl.classList.remove("timer-danger");
-    }
+  const timerEl = document.getElementById("auctionTimer");
+  if (timerEl) {
+    timerEl.innerText = timeLeft;
+    if (timeLeft <= 3) timerEl.classList.add("timer-danger");
+    else timerEl.classList.remove("timer-danger");
+  }
 });
 
 // 🔧 SMART BID PARSER
 function parseBidValue(val) {
-    if (!val) return 0;
-    // Remove commas if any
-    let cleaned = val.toString().replace(/,/g, '');
-    let num = parseFloat(cleaned);
-    if (isNaN(num)) return 0;
+  if (!val) return 0;
+  // Remove commas if any
+  let cleaned = val.toString().replace(/,/g, "");
+  let num = parseFloat(cleaned);
+  if (isNaN(num)) return 0;
 
-    // Use a threshold: If entered value is less than 1000, assume it's in Short Notation (Crores)
-    // 10.25 -> 10.25 Crore
-    // 0.5 -> 50 Lakhs
-    // 50 -> 50 Crore (If they want 50 Lakhs, they should enter 0.5 or 5000000)
-    if (num < 1000) {
-        return Math.round(num * 10000000);
-    }
-    
-    return Math.round(num);
+  // Use a threshold: If entered value is less than 1000, assume it's in Short Notation (Crores)
+  // 10.25 -> 10.25 Crore
+  // 0.5 -> 50 Lakhs
+  // 50 -> 50 Crore (If they want 50 Lakhs, they should enter 0.5 or 5000000)
+  if (num < 1000) {
+    return Math.round(num * 10000000);
+  }
+
+  return Math.round(num);
 }
 
 // 🔧 SUBMIT BLIND BID
 function submitBlindBid() {
-    if (!socketAlive) return alert("Connection lost!");
-    if (!currentActivePlayer) return;
-    if (!mySelectedTeamKey) return alert("You don't have a team!");
+  if (!socketAlive) return alert("Connection lost!");
+  if (!currentActivePlayer) return;
+  if (!mySelectedTeamKey) return alert("You don't have a team!");
 
-    const myTeam = globalTeams.find((t) => t.bidKey === mySelectedTeamKey);
-    const rawVal = document.getElementById("customBidInput").value;
-    const amount = parseBidValue(rawVal);
+  const myTeam = globalTeams.find((t) => t.bidKey === mySelectedTeamKey);
+  const rawVal = document.getElementById("customBidInput").value;
+  const amount = parseBidValue(rawVal);
 
-    // Validation
-    if (!rawVal || isNaN(amount) || amount <= 0) {
-        alert("Please enter a valid amount!");
-        return;
-    }
-    if (amount < currentActivePlayer.basePrice) {
-        alert("Bid must be at least Base Price (" + formatAmount(currentActivePlayer.basePrice) + ")!");
-        return;
-    }
-    if (myTeam.budget < amount) {
-        alert("Insufficient Budget!");
-        return;
-    }
+  // Validation
+  if (!rawVal || isNaN(amount) || amount <= 0) {
+    alert("Please enter a valid amount!");
+    return;
+  }
+  if (amount < currentActivePlayer.basePrice) {
+    alert(
+      "Bid must be at least Base Price (" +
+        formatAmount(currentActivePlayer.basePrice) +
+        ")!",
+    );
+    return;
+  }
+  if (myTeam.budget < amount) {
+    alert("Insufficient Budget!");
+    return;
+  }
 
-    socket.emit("submit_blind_bid", {
-        teamKey: mySelectedTeamKey,
-        amount: amount
-    });
+  socket.emit("submit_blind_bid", {
+    teamKey: mySelectedTeamKey,
+    amount: amount,
+  });
 
-    // UI Feedback
-    disableBidControls(true);
-    
-    logEvent(`You submitted a bid of ${formatAmount(amount)}`, true);
+  // UI Feedback
+  disableBidControls(true);
+
+  logEvent(`You submitted a bid of ${formatAmount(amount)}`, true);
 }
 
 function submitBlindPass() {
-    if (!socketAlive) return;
-    if (!mySelectedTeamKey) return;
+  if (!socketAlive) return;
+  if (!mySelectedTeamKey) return;
 
-    socket.emit("submit_blind_bid", {
-        teamKey: mySelectedTeamKey,
-        amount: 0 // 0 means Not Interested
-    });
+  socket.emit("submit_blind_bid", {
+    teamKey: mySelectedTeamKey,
+    amount: 0, // 0 means Not Interested
+  });
 
-    disableBidControls(true);
-    logEvent(`You skipped this player (Not Interested)`, true);
+  disableBidControls(true);
+  logEvent(`You skipped this player (Not Interested)`, true);
 }
 
 function disableBidControls(disabled) {
-    document.getElementById("placeBidBtn").disabled = disabled;
-    document.getElementById("passBidBtn").disabled = disabled;
-    if (disabled) {
-        document.getElementById("placeBidBtn").innerHTML = `SUBMITTED <i class="bi bi-check-lg"></i>`;
+  const placeBtn = document.getElementById("placeBidBtn");
+  const passBtn = document.getElementById("passBidBtn");
+  const input = document.getElementById("customBidInput");
+
+  if (placeBtn) placeBtn.disabled = disabled;
+  if (passBtn) passBtn.disabled = disabled;
+  if (input) input.disabled = disabled;
+
+  if (disabled) {
+    if (placeBtn)
+      placeBtn.innerHTML = `SUBMITTED <i class="bi bi-check-lg"></i>`;
+  } else {
+    if (placeBtn) placeBtn.innerHTML = `SUBMIT <i class="bi bi-send-fill"></i>`;
+    if (input) {
+      input.value = "";
+      input.focus();
     }
+  }
 }
 
 // 🛑 SUBMIT BID (UNIFIED LOGIC)
 function submitMyBid() {
   if (!socketAlive) return alert("Connection lost. Please wait…");
-  
+
+  // Check if controls are disabled
+  if (document.getElementById("placeBidBtn").disabled) return;
+
   // If in blind mode (pBid says SEALED), use submitBlindBid
   if (document.getElementById("pBid").innerText === "SEALED") {
     submitBlindBid();
@@ -1884,7 +2102,9 @@ function submitMyBid() {
 
   if (
     !auctionStarted ||
-    document.getElementById("saleOverlay").classList.contains("overlay-active") ||
+    document
+      .getElementById("saleOverlay")
+      .classList.contains("overlay-active") ||
     document.getElementById("saleOverlay").classList.contains("overlay-visible")
   )
     return;
@@ -1913,10 +2133,11 @@ function submitMyBid() {
 
   // Logic for increment in normal mode
   const currentBidText = document.getElementById("pBid").innerText;
-  const incValue = parseInt(document.getElementById("customBidInput").value) || 2500000;
+  const incValue =
+    parseInt(document.getElementById("customBidInput").value) || 2500000;
 
   let bidAmount;
-  
+
   if (currentHighestBidderKey === null) {
     bidAmount = currentActivePlayer.basePrice;
   } else {
@@ -1940,42 +2161,42 @@ function submitMyBid() {
 // 🔧 BIDS REVEALED
 socket.off("bids_revealed");
 socket.on("bids_revealed", (data) => {
-    console.log("BIDS REVEALED:", data);
-    const bids = data.bids; // Sorted highest first
-    const winner = data.winner;
-    
-    if (currentActivePlayer) {
-        currentActivePlayer.winnerKey = winner ? winner.teamKey : null;
-    }
-    
-    let html = `<div class="reveal-container">
+  console.log("BIDS REVEALED:", data);
+  const bids = data.bids; // Sorted highest first
+  const winner = data.winner;
+
+  if (currentActivePlayer) {
+    currentActivePlayer.winnerKey = winner ? winner.teamKey : null;
+  }
+
+  let html = `<div class="reveal-container">
         <h3 class="display-font text-warning mb-4 text-center">AUCTION RESULTS: ${data.playerName}</h3>
         <div class="d-flex flex-column gap-2">
     `;
-    
-    bids.forEach((b, index) => {
-        if (b.amount <= 0) return; // Skip zero bids (Not Interested)
-        
-        const isWin = winner && winner.teamKey === b.teamKey;
-        
-        let rowClass = "reveal-row";
-        let statusBadge = "";
-        let actionBtn = "";
-        
-        if (isWin) {
-            rowClass += " winner";
-            statusBadge = `<span class="winner-label">WON</span>`;
-        } else {
-            // ALL OTHER TEAMS HAVE OFFER BUTTON
-            if (winner && winner.teamKey === mySelectedTeamKey) {
-                // If I am the winner, others can see "OFFER" (handled by they being current user)
-            } else if (!isWin && winner) {
-                // If I am NOT the winner, show the OFFER button
-                actionBtn = `<button class="request-btn" onclick="requestExchange('${mySelectedTeamKey}', '${winner.teamKey}')">OFFER</button>`;
-            }
-        }
-        
-        html += `
+
+  bids.forEach((b, index) => {
+    if (b.amount <= 0) return; // Skip zero bids (Not Interested)
+
+    const isWin = winner && winner.teamKey === b.teamKey;
+
+    let rowClass = "reveal-row";
+    let statusBadge = "";
+    let actionBtn = "";
+
+    if (isWin) {
+      rowClass += " winner";
+      statusBadge = `<span class="winner-label">WON</span>`;
+    } else {
+      // ALL OTHER TEAMS HAVE OFFER BUTTON
+      if (winner && winner.teamKey === mySelectedTeamKey) {
+        // If I am the winner, others can see "OFFER" (handled by they being current user)
+      } else if (!isWin && winner) {
+        // If I am NOT the winner, show the OFFER button
+        actionBtn = `<button class="request-btn" onclick="requestExchange('${mySelectedTeamKey}', '${winner.teamKey}')">OFFER</button>`;
+      }
+    }
+
+    html += `
             <div class="${rowClass}">
                 <div class="d-flex align-items-center">
                     <span class="reveal-team">${b.teamName}</span>
@@ -1987,17 +2208,17 @@ socket.on("bids_revealed", (data) => {
                 </div>
             </div>
         `;
-    });
-    
-    if (!winner) {
-        html += `<div class="reveal-row justify-content-center text-danger border-danger">UNSOLD</div>`;
-    }
-    
-    html += `</div>
+  });
+
+  if (!winner) {
+    html += `<div class="reveal-row justify-content-center text-danger border-danger">UNSOLD</div>`;
+  }
+
+  html += `</div>
     <div id="exchangeArea" class="mt-4 w-100"></div>`;
-    
-    if (winner && winner.teamKey === mySelectedTeamKey) {
-         html += `
+
+  if (winner && winner.teamKey === mySelectedTeamKey) {
+    html += `
             <div id="selfKeepArea" class="mt-4 p-3 border border-success rounded bg-success bg-opacity-10 text-center w-100">
                 <div class="text-success fw-bold mb-2">🎉 YOU WON THE BID!</div>
                 <div class="small text-white-50 mb-2">Wait for other teams to send exchange offers...</div>
@@ -2008,41 +2229,43 @@ socket.on("bids_revealed", (data) => {
                 </div>
             </div>
          `;
-    }
-    
-    if (isAdmin && !winner) {
-         html += `<button onclick="socket.emit('proceed_to_next_player')" class="btn btn-warning w-100 mt-3">NEXT PLAYER</button>`;
-    }
-    
-    html += `</div>`;
-    
-    // Use Sale Overlay
-    const overlay = document.getElementById("saleOverlay");
-    overlay.innerHTML = html;
-    overlay.classList.add("overlay-visible");
-    overlay.style.display = "flex";
-    overlay.style.flexDirection = "column";
-    overlay.style.zIndex = "2000";
-    overlay.style.background = "rgba(0,0,0,0.95)";
+  }
 
-    playHammerSound();
-    
-    if (winner) {
-         speakText(`${data.playerName} won by ${winner.teamName} for ${formatAmount(winner.amount)}.`);
-    } else {
-         speakText("Unsold.");
-    }
+  if (isAdmin && !winner) {
+    html += `<button onclick="socket.emit('proceed_to_next_player')" class="btn btn-warning w-100 mt-3">NEXT PLAYER</button>`;
+  }
+
+  html += `</div>`;
+
+  // Use Sale Overlay
+  const overlay = document.getElementById("saleOverlay");
+  overlay.innerHTML = html;
+  overlay.classList.add("overlay-visible");
+  overlay.style.display = "flex";
+  overlay.style.flexDirection = "column";
+  overlay.style.zIndex = "2000";
+  overlay.style.background = "rgba(0,0,0,0.95)";
+
+  playHammerSound();
+
+  if (winner) {
+    speakText(
+      `${data.playerName} won by ${winner.teamName} for ${formatAmount(winner.amount)}.`,
+    );
+  } else {
+    speakText("Unsold.");
+  }
 });
 
 // 🔧 EXCHANGE REQUEST UPDATED
 socket.off("exchange_requests_updated");
 socket.on("exchange_requests_updated", (data) => {
-    const selfKeep = document.getElementById("selfKeepArea");
-    if (!selfKeep || mySelectedTeamKey !== currentActivePlayer.winnerKey) return;
+  const selfKeep = document.getElementById("selfKeepArea");
+  if (!selfKeep || mySelectedTeamKey !== currentActivePlayer.winnerKey) return;
 
-    const count = data.requestors.length;
-    if (count > 0 && selfKeep && selfKeep.style.display !== "none") {
-        selfKeep.innerHTML = `
+  const count = data.requestors.length;
+  if (count > 0 && selfKeep && selfKeep.style.display !== "none") {
+    selfKeep.innerHTML = `
              <div class="text-warning fw-bold mb-2">📩 ${count} EXCHANGE REQUESTS RECEIVED!</div>
              <div class="d-flex gap-2 mb-2">
                 <button class="btn btn-success flex-grow-1 py-3 display-font" onclick="socket.emit('keep_player')">KEEP PLAYER</button>
@@ -2050,14 +2273,14 @@ socket.on("exchange_requests_updated", (data) => {
              </div>
              <button class="btn btn-outline-danger w-100 py-2 display-font" onclick="socket.emit('reject_all_requests')">REJECT ALL OFFERS</button>
         `;
-    }
+  }
 });
 
 socket.off("exchange_requests_rejected");
 socket.on("exchange_requests_rejected", (data) => {
-    const selfKeep = document.getElementById("selfKeepArea");
-    if (selfKeep && mySelectedTeamKey === currentActivePlayer.winnerKey) {
-        selfKeep.innerHTML = `
+  const selfKeep = document.getElementById("selfKeepArea");
+  if (selfKeep && mySelectedTeamKey === currentActivePlayer.winnerKey) {
+    selfKeep.innerHTML = `
             <div class="text-success fw-bold mb-2">🎉 YOU WON THE BID!</div>
             <div class="small text-white-50 mb-3">Wait for other teams to send exchange offers...</div>
             <div class="d-flex gap-3 w-100">
@@ -2065,23 +2288,23 @@ socket.on("exchange_requests_rejected", (data) => {
                 <button class="btn btn-warning flex-grow-1 py-3 display-font" onclick="socket.emit('start_exchange_contest')">EXCHANGE</button>
             </div>
         `;
-    }
-    logEvent(data.message, true);
+  }
+  logEvent(data.message, true);
 });
 
 // 🔧 EXCHANGE CONTEST STARTED
 socket.off("exchange_contest_started");
 socket.on("exchange_contest_started", (data) => {
-    const overlay = document.getElementById("saleOverlay");
-    const isRequestor = data.requestors.includes(mySelectedTeamKey);
-    
-    let html = `<div class="reveal-container text-center">
+  const overlay = document.getElementById("saleOverlay");
+  const isRequestor = data.requestors.includes(mySelectedTeamKey);
+
+  let html = `<div class="reveal-container text-center">
         <h3 class="display-font text-info mb-3">🔥 EXCHANGE CONTEST: ${data.player.name}</h3>
         <p class="text-white-50">Current Winning Price: <span class="text-warning fw-bold">${formatAmount(data.basePrice)}</span></p>
     `;
 
-    if (isRequestor) {
-        html += `
+  if (isRequestor) {
+    html += `
             <div class="mt-4 p-4 border border-info rounded bg-info bg-opacity-10">
                 <h4 class="text-white mb-3">SUBMIT YOUR CHALLENGE BID</h4>
                 <div class="amount-entry-box mb-3">
@@ -2090,45 +2313,52 @@ socket.on("exchange_contest_started", (data) => {
                 <button class="bid-submit-btn w-100" id="submitContestBtn">SUBMIT CHALLENGE</button>
             </div>
         `;
-    } else {
-        html += `
+  } else {
+    html += `
             <div class="mt-4 p-4 text-white-50">
                 <div class="spinner-border text-info mb-3"></div>
                 <p>Requesting teams are placing their final bids...</p>
             </div>
         `;
-    }
-    html += "</div>";
+  }
+  html += "</div>";
 
-    overlay.innerHTML = html;
-    
-    if (isRequestor) {
-        document.getElementById("submitContestBtn").onclick = () => {
-            const rawVal = document.getElementById("contestBidInput").value;
-            const amount = parseBidValue(rawVal);
-            if (amount <= data.basePrice) {
-                return alert("Challenge bid must be higher than " + formatAmount(data.basePrice));
-            }
-            socket.emit("submit_contest_bid", { amount: amount });
-            document.getElementById("submitContestBtn").disabled = true;
-            document.getElementById("submitContestBtn").innerText = "BID SUBMITTED";
-        };
-    }
+  overlay.innerHTML = html;
+
+  if (isRequestor) {
+    document.getElementById("submitContestBtn").onclick = () => {
+      const rawVal = document.getElementById("contestBidInput").value;
+      const amount = parseBidValue(rawVal);
+      if (amount <= data.basePrice) {
+        return alert(
+          "Challenge bid must be higher than " + formatAmount(data.basePrice),
+        );
+      }
+      // Budget check for contest bid
+      const myTeam = globalTeams.find((t) => t.bidKey === mySelectedTeamKey);
+      if (myTeam && myTeam.budget < amount) {
+        return alert("Insufficient Budget for this bid!");
+      }
+      socket.emit("submit_contest_bid", { amount: amount });
+      document.getElementById("submitContestBtn").disabled = true;
+      document.getElementById("submitContestBtn").innerText = "BID SUBMITTED";
+    };
+  }
 });
 
 // ⚖️ TIE-BREAKER JUST STARTED
 socket.off("tie_breaker_started");
 socket.on("tie_breaker_started", (data) => {
-    const overlay = document.getElementById("saleOverlay");
-    const isTied = data.teams.some(t => t.teamKey === mySelectedTeamKey);
-    
-    let html = `<div class="reveal-container text-center">
+  const overlay = document.getElementById("saleOverlay");
+  const isTied = data.teams.some((t) => t.teamKey === mySelectedTeamKey);
+
+  let html = `<div class="reveal-container text-center">
         <h2 class="display-font text-warning mb-3">⚖️ TIE DETECTED!</h2>
-        <p class="text-white-50 mb-4">Teams ${data.teams.map(t => t.teamName).join(' & ')} bid the same amount: <span class="text-success fw-bold">${formatAmount(data.amount)}</span></p>
+        <p class="text-white-50 mb-4">Teams ${data.teams.map((t) => t.teamName).join(" & ")} bid the same amount: <span class="text-success fw-bold">${formatAmount(data.amount)}</span></p>
     `;
 
-    if (isTied) {
-        html += `
+  if (isTied) {
+    html += `
             <div class="mt-4 p-4 border border-warning rounded bg-warning bg-opacity-10">
                 <h4 class="text-white mb-3">RE-SUBMIT YOUR BID TO BREAK TIE</h4>
                 <div class="amount-entry-box mb-3">
@@ -2138,42 +2368,49 @@ socket.on("tie_breaker_started", (data) => {
                 <p class="small text-white-50 mt-3">Bid must be higher than ${formatAmount(data.amount)} to win.</p>
             </div>
         `;
-    } else {
-        html += `
+  } else {
+    html += `
             <div class="mt-4 p-4 text-white-50">
                 <div class="spinner-border text-warning mb-3"></div>
                 <p>Tied teams are re-submitting their bids...</p>
             </div>
         `;
-    }
-    html += "</div>";
+  }
+  html += "</div>";
 
-    overlay.innerHTML = html;
-    overlay.classList.add("overlay-visible");
-    overlay.style.display = "flex";
-    overlay.style.background = "rgba(0,0,0,0.95)";
-    
-    if (isTied) {
-        document.getElementById("submitTieBtn").onclick = () => {
-            const rawVal = document.getElementById("tieBidInput").value;
-            const amount = parseBidValue(rawVal);
-            if (amount <= data.amount) {
-                return alert("Tie-breaker bid must be higher than " + formatAmount(data.amount));
-            }
-            socket.emit("submit_tie_bid", { amount: amount });
-            document.getElementById("submitTieBtn").disabled = true;
-            document.getElementById("submitTieBtn").innerText = "BID SUBMITTED";
-        };
-    }
-    
-    playBidSound();
-    speakText("A tie has been detected. Tied teams please re-submit your bids.");
+  overlay.innerHTML = html;
+  overlay.classList.add("overlay-visible");
+  overlay.style.display = "flex";
+  overlay.style.background = "rgba(0,0,0,0.95)";
+
+  if (isTied) {
+    document.getElementById("submitTieBtn").onclick = () => {
+      const rawVal = document.getElementById("tieBidInput").value;
+      const amount = parseBidValue(rawVal);
+      if (amount <= data.amount) {
+        return alert(
+          "Tie-breaker bid must be higher than " + formatAmount(data.amount),
+        );
+      }
+      // Budget check for tie-breaker bid
+      const myTeam = globalTeams.find((t) => t.bidKey === mySelectedTeamKey);
+      if (myTeam && myTeam.budget < amount) {
+        return alert("Insufficient Budget for this bid!");
+      }
+      socket.emit("submit_tie_bid", { amount: amount });
+      document.getElementById("submitTieBtn").disabled = true;
+      document.getElementById("submitTieBtn").innerText = "BID SUBMITTED";
+    };
+  }
+
+  playBidSound();
+  speakText("A tie has been detected. Tied teams please re-submit your bids.");
 });
 
 socket.off("exchange_contest_finalized");
 socket.on("exchange_contest_finalized", (data) => {
-    const overlay = document.getElementById("saleOverlay");
-    overlay.innerHTML = `
+  const overlay = document.getElementById("saleOverlay");
+  overlay.innerHTML = `
         <div class="reveal-container text-center">
             <h1 class="display-font text-success mb-3">🏆 EXCHANGE WINNER!</h1>
             <h2 class="display-3 text-white mb-2">${data.winner}</h2>
@@ -2181,14 +2418,16 @@ socket.on("exchange_contest_finalized", (data) => {
             <div class="mt-4 text-white-50">Transferring player...</div>
         </div>
     `;
-    playHammerSound();
-    speakText(`Exchange contest won by ${data.winner} for ${formatAmount(data.amount)}.`);
+  playHammerSound();
+  speakText(
+    `Exchange contest won by ${data.winner} for ${formatAmount(data.amount)}.`,
+  );
 });
 
 socket.off("exchange_accepted");
 socket.on("exchange_accepted", (data) => {
-    const overlay = document.getElementById("saleOverlay");
-    overlay.innerHTML = `
+  const overlay = document.getElementById("saleOverlay");
+  overlay.innerHTML = `
         <div class="reveal-container text-center">
             <h1 class="display-font text-info mb-3">🤝 EXCHANGE ACCEPTED!</h1>
             <h2 class="display-3 text-white mb-2">${data.toTeamName}</h2>
@@ -2196,41 +2435,57 @@ socket.on("exchange_accepted", (data) => {
             <div class="mt-4 text-white-50">Finalizing sale...</div>
         </div>
     `;
-    playHammerSound();
-    speakText(`Exchange accepted. ${data.player.name} transferred to ${data.toTeamName}.`);
+  playHammerSound();
+  speakText(
+    `Exchange accepted. ${data.player.name} transferred to ${data.toTeamName}.`,
+  );
 });
 
 // Exchange Helper
-window.requestExchange = function(fromTeam, toTeam) {
-   socket.emit("request_exchange", { 
-       fromTeam: fromTeam, 
-       toTeam: toTeam, 
-       player: currentActivePlayer // Pass current player info
-   });
-   
-   // Update the button locally to show it was sent
-   const btn = event.currentTarget;
-   if (btn) {
-       btn.disabled = true;
-       btn.innerText = "REQUESTED";
-       btn.classList.add("btn-secondary");
-   }
+window.requestExchange = function (fromTeam, toTeam) {
+  socket.emit("request_exchange", {
+    fromTeam: fromTeam,
+    toTeam: toTeam,
+    player: currentActivePlayer, // Pass current player info
+  });
+
+  // Update the button locally to show it was sent
+  const btn = event.currentTarget;
+  if (btn) {
+    btn.disabled = true;
+    btn.innerText = "REQUESTED";
+    btn.classList.add("btn-secondary");
+  }
 };
 
 // 🔧 EXCHANGE REQUEST RECEIVED
 socket.off("exchange_request_received");
 socket.on("exchange_request_received", (data) => {
-    // Show Custom Overlay to Target Team instead of confirm()
-    if (data.toTeam === mySelectedTeamKey) {
-        const overlay = document.getElementById("saleOverlay");
-        const price = data.player.soldPrice || data.player.basePrice || "---";
-        
-        overlay.innerHTML = `
+  // Show Custom Overlay to Target Team instead of confirm()
+  if (data.toTeam === mySelectedTeamKey) {
+    const overlay = document.getElementById("saleOverlay");
+    const price = data.player.soldPrice || data.player.basePrice || "---";
+
+    overlay.innerHTML = `
             <div class="reveal-container text-center animate__animated animate__fadeInUp" style="max-width: 400px;">
                 <h3 class="display-font text-warning mb-3">EXCHANGE OFFER!</h3>
-                <div class="p-3 bg-white bg-opacity-10 rounded mb-4" style="border: 1px solid rgba(255,255,255,0.1);">
+                <div class="p-3 bg-white bg-opacity-10 rounded mb-4 position-relative" style="border: 1px solid rgba(255,255,255,0.1); overflow: hidden;">
+                    <!-- Team Logo Background/Watermark -->
+                    <div style="position: absolute; top: 10px; right: 10px; opacity: 0.2;">
+                         <img src="assets/teams/${data.fromTeam}.png" onerror="this.style.display='none'" style="width: 60px; height: 60px; object-fit: contain;">
+                    </div>
+
                     <p class="text-white-50 small mb-1">TEAM ${data.fromTeam} wants to give you</p>
-                    <h2 class="text-white display-font mb-2">${data.player.name}</h2>
+                    
+                    <div class="d-flex align-items-center gap-3 justify-content-center my-3">
+                        <img src="${data.player.img || 'assets/players/default.png'}" 
+                             style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 2px solid #ffc107; box-shadow: 0 0 15px rgba(255, 193, 7, 0.3);">
+                        <div class="text-start">
+                             <h2 class="text-white display-font mb-0" style="font-size: 1.8rem;">${data.player.name}</h2>
+                             <div class="text-info small">${data.player.role || 'Player'}</div>
+                        </div>
+                    </div>
+
                     <div class="fs-4 text-success fw-bold mb-2">${formatAmount(price)}</div>
                     <p class="small text-muted mb-0">Do you want this player?</p>
                 </div>
@@ -2240,138 +2495,168 @@ socket.on("exchange_request_received", (data) => {
                 </div>
             </div>
         `;
-        
-        overlay.classList.add("overlay-visible");
-        overlay.style.display = "flex";
-        overlay.style.background = "rgba(0,0,0,0.92)";
 
-        document.getElementById("cfAcceptBtn").onclick = () => {
-            socket.emit("accept_exchange", { fromTeam: data.fromTeam });
-            overlay.style.display = "none";
-            overlay.classList.remove("overlay-visible");
-        };
-        
-        document.getElementById("cfRejectBtn").onclick = () => {
-            socket.emit("reject_exchange", { fromTeam: data.fromTeam });
-            overlay.style.display = "none";
-            overlay.classList.remove("overlay-visible");
-        };
-    }
+    overlay.classList.add("overlay-visible");
+    overlay.style.display = "flex";
+    overlay.style.background = "rgba(0,0,0,0.92)";
+
+    document.getElementById("cfAcceptBtn").onclick = () => {
+      socket.emit("accept_exchange", { fromTeam: data.fromTeam });
+      overlay.style.display = "none";
+      overlay.classList.remove("overlay-visible");
+    };
+
+    document.getElementById("cfRejectBtn").onclick = () => {
+      socket.emit("reject_exchange", { fromTeam: data.fromTeam });
+      overlay.style.display = "none";
+      overlay.classList.remove("overlay-visible");
+    };
+  }
 });
 
 socket.off("exchange_finalized");
 socket.on("exchange_finalized", (data) => {
-    // Hide overlay
-    const overlay = document.getElementById("saleOverlay");
-    overlay.style.display = "none";
-    overlay.classList.remove("overlay-visible");
+  // Hide overlay
+  const overlay = document.getElementById("saleOverlay");
+  overlay.style.display = "none";
+  overlay.classList.remove("overlay-visible");
+  
+  // Clear any client side timer text just in case
+  const timerEl = document.getElementById("exchangeTimerValue");
+  if(timerEl) timerEl.innerText = "0";
+
+  globalTeams = data.teams;
+  updateTeamSidebar(globalTeams);
+  logEvent(data.message, true);
+});
+
+// NEW: Handle Decision Timer Tick
+socket.off("blind_timer_tick");
+socket.on("blind_timer_tick", (timeLeft) => {
+    const el = document.getElementById("exchangeTimerValue");
+    if(el) {
+        el.innerText = timeLeft;
+        if(timeLeft <= 5) {
+             el.style.color = "red";
+             el.parentElement.classList.add("animate__animated", "animate__flash");
+             playTickSound();
+        }
+    }
+});
+
+// Handle Timer Extension (when someone requests exchange)
+socket.off("timer_extended");
+socket.on("timer_extended", (data) => {
+    console.log(`⏱️ Timer extended: ${data.message}`);
     
-    globalTeams = data.teams;
-    updateTeamSidebar(globalTeams);
-    logEvent(data.message, true);
+    // Show toast notification
+    showToast(`⏱️ ${data.message}`, "info");
+    
+    // Log the event
+    logEvent(`⏱️ ${data.message}`, true);
+    
+    // Play a sound effect
+    playBeep(600, 0.1);
 });
 
 socket.off("exchange_rejected");
 socket.on("exchange_rejected", (data) => {
-    // If I am the one who sent the request, show alert
-    if (data.fromTeam === mySelectedTeamKey) {
-        alert(`Exchange offer was REJECTED by ${data.toTeamName}`);
-    }
+  // If I am the one who sent the request, show alert
+  if (data.fromTeam === mySelectedTeamKey) {
+    alert(`Exchange offer was REJECTED by ${data.toTeamName}`);
+  }
 });
 
 // 🔧 EXCHANGE TIMER TICK
 socket.off("exchange_timer_tick");
 socket.on("exchange_timer_tick", (timeLeft) => {
-    const timerValue = document.getElementById("exchangeTimerValue");
-    if (timerValue) {
-        timerValue.innerText = timeLeft;
-        if (timeLeft <= 2) {
-            timerValue.style.color = "#ff4444";
-        }
+  const timerValue = document.getElementById("exchangeTimerValue");
+  if (timerValue) {
+    timerValue.innerText = timeLeft;
+    if (timeLeft <= 2) {
+      timerValue.style.color = "#ff4444";
     }
+  }
 });
 
 socket.off("unsold_finalized");
 socket.on("unsold_finalized", (data) => {
-    const overlay = document.getElementById("saleOverlay");
+  const overlay = document.getElementById("saleOverlay");
+  overlay.style.display = "none";
+  overlay.classList.remove("overlay-visible");
+  logEvent(data.message, true);
+});
+
+// 🎯 OPEN SQUAD SELECTION (Auction Complete)
+socket.off("open_squad_selection");
+socket.on("open_squad_selection", () => {
+  console.log("✅ Auction complete! Opening squad selection...");
+  
+  // Hide any overlays
+  const overlay = document.getElementById("saleOverlay");
+  if (overlay) {
     overlay.style.display = "none";
     overlay.classList.remove("overlay-visible");
-    logEvent(data.message, true);
+  }
+  
+  // Show squad selection section if it exists
+  const squadSection = document.getElementById("squadSelectionSection");
+  if (squadSection) {
+    squadSection.style.display = "block";
+    document.getElementById("auctionDashboard").style.display = "none";
+  }
+  
+  // Notify the user
+  logEvent("<strong>🎉 AUCTION COMPLETE!</strong> Proceed to squad selection.", true);
+  speakText("The auction is complete! Please proceed to select your playing eleven.");
+  playHammerSound();
+  
+  // Show a completion notification
+  showToast("Auction Complete! 🎉 Proceed to squad selection.", "success");
 });
 
 // 🛑 SUBMIT BID (FIXED LOGIC)
-function submitMyBid() {
-  if (!socketAlive) return alert("Connection lost. Please wait…");
-  if (
-    !auctionStarted ||
-    document.getElementById("saleOverlay").classList.contains("overlay-active")
-  )
-    return;
-  if (currentHighestBidderKey === mySelectedTeamKey) return;
-  if (!mySelectedTeamKey) return alert("You don't have a team!");
-  if (!currentActivePlayer) return;
 
-  const myTeam = globalTeams.find((t) => t.bidKey === mySelectedTeamKey);
-  if (!myTeam) return;
-
-  const currentSquadSize = myTeam.roster ? myTeam.roster.length : 0;
-  if (currentSquadSize >= 25) {
-    alert("SQUAD FULL! You have reached 25 players.");
+// Safely attach placeBidBtn listener
+function attachPlaceBidListener() {
+  const placeBidBtn = document.getElementById("placeBidBtn");
+  if (!placeBidBtn) {
+    console.warn("⚠️ placeBidBtn not found, retrying in 300ms...");
+    setTimeout(attachPlaceBidListener, 300);
     return;
   }
 
-  if (currentActivePlayer.playerType === "Foreign") {
-    const foreignCount = myTeam.roster
-      ? myTeam.roster.filter((p) => p.playerType === "Foreign").length
-      : 0;
-    if (foreignCount >= 8) {
-      alert("FOREIGN QUOTA FULL! Max 8 allowed.");
-      return;
-    }
-  }
+  if (placeBidBtn.dataset.listenerAttached) return;
+  placeBidBtn.dataset.listenerAttached = "true";
 
-  // FIXED: Logic for first bid vs subsequent bids
-  const currentBidText = document.getElementById("pBid").innerText;
-  const inc = parseInt(document.getElementById("customBidInput").value);
-
-  let bidAmount;
-  
-  // Check if this is the FIRST bid (no one has bid yet)
-  if (currentHighestBidderKey === null) {
-    // First bid = exactly base price (no increment)
-    bidAmount = currentActivePlayer.basePrice;
-  } else {
-    // Subsequent bids = current bid + increment
-    const parsed = parsePrice(currentBidText);
-    const current = parsed > 0 ? parsed : currentActivePlayer.basePrice;
-    bidAmount = current + inc;
-  }
-
-  if (myTeam.budget < bidAmount) {
-    alert("INSUFFICIENT BUDGET!");
-    return;
-  }
-
-  socket.emit("place_bid", {
-    teamKey: mySelectedTeamKey,
-    teamName: myTeam.name,
-    amount: bidAmount,
-  });
+  placeBidBtn.addEventListener("click", submitMyBid);
+  console.log("✓ placeBidBtn listener attached");
 }
 
-document.getElementById("placeBidBtn").addEventListener("click", submitMyBid);
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", attachPlaceBidListener);
+} else {
+  setTimeout(attachPlaceBidListener, 100);
+}
+
+// NOTE: Removed duplicate listener attachment to prevent double-bid submissions
+// The attachPlaceBidListener function handles all cases properly
 
 // Logout functionality
 document.getElementById("logoutBtn")?.addEventListener("click", () => {
-    localStorage.removeItem("token");
-    sessionStorage.removeItem("ipl_auction_player_name");
-    window.location.href = "login.html";
+  localStorage.removeItem("token");
+  sessionStorage.removeItem("ipl_auction_player_name");
+  window.location.href = "login.html";
 });
 document.addEventListener("keydown", (e) => {
   if (lobbyScreen.style.display !== "none") return;
-  
+
   // Prevent actions if typing in an input field (except custom bid)
-  if(document.activeElement.tagName === "INPUT" && document.activeElement.id !== "customBidInput") return;
+  if (
+    document.activeElement.tagName === "INPUT" &&
+    document.activeElement.id !== "customBidInput"
+  )
+    return;
 
   // BID SHORTCUTS (Space/Enter)
   if (e.code === "Space" || e.code === "Enter") {
@@ -2381,12 +2666,12 @@ document.addEventListener("keydown", (e) => {
 
   // HOST SHORTCUTS (S = Sold, U = Unsold/Skip)
   if (isAdmin) {
-      if (e.key.toLowerCase() === 's') {
-          document.getElementById("soldBtn").click();
-      }
-      if (e.key.toLowerCase() === 'u') {
-          document.getElementById("skipBtn").click();
-      }
+    if (e.key.toLowerCase() === "s") {
+      document.getElementById("soldBtn").click();
+    }
+    if (e.key.toLowerCase() === "u") {
+      document.getElementById("skipBtn").click();
+    }
   }
 });
 
@@ -2395,6 +2680,12 @@ socket.on("timer_tick", (val) => {
   const timerEl = document.getElementById("auctionTimer");
   if (timerEl) {
     timerEl.innerText = val;
+
+    // Calculate percentage (Assuming 10s max as per server logic)
+    const MAX_TIME = 10;
+    const percentage = (val / MAX_TIME) * 100;
+    timerEl.style.setProperty("--progress", `${percentage}%`);
+
     timerEl.classList.remove("timer-paused", "timer-danger");
     if (val <= 3) timerEl.classList.add("timer-danger");
   }
@@ -2440,14 +2731,14 @@ socket.on("sale_finalized", (data) => {
   if (!data.isUnsold) {
     logEvent(
       `<strong>SOLD:</strong> ${data.soldPlayer.name} to ${data.soldDetails.soldTeam}`,
-      true
+      true,
     );
     document.getElementById("soldToSection").style.display = "block";
     document.getElementById("soldPriceSection").style.display = "block";
     document.getElementById("soldTeamName").innerText =
       data.soldDetails.soldTeam;
     document.getElementById("soldFinalPrice").innerText = formatAmount(
-      data.price
+      data.price,
     );
     stamp.innerText = "SOLD";
     stamp.className = "stamp-overlay";
@@ -2455,7 +2746,7 @@ socket.on("sale_finalized", (data) => {
     playHammerSound();
     const priceInCrores = (data.price / 10000000).toFixed(2);
     speakText(
-      `${data.soldPlayer.name}. Sold to ${data.soldDetails.soldTeam} for ${priceInCrores} crore rupees.`
+      `${data.soldPlayer.name}. Sold to ${data.soldDetails.soldTeam} for ${priceInCrores} crore rupees.`,
     );
   } else {
     logEvent(`<strong>UNSOLD:</strong> ${data.soldPlayer.name}`, true);
@@ -2475,7 +2766,7 @@ socket.on("sale_finalized", (data) => {
   }, 3500);
 });
 
-window.setBidAmount = function(amount) {
+window.setBidAmount = function (amount) {
   const input = document.getElementById("customBidInput");
   if (input) {
     input.value = amount;
@@ -2487,51 +2778,66 @@ function setupBidControls(p) {
   if (!quickArea) return;
 
   const isDomestic = p && p.playerType === "Uncapped";
-  
+
   let html = "";
   if (isDomestic) {
-      // Domestic: Only Lakhs
-      [20, 30, 50, 70, 90].forEach(v => {
-          html += `<div class="quick-bid-chip lakh" onclick="setBidAmount(${v * 100000})">${v} L</div>`;
-      });
+    // Domestic: Only Lakhs
+    [20, 30, 50, 70, 90].forEach((v) => {
+      html += `<div class="quick-bid-chip lakh" onclick="setBidAmount(${v * 100000})">${v} L</div>`;
+    });
   } else {
-      // Normal: Only Crores
-      [2, 3, 5, 7, 10, 15, 20].forEach(v => {
-          html += `<div class="quick-bid-chip crore" onclick="setBidAmount(${v * 10000000})">${v} CR</div>`;
-      });
+    // Normal: Only Crores
+    [2, 3, 5, 7, 10, 15, 20].forEach((v) => {
+      html += `<div class="quick-bid-chip crore" onclick="setBidAmount(${v * 10000000})">${v} CR</div>`;
+    });
   }
-  
+
   quickArea.innerHTML = html;
 
   // Add event listener for Enter key on the input
   const input = document.getElementById("customBidInput");
   if (input) {
-      input.addEventListener("keypress", (e) => {
-          if (e.key === "Enter") {
-              submitBlindBid();
-          }
-      });
-      // Clear value for new player
-      input.value = "";
-      input.focus();
+    input.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") {
+        submitBlindBid();
+      }
+    });
+    // Clear value for new player
+    input.value = "";
+    input.focus();
   }
 
   // Handle Admin Controls visibility
-  const adminPanel = document.getElementById("adminControls");
-  if (adminPanel) {
-      if (isAdmin) {
-          adminPanel.classList.remove("d-none");
-          adminPanel.classList.add("d-flex");
-      } else {
-          adminPanel.classList.remove("d-flex");
-          adminPanel.classList.add("d-none");
-      }
+  const adminHeader = document.getElementById("adminHeaderControls");
+  const adminFooter = document.getElementById("adminFooterControls");
+
+  if (isAdmin) {
+    if (adminHeader) {
+      adminHeader.classList.remove("d-none");
+      adminHeader.classList.add("d-flex");
+    }
+    if (adminFooter) {
+      adminFooter.classList.remove("d-none");
+      adminFooter.classList.add("d-flex");
+    }
+  } else {
+    if (adminHeader) {
+      adminHeader.classList.remove("d-flex");
+      adminHeader.classList.add("d-none"); // Header might need d-none if not admin
+    }
+    if (adminFooter) {
+      adminFooter.classList.remove("d-flex");
+      adminFooter.classList.add("d-none");
+    }
   }
 
-  // Place bid button listener
-  document.getElementById("placeBidBtn").onclick = submitBlindBid;
-  document.getElementById("passBidBtn").onclick = submitBlindPass;
-  
+  // Place bid button listener - safe with null checks
+  const placeBidBtn = document.getElementById("placeBidBtn");
+  const passBidBtn = document.getElementById("passBidBtn");
+
+  if (placeBidBtn) placeBidBtn.onclick = submitBlindBid;
+  if (passBidBtn) passBidBtn.onclick = submitBlindPass;
+
   // Enable buttons for new player
   disableBidControls(false);
 }
@@ -2548,19 +2854,26 @@ function updateTeamSidebar(teams) {
       card.id = `team-card-${t.bidKey}`;
       card.className = "franchise-card";
       if (isMine) card.classList.add("my-team");
-      
+
       // Display player name if available
-      const playerNameDisplay = t.playerName 
-        ? `<div style="font-size: 0.65rem; color: #888; margin-top: 2px;">${t.playerName}</div>` 
-        : '';
-      
+      const playerNameDisplay = t.playerName
+        ? `<div style="font-size: 0.65rem; color: #888; margin-top: 2px;">${t.playerName}</div>`
+        : "";
+
+      const clickAction = (!isMine && !t.isTaken && !mySelectedTeamKey) 
+        ? `onclick="claimLobbyTeam('${t.bidKey}')" style="cursor: pointer;"` 
+        : "";
+
       card.innerHTML = `
-                <div class="f-header">
+                <div class="f-header" ${clickAction}>
                     <div class="f-name text-white text-truncate" style="max-width: 120px;">
                         ${t.name} ${
-        isMine ? '<i class="bi bi-person-fill text-success"></i>' : ""
-      }
+                          isMine
+                            ? '<i class="bi bi-person-fill text-success"></i>'
+                            : ""
+                        }
                         ${playerNameDisplay}
+                        ${(!isMine && !t.isTaken && !mySelectedTeamKey) ? '<br><span class="badge bg-success" style="font-size:0.5rem">JOIN FREE TEAM</span>' : ''}
                     </div>
                     <div class="f-budget">${formatAmount(t.budget)}</div> 
                 </div>
@@ -2622,16 +2935,53 @@ document.getElementById("skipBtn").addEventListener("click", () => {
   socket.emit("finalize_sale", { isUnsold: true });
 });
 
-document
-  .getElementById("timerToggleBtn")
-  .addEventListener("click", () => isAdmin && socket.emit("toggle_timer"));
-document
-  .getElementById("endAuctionBtn")
-  .addEventListener(
-    "click",
-    () =>
-      isAdmin && confirm("End Auction?") && socket.emit("end_auction_trigger")
-  );
+const timerToggleBtn = document.getElementById("timerToggleBtn");
+if (timerToggleBtn) {
+  timerToggleBtn.addEventListener("click", () => {
+    console.log("Timer toggle clicked. Is Admin:", isAdmin);
+    if (isAdmin) {
+      socket.emit("toggle_timer");
+    } else {
+      console.warn("Ignored toggle timer: User is not admin");
+    }
+  });
+}
+
+// Safely attach endAuctionBtn listener
+function attachEndAuctionListener() {
+  const btn = document.getElementById("endAuctionBtn");
+  if (!btn) {
+    setTimeout(attachEndAuctionListener, 300);
+    return;
+  }
+
+  if (btn.dataset.listenerAttached) return;
+  btn.dataset.listenerAttached = "true";
+
+  btn.addEventListener("click", () => {
+    if (!isAdmin) {
+      alert("Only the host can end the auction.");
+      return;
+    }
+
+    if (
+      confirm(
+        "Are you sure you want to end the auction? This cannot be undone.",
+      )
+    ) {
+      // Disable button to prevent double-click
+      btn.disabled = true;
+      btn.innerHTML = 'ENDING... <i class="bi bi-hourglass-end"></i>';
+      socket.emit("end_auction_trigger");
+    }
+  });
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", attachEndAuctionListener);
+} else {
+  setTimeout(attachEndAuctionListener, 100);
+}
 
 function updatePauseButtonState(isPaused) {
   const btn = document.getElementById("timerToggleBtn");
@@ -2652,24 +3002,29 @@ let mySelectedCaptain = null;
 socket.off("open_squad_selection");
 socket.on("open_squad_selection", (data) => {
   console.log("📢 SQUAD SELECTION OPENED", data);
-  
+
   if (data && data.teams) {
-      globalTeams = data.teams;
-      
-      // Auto-recover mySelectedTeamKey if lost/mismatch
-      const myTeam = globalTeams.find(t => t.ownerPlayerId === myPersistentId || t.ownerSocketId === socket.id);
-      if (myTeam) {
-          mySelectedTeamKey = myTeam.bidKey;
-          console.log("✅ Recovered Team Key:", mySelectedTeamKey);
-      }
+    globalTeams = data.teams;
+
+    // Auto-recover mySelectedTeamKey if lost/mismatch
+    const myTeam = globalTeams.find(
+      (t) =>
+        t.ownerPlayerId === myPersistentId || t.ownerSocketId === socket.id,
+    );
+    if (myTeam) {
+      mySelectedTeamKey = myTeam.bidKey;
+      console.log("✅ Recovered Team Key:", mySelectedTeamKey);
+    }
   }
 
   document
     .getElementById("squadSelectionScreen")
     .classList.add("overlay-active");
-    
+
   renderMySquadSelection();
-  speakText("The auction has ended. All teams, please select your playing eleven and impact players.");
+  speakText(
+    "The auction has ended. All teams, please select your playing eleven and impact players.",
+  );
 });
 
 function countForeigners(list) {
@@ -2677,7 +3032,8 @@ function countForeigners(list) {
 }
 function countKeepers(list) {
   // FIXED: Strict check as requested
-  return list.filter(p => p.roleKey && p.roleKey.toLowerCase() === "wk").length;
+  return list.filter((p) => p.roleKey && p.roleKey.toLowerCase() === "wk")
+    .length;
 }
 
 // --- GLOBAL HELPERS (Moved from socket handlers) ---
@@ -2688,7 +3044,7 @@ function normalizeTeamStats(team) {
     l: team.stats?.lost ?? 0,
     pts: team.stats?.pts ?? 0,
     nrr: team.stats?.nrr?.toFixed?.(3) ?? "0.000",
-    name: team.name
+    name: team.name,
   };
 }
 
@@ -2710,15 +3066,17 @@ function renderMySquadSelection() {
   const myTeam = globalTeams.find((t) => t.bidKey === mySelectedTeamKey);
   const list = document.getElementById("playing11List");
   const impList = document.getElementById("impactList");
-  list.innerHTML = '<small class="text-warning d-block mb-2 text-center" style="font-size:0.75rem;">Select 12 Players (Batting Order Priority)</small>';
-  impList.innerHTML = '<small class="text-warning d-block mb-2 text-center" style="font-size:0.75rem;">Assign Roles (Bat Impact & Bowl Impact)</small>';
+  list.innerHTML =
+    '<small class="text-warning d-block mb-2 text-center" style="font-size:0.75rem;">Select 12 Players (Batting Order Priority)</small>';
+  impList.innerHTML =
+    '<small class="text-warning d-block mb-2 text-center" style="font-size:0.75rem;">Assign Roles (Bat Impact & Bowl Impact)</small>';
 
   if (!myTeam || !myTeam.roster || myTeam.roster.length === 0)
     return (list.innerHTML =
       "<div class='text-white-50 text-center mt-5'>No players bought!</div>");
 
   const sortedRoster = [...myTeam.roster].sort(
-    (a, b) => getRolePriority(a.roleKey) - getRolePriority(b.roleKey)
+    (a, b) => getRolePriority(a.roleKey) - getRolePriority(b.roleKey),
   );
 
   sortedRoster.forEach((p, i) => {
@@ -2745,15 +3103,15 @@ function renderMySquadSelection() {
 
   // Render Role Selection (Only from Selected Squad)
   mySelectedSquad.forEach((p, i) => {
-      const isBatImp = myBattingImpact && myBattingImpact.name === p.name;
-      const isBowlImp = myBowlingImpact && myBowlingImpact.name === p.name;
-      const roleIcon = getRoleIcon(p.roleKey);
-      
-      impList.innerHTML += `
+    const isBatImp = myBattingImpact && myBattingImpact.name === p.name;
+    const isBowlImp = myBowlingImpact && myBowlingImpact.name === p.name;
+    const roleIcon = getRoleIcon(p.roleKey);
+
+    impList.innerHTML += `
       <div class="player-check-card impact-card d-flex gap-2 align-items-center p-1" style="cursor:default;">
          <div class="fw-bold text-white small flex-grow-1 text-truncate">${p.name}</div>
-         <button class="btn btn-xs ${isBatImp ? 'btn-danger' : 'btn-outline-danger'} small-impact-btn" onclick="setBatImpact('${p.name}')">BAT IMP</button>
-         <button class="btn btn-xs ${isBowlImp ? 'btn-primary' : 'btn-outline-primary'} small-impact-btn" onclick="setBowlImpact('${p.name}')">BOWL IMP</button>
+         <button class="btn btn-xs ${isBatImp ? "btn-danger" : "btn-outline-danger"} small-impact-btn" onclick="setBatImpact('${p.name}')">BAT IMP</button>
+         <button class="btn btn-xs ${isBowlImp ? "btn-primary" : "btn-outline-primary"} small-impact-btn" onclick="setBowlImpact('${p.name}')">BOWL IMP</button>
       </div>`;
   });
 
@@ -2763,8 +3121,8 @@ function renderMySquadSelection() {
 function toggleSquadMember(i, name) {
   const team = globalTeams.find((t) => t.bidKey === mySelectedTeamKey);
   const p = team.roster.find((x) => x.name === name);
-  
-  if (!p) return; 
+
+  if (!p) return;
 
   const idx = mySelectedSquad.findIndex((x) => x.name === name);
   if (idx > -1) {
@@ -2772,11 +3130,14 @@ function toggleSquadMember(i, name) {
     mySelectedSquad.splice(idx, 1);
     // Clear roles if removed
     if (mySelectedCaptain === name) mySelectedCaptain = null;
-    if (myBattingImpact && myBattingImpact.name === name) myBattingImpact = null;
-    if (myBowlingImpact && myBowlingImpact.name === name) myBowlingImpact = null;
+    if (myBattingImpact && myBattingImpact.name === name)
+      myBattingImpact = null;
+    if (myBowlingImpact && myBowlingImpact.name === name)
+      myBowlingImpact = null;
   } else {
     // Add
-    if (mySelectedSquad.length >= 12) return alert("Max 12 Players (11 + Impact Pair)");
+    if (mySelectedSquad.length >= 12)
+      return alert("Max 12 Players (11 + Impact Pair)");
     const currentForeignCount = countForeigners(mySelectedSquad);
     if (p.playerType === "Foreign" && currentForeignCount >= 4)
       return alert("MAX 4 FOREIGN PLAYERS ALLOWED IN SQUAD!");
@@ -2786,21 +3147,21 @@ function toggleSquadMember(i, name) {
 }
 
 function setBatImpact(name) {
-    const p = mySelectedSquad.find(x => x.name === name);
-    if(myBowlingImpact && myBowlingImpact.name === name) {
-        myBowlingImpact = null; // Swap roles if clicking same
-    }
-    myBattingImpact = (myBattingImpact && myBattingImpact.name === name) ? null : p;
-    renderMySquadSelection();
+  const p = mySelectedSquad.find((x) => x.name === name);
+  if (myBowlingImpact && myBowlingImpact.name === name) {
+    myBowlingImpact = null; // Swap roles if clicking same
+  }
+  myBattingImpact = myBattingImpact && myBattingImpact.name === name ? null : p;
+  renderMySquadSelection();
 }
 
 function setBowlImpact(name) {
-    const p = mySelectedSquad.find(x => x.name === name);
-    if(myBattingImpact && myBattingImpact.name === name) {
-        myBattingImpact = null;
-    }
-    myBowlingImpact = (myBowlingImpact && myBowlingImpact.name === name) ? null : p;
-    renderMySquadSelection();
+  const p = mySelectedSquad.find((x) => x.name === name);
+  if (myBattingImpact && myBattingImpact.name === name) {
+    myBattingImpact = null;
+  }
+  myBowlingImpact = myBowlingImpact && myBowlingImpact.name === name ? null : p;
+  renderMySquadSelection();
 }
 
 function setCaptain(name) {
@@ -2820,15 +3181,18 @@ function updateSquadUI() {
   const wkCount = countKeepers(mySelectedSquad);
   const wkColor = wkCount < 1 ? "text-danger" : "text-white-50";
 
-  document.getElementById("p11Count").innerText = `${mySelectedSquad.length}/12 Selected`;
-  document.getElementById("foreignCountDisplay").innerHTML = `<span class="${fColor}">Foreign: ${fCount}/4</span>`;
-  document.getElementById("wkCountDisplay").innerHTML = `<span class="${wkColor}">WK: ${wkCount}/1</span>`;
-  
+  document.getElementById("p11Count").innerText =
+    `${mySelectedSquad.length}/12 Selected`;
+  document.getElementById("foreignCountDisplay").innerHTML =
+    `<span class="${fColor}">Foreign: ${fCount}/4</span>`;
+  document.getElementById("wkCountDisplay").innerHTML =
+    `<span class="${wkColor}">WK: ${wkCount}/1</span>`;
+
   // Impact Count Display Update
   const impactReady = myBattingImpact && myBowlingImpact;
-  document.getElementById("impactCount").innerHTML = impactReady 
-      ? "<span class='text-success'>Roles Set</span>" 
-      : "<span class='text-danger'>Select Batsman & Bowler Impact</span>";
+  document.getElementById("impactCount").innerHTML = impactReady
+    ? "<span class='text-success'>Roles Set</span>"
+    : "<span class='text-danger'>Select Batsman & Bowler Impact</span>";
 
   const isValid =
     mySelectedSquad.length === 12 &&
@@ -2838,25 +3202,43 @@ function updateSquadUI() {
   document.getElementById("submitSquadBtn").disabled = !isValid;
 }
 
-document.getElementById("submitSquadBtn").addEventListener("click", () => {
+// Safely attach submitSquadBtn listener
+function attachSubmitSquadListener() {
+  const btn = document.getElementById("submitSquadBtn");
+  if (!btn) {
+    setTimeout(attachSubmitSquadListener, 300);
+    return;
+  }
+
+  if (btn.dataset.listenerAttached) return;
+  btn.dataset.listenerAttached = "true";
+
+  btn.addEventListener("click", () => {
     // Ensure removal of old listener if any (though usually one-shot)
     socket.emit("submit_squad", {
-    teamKey: mySelectedTeamKey,
-    squad: mySelectedSquad,
-    batImpact: myBattingImpact,
-    bowlImpact: myBowlingImpact,
-    captain: mySelectedCaptain,
-  });
+      teamKey: mySelectedTeamKey,
+      squad: mySelectedSquad,
+      batImpact: myBattingImpact,
+      bowlImpact: myBowlingImpact,
+      captain: mySelectedCaptain,
+    });
 
-  document.getElementById("submitSquadBtn").innerHTML =
-    "SUBMITTED <i class='bi bi-check'></i>";
-  document.getElementById("submitSquadBtn").disabled = true;
-  const waitMsg = document.getElementById("waitingMsg");
-  waitMsg.classList.remove("d-none");
-  if (isAdmin) {
-    waitMsg.innerHTML += `<br><button onclick="forceRunSim()" class="btn btn-sm btn-outline-warning mt-2">FORCE START SIMULATION</button>`;
-  }
-});
+    document.getElementById("submitSquadBtn").innerHTML =
+      "SUBMITTED <i class='bi bi-check'></i>";
+    document.getElementById("submitSquadBtn").disabled = true;
+    const waitMsg = document.getElementById("waitingMsg");
+    waitMsg.classList.remove("d-none");
+    if (isAdmin) {
+      clearTimeout(squadSubmitTimeout);
+    }
+  });
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", attachSubmitSquadListener);
+} else {
+  setTimeout(attachSubmitSquadListener, 100);
+}
 
 // FIXED: Emit the exact event name the server expects to START the tournament
 function forceRunSim() {
@@ -2867,7 +3249,7 @@ socket.off("squad_submission_update");
 socket.on("squad_submission_update", (d) => {
   const msgEl = document.getElementById("waitingMsg");
   msgEl.innerHTML = `WAITING... (${d.submittedCount}/${d.totalTeams} SUBMITTED)`;
-  
+
   if (isAdmin) {
     // Check if button already exists to prevent duplicates
     if (!document.getElementById("forceStartBtn")) {
@@ -2918,30 +3300,34 @@ socket.on("tournamentComplete", (results) => {
   // Save results to session storage for play.html to pick up
   sessionStorage.setItem("IPL_RESULTS", JSON.stringify(results));
   sessionStorage.setItem("currentRoomId", myRoomId);
-  
+
   // Redirect to play.html
   window.location.href = `play.html?room=${myRoomId}`;
 });
 
-
-
 // --- MATCH FILTER LOGIC ---
-window.filterMatchLogs = function(teamName) {
-    const mLog = document.getElementById("matchLogContainer");
-    mLog.innerHTML = "";
-    
-    if (!lastTournamentData || !lastTournamentData.leagueMatches) return;
+window.filterMatchLogs = function (teamName) {
+  const mLog = document.getElementById("matchLogContainer");
+  mLog.innerHTML = "";
 
-    const allMatches = lastTournamentData.leagueMatches;
-    const filtered = teamName === "ALL" 
-        ? allMatches 
-        : allMatches.filter(m => m.t1 === teamName || m.t2 === teamName);
+  if (!lastTournamentData || !lastTournamentData.leagueMatches) return;
 
-    if (filtered.length > 0) {
-        filtered.forEach((m, i) => mLog.innerHTML += createMatchCard(m, false, i));
-    } else {
-        mLog.innerHTML = "<div class='text-center text-white-50 p-4'>No matches found for " + teamName + "</div>";
-    }
+  const allMatches = lastTournamentData.leagueMatches;
+  const filtered =
+    teamName === "ALL"
+      ? allMatches
+      : allMatches.filter((m) => m.t1 === teamName || m.t2 === teamName);
+
+  if (filtered.length > 0) {
+    filtered.forEach(
+      (m, i) => (mLog.innerHTML += createMatchCard(m, false, i)),
+    );
+  } else {
+    mLog.innerHTML =
+      "<div class='text-center text-white-50 p-4'>No matches found for " +
+      teamName +
+      "</div>";
+  }
 };
 
 function renderAllTeams(teamsData) {
@@ -2962,7 +3348,7 @@ function renderAllTeams(teamsData) {
       p11Html += `<div class="team-player-row" style="border-left: 3px solid #00E676; padding-left:8px;"><span class="text-white">${icon} ${
         p.name
       } ${isCapt}</span><span class="text-white-50">${formatAmount(
-        p.price || 0
+        p.price || 0,
       )}</span></div>`;
     });
 
@@ -2973,7 +3359,7 @@ function renderAllTeams(teamsData) {
         benchHtml += `<div class="team-player-row" style="opacity:0.5;"><span class="text-white">${icon} ${
           p.name
         } (Bench)</span><span class="text-white-50">${formatAmount(
-          p.price || 0
+          p.price || 0,
         )}</span></div>`;
       }
     });
@@ -3027,27 +3413,26 @@ function createMatchCard(m, isPlayoff = false, index) {
 // --- OPEN SCORECARD (DETAILED) ---
 function openScorecard(type, index) {
   if (!lastTournamentData) return;
-  
+
   // 1. Fetch Data
   const matchData =
     type === "league"
       ? lastTournamentData.leagueMatches[index]
       : lastTournamentData.playoffs[index];
-  
+
   if (!matchData) {
-      console.error("Match data not found for", type, index);
-      return;
+    console.error("Match data not found for", type, index);
+    return;
   }
-  
+
   // 2. Delegate to the global UI renderer (defined in play.html)
-  if (typeof window.showScorecard === 'function') {
-      window.showScorecard(matchData);
+  if (typeof window.showScorecard === "function") {
+    window.showScorecard(matchData);
   } else {
-      console.error("showScorecard function not found!");
-      alert("Error: Scorecard viewer not loaded.");
+    console.error("showScorecard function not found!");
+    alert("Error: Scorecard viewer not loaded.");
   }
 }
-
 
 function renderPlayerPool() {
   const a = document.getElementById("availableList"),
@@ -3064,7 +3449,7 @@ function renderPlayerPool() {
     }</div><div class="text-white-50 small">${p.category} [${p.set}]</div>${
       p.status === "SOLD"
         ? `<div class="text-success small">Sold: ${formatAmount(
-            p.soldPrice
+            p.soldPrice,
           )}</div>`
         : ""
     }</div></div></div>`;
@@ -3078,10 +3463,12 @@ function renderSquads() {
   const mb = document.getElementById("teamStatusOverview");
   if (!mb) return;
   mb.innerHTML = "";
-  
+
   // Filter teams that have players
-  const teamsWithPlayers = globalTeams.filter(t => t.roster && t.roster.length > 0);
-  
+  const teamsWithPlayers = globalTeams.filter(
+    (t) => t.roster && t.roster.length > 0,
+  );
+
   if (teamsWithPlayers.length === 0) {
     mb.innerHTML = `<div class="text-center p-5 text-white-50 fs-4">
       <i class="bi bi-info-circle mb-3 d-block fs-1"></i>
@@ -3094,19 +3481,23 @@ function renderSquads() {
     const isMine = mySelectedTeamKey === t.bidKey;
     let h =
       '<div class="table-responsive"><table class="table table-dark table-sm table-bordered mb-0"><thead><tr><th>Player</th><th>Price</th></tr></thead><tbody>';
-    
+
     t.roster.forEach(
       (p) =>
-        (h += `<tr><td>${p.name}</td><td>${formatAmount(p.price)}</td></tr>`)
+        (h += `<tr><td>${p.name}</td><td>${formatAmount(p.price)}</td></tr>`),
     );
     h += "</tbody></table></div>";
 
     // Show claimant name if available
-    const claimantInfo = t.playerName ? `<span class="badge bg-secondary ms-2 fw-normal" style="font-size: 0.75rem;">OWNER: ${t.playerName}</span>` : '';
-    const myBadge = isMine ? `<span class="badge bg-warning text-dark ms-2">YOUR TEAM</span>` : '';
+    const claimantInfo = t.playerName
+      ? `<span class="badge bg-secondary ms-2 fw-normal" style="font-size: 0.75rem;">OWNER: ${t.playerName}</span>`
+      : "";
+    const myBadge = isMine
+      ? `<span class="badge bg-warning text-dark ms-2">YOUR TEAM</span>`
+      : "";
 
     mb.innerHTML += `
-      <div class="card bg-black border-secondary mb-3 ${isMine ? 'border-warning' : ''}" style="box-shadow: ${isMine ? '0 0 15px rgba(255, 193, 7, 0.2)' : 'none'};">
+      <div class="card bg-black border-secondary mb-3 ${isMine ? "border-warning" : ""}" style="box-shadow: ${isMine ? "0 0 15px rgba(255, 193, 7, 0.2)" : "none"};">
         <div class="card-header white border-secondary d-flex justify-content-between align-items-center bg-dark bg-opacity-50">
           <div>
             <span class="text-warning fw-bold fs-5">${t.name}</span>
@@ -3150,67 +3541,102 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-
 /* =========================================
    AUTO TEST FEATURE (SKIP AUCTION)
    ========================================= */
 
-const AUTO_RCB_NAMES = ["Virat Kohli", "Faf du Plessis", "Rajat Patidar", "Suyash Prabhudessai", "Dinesh Karthik", "Anuj Rawat", "Glenn Maxwell", "Will Jacks", "Cameron Green", "Mahipal Lomror", "Mohammed Siraj", "Reece Topley", "Akash Deep"];
-const AUTO_CSK_NAMES = ["Ruturaj Gaikwad", "Devon Conway", "Ajinkya Rahane", "Sameer Rizvi", "MS Dhoni", "Ravindra Jadeja", "Moeen Ali", "Shivam Dube", "Rachin Ravindra", "Matheesha Pathirana", "Maheesh Theekshana", "Tushar Deshpande"];
+const AUTO_RCB_NAMES = [
+  "Virat Kohli",
+  "Faf du Plessis",
+  "Rajat Patidar",
+  "Suyash Prabhudessai",
+  "Dinesh Karthik",
+  "Anuj Rawat",
+  "Glenn Maxwell",
+  "Will Jacks",
+  "Cameron Green",
+  "Mahipal Lomror",
+  "Mohammed Siraj",
+  "Reece Topley",
+  "Akash Deep",
+];
+const AUTO_CSK_NAMES = [
+  "Ruturaj Gaikwad",
+  "Devon Conway",
+  "Ajinkya Rahane",
+  "Sameer Rizvi",
+  "MS Dhoni",
+  "Ravindra Jadeja",
+  "Moeen Ali",
+  "Shivam Dube",
+  "Rachin Ravindra",
+  "Matheesha Pathirana",
+  "Maheesh Theekshana",
+  "Tushar Deshpande",
+];
 
 function getPlayerForTest(name) {
-    const db = PLAYER_DATABASE[name] || { bat: 75, bowl: 75, luck: 75, type: 'bat' }; // fallback stats
-    
-    let region = "Indian"; 
-    let roleKey = db.type || 'bat';
+  const db = PLAYER_DATABASE[name] || {
+    bat: 75,
+    bowl: 75,
+    luck: 75,
+    type: "bat",
+  }; // fallback stats
 
-    // Determine Region (Foreign/Indian) from RAW_DATA
-    for (const cat in RAW_DATA) {
-        if (RAW_DATA[cat].foreign && RAW_DATA[cat].foreign.includes(name)) region = "Foreign";
-        if (RAW_DATA[cat].indian && RAW_DATA[cat].indian.includes(name)) region = "Indian";
-        
-        // Also check if role matches category loose check
-        if(RAW_DATA[cat].foreign && RAW_DATA[cat].foreign.includes(name) || RAW_DATA[cat].indian && RAW_DATA[cat].indian.includes(name)) {
-             if(cat.toLowerCase().includes('keep')) roleKey = 'wk';
-             else if(cat.toLowerCase().includes('round')) roleKey = 'ar';
-             else if(cat.toLowerCase().includes('bowl')) roleKey = 'bowl';
-             else roleKey = 'bat';
-        }
+  let region = "Indian";
+  let roleKey = db.type || "bat";
+
+  // Determine Region (Foreign/Indian) from RAW_DATA
+  for (const cat in RAW_DATA) {
+    if (RAW_DATA[cat].foreign && RAW_DATA[cat].foreign.includes(name))
+      region = "Foreign";
+    if (RAW_DATA[cat].indian && RAW_DATA[cat].indian.includes(name))
+      region = "Indian";
+
+    // Also check if role matches category loose check
+    if (
+      (RAW_DATA[cat].foreign && RAW_DATA[cat].foreign.includes(name)) ||
+      (RAW_DATA[cat].indian && RAW_DATA[cat].indian.includes(name))
+    ) {
+      if (cat.toLowerCase().includes("keep")) roleKey = "wk";
+      else if (cat.toLowerCase().includes("round")) roleKey = "ar";
+      else if (cat.toLowerCase().includes("bowl")) roleKey = "bowl";
+      else roleKey = "bat";
     }
-    
-    // Override roleKey from DB if explicit
-    if(db.type) roleKey = db.type;
+  }
 
-    return {
-        name: name,
-        price: 10000000, // Dummy price
-        roleKey: roleKey,
-        playerType: region, 
-        stats: db,
-        cat: roleKey.toUpperCase(),
-        set: 1
-    };
+  // Override roleKey from DB if explicit
+  if (db.type) roleKey = db.type;
+
+  return {
+    name: name,
+    price: 10000000, // Dummy price
+    roleKey: roleKey,
+    playerType: region,
+    stats: db,
+    cat: roleKey.toUpperCase(),
+    set: 1,
+  };
 }
 
 document.getElementById("autoTestBtn")?.addEventListener("click", () => {
-    if (!isAdmin) {
-        alert("Only Host can run auto test.");
-        return;
-    }
-    
-    if(!confirm("⚠️ FORCE SKIP to Squad Selection with Auto-Filled Teams?\n(This skips the auction completely)")) return;
+  if (!isAdmin) {
+    alert("Only Host can run auto test.");
+    return;
+  }
 
-    const rcbRoster = AUTO_RCB_NAMES.map(name => getPlayerForTest(name));
-    const cskRoster = AUTO_CSK_NAMES.map(name => getPlayerForTest(name));
+  if (
+    !confirm(
+      "⚠️ FORCE SKIP to Squad Selection with Auto-Filled Teams?\n(This skips the auction completely)",
+    )
+  )
+    return;
 
-    socket.emit("admin_auto_test", { rcb: rcbRoster, csk: cskRoster });
+  const rcbRoster = AUTO_RCB_NAMES.map((name) => getPlayerForTest(name));
+  const cskRoster = AUTO_CSK_NAMES.map((name) => getPlayerForTest(name));
+
+  socket.emit("admin_auto_test", { rcb: rcbRoster, csk: cskRoster });
 });
-function formatOver(balls) {
-    if (!balls) return "0.0";
-    const o = Math.floor(balls / 6);
-    const b = balls % 6;
-    return `${o}.${b}`;
-}
 window.formatOver = formatOver;
 
 // ======================================================
@@ -3221,7 +3647,7 @@ window.formatOver = formatOver;
 function sendChatMessage() {
   const input = document.getElementById("chatInput");
   const message = input.value.trim();
-  
+
   if (!message) return;
   if (!myPlayerName) {
     // Alert user to enter name first
@@ -3235,14 +3661,14 @@ function sendChatMessage() {
     input.value = "";
     return;
   }
-  
+
   // Emit chat message to server
   socket.emit("chat_message", {
     playerName: myPlayerName,
     message: message,
-    timestamp: Date.now()
+    timestamp: Date.now(),
   });
-  
+
   // Clear input
   input.value = "";
 }
@@ -3252,18 +3678,18 @@ socket.off("chat_message");
 socket.on("chat_message", (data) => {
   const chatContainer = document.getElementById("chatMessages");
   if (!chatContainer) return;
-  
+
   // Create message element
   const messageDiv = document.createElement("div");
   messageDiv.className = "chat-message";
-  
+
   messageDiv.innerHTML = `
     <div class="chat-name">${escapeHtml(data.playerName)}:</div>
     <div class="chat-text">${escapeHtml(data.message)}</div>
   `;
-  
+
   chatContainer.appendChild(messageDiv);
-  
+
   // Auto-scroll to bottom
   chatContainer.scrollTop = chatContainer.scrollHeight;
 });
@@ -3272,11 +3698,11 @@ socket.on("chat_message", (data) => {
 document.addEventListener("DOMContentLoaded", () => {
   const sendBtn = document.getElementById("sendChatBtn");
   const chatInput = document.getElementById("chatInput");
-  
+
   if (sendBtn) {
     sendBtn.addEventListener("click", sendChatMessage);
   }
-  
+
   if (chatInput) {
     // Send on Enter key
     chatInput.addEventListener("keypress", (e) => {
@@ -3286,10 +3712,10 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   }
-  
+
   // Name Entry System
   const lobbyPlayerName = document.getElementById("lobbyPlayerName");
-  
+
   if (lobbyPlayerName) {
     const submitName = () => {
       const name = lobbyPlayerName.value.trim();
@@ -3297,21 +3723,21 @@ document.addEventListener("DOMContentLoaded", () => {
         // Just return if empty, no alert
         return;
       }
-      
+
       // Store name
       myPlayerName = name;
-      sessionStorage.setItem("ipl_auction_player_name", name);
-      
+      localStorage.setItem("ipl_auction_player_name", name);
+
       // Hide name entry section
       document.getElementById("nameEntrySection").style.display = "none";
-      
+
       // Send name to server
       socket.emit("update_player_name", { playerName: name });
-      
+
       // Show success message
       logEvent(`✅ Welcome, ${name}!`, true);
     };
-    
+
     // Enter key support
     lobbyPlayerName.addEventListener("keypress", (e) => {
       if (e.key === "Enter") {
@@ -3331,3 +3757,904 @@ function checkAndShowNameEntry() {
     }
   }
 }
+
+// ======================================================
+// 10. TRADE CENTER LOGIC
+// ======================================================
+let currentTradeRequests = [];
+let currentTradeHistory = [];
+
+socket.on("trade_update", (data) => {
+  currentTradeRequests = data.requests || [];
+  currentTradeHistory = data.history || [];
+
+  // Refresh UI if modal is open
+  const modal = document.getElementById("tradeCenterModal");
+  if (modal && modal.classList.contains("show")) {
+    // Re-render current tab
+    const activeTab = document.querySelector("#tradeCenterModal .active").id;
+    if (activeTab === "tabTradeCreate") renderTradeCreate();
+    else if (activeTab === "tabTradeMarket") renderTradeMarket();
+    else if (activeTab === "tabTradeMy") renderTradeMy();
+    else if (activeTab === "tabTradeHistory") renderTradeHistory();
+  }
+
+  // Also re-check button visibility
+  checkTradeEligibility();
+});
+
+window.checkTradeEligibility = function () {
+  // Check globalTeams or state to see if all taken teams have >= 2 players
+  // This is called from updateLobbyUI typically
+
+  // We need robust access to teams. 'globalTeams' is updated in 'lobby_update'
+  const activeTeams = globalTeams.filter((t) => t.isTaken);
+  if (activeTeams.length < 2) return; // Need at least 2 teams to trade
+
+  const allHaveTwo = activeTeams.every((t) => (t.totalPlayers || 0) >= 2);
+  const btn = document.getElementById("btnTradeCenter");
+
+  if (btn) {
+    if (allHaveTwo) {
+      btn.classList.remove("d-none");
+    } else {
+      btn.classList.add("d-none");
+    }
+  }
+};
+
+// Hook into lobby update to check eligibility
+const originalUpdateLobbyUI =
+  typeof updateLobbyUI === "function" ? updateLobbyUI : function () {};
+updateLobbyUI = function (teams, userCount) {
+  if (typeof originalUpdateLobbyUI === "function")
+    originalUpdateLobbyUI(teams, userCount);
+  globalTeams = teams; // Ensure global tracking
+  checkTradeEligibility();
+
+  // Refresh Squad Modal if Open
+  const statusModal = document.getElementById("teamStatusModal");
+  if (statusModal && statusModal.classList.contains("show")) {
+    renderSquads();
+  }
+};
+
+// --- TRADE HELPERS ---
+function resetTradeState() {
+  tradeState = {
+    partnerTeamId: "",
+    myOfferPlayers: new Set(),
+    theirOfferPlayers: new Set(),
+    payCash: 0,
+    requestCash: 0,
+    filter: "All",
+  };
+}
+
+window.openTradeCenter = function () {
+  socket.emit("get_trade_state");
+  resetTradeState();
+  switchTradeTab("create");
+};
+
+window.switchTradeTab = function (tab) {
+  // Update Tabs
+  document.querySelectorAll("#tradeCenterModal .nav-link").forEach((b) => {
+    b.classList.remove("active");
+  });
+
+  const activeBtn = document.getElementById(
+    tab === "create"
+      ? "tabTradeCreate"
+      : tab === "market"
+        ? "tabTradeMarket"
+        : tab === "my"
+          ? "tabTradeMy"
+          : tab === "money"
+            ? "tabTradeMoney"
+            : "tabTradeHistory",
+  );
+
+  if (activeBtn) {
+    activeBtn.classList.add("active");
+  }
+
+  if (tab === "create") renderTradeCreate();
+  else if (tab === "market") renderTradeMarket();
+  else if (tab === "my") renderTradeMy();
+  else if (tab === "money") renderTradeMoney();
+  else if (tab === "history") renderTradeHistory();
+};
+
+// --- TRADE CENTER STATE ---
+let tradeState = {
+  partnerTeamId: "",
+  myOfferPlayers: new Set(),
+  theirOfferPlayers: new Set(),
+  payCash: 0,
+  requestCash: 0,
+  filter: "All",
+};
+
+function renderTradeCreate() {
+  const container = document.getElementById("tradeContentArea");
+  const myTeam = globalTeams.find((t) => t.bidKey === window.mySelectedTeamKey);
+  if (!myTeam) return (container.innerHTML = "Error: Team not found.");
+
+  // Get potential partners (everyone except me)
+  const partners = globalTeams.filter(
+    (t) => t.bidKey !== window.mySelectedTeamKey && t.isTaken,
+  );
+
+  let html = `
+    <div class="d-flex flex-column gap-3 h-100">
+        <!-- 1. Header: Select Team & Filter -->
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="text-white-50 small mb-1">Select Team to Trade With:</label>
+                <select id="tradePartnerSelect" class="trade-select" onchange="onTradePartnerChange(this.value)">
+                    <option value="" disabled ${!tradeState.partnerTeamId ? "selected" : ""}>Choose a team...</option>
+                    ${partners.map((p) => `<option value="${p.bidKey}" ${tradeState.partnerTeamId === p.bidKey ? "selected" : ""}>${p.name}</option>`).join("")}
+                </select>
+            </div>
+            
+            <div class="col-md-6">
+                <label class="text-white-50 small mb-1">Select Category:</label>
+                <div class="category-filters">
+                    ${["All", "Batsman", "Wick", "All Rounder", "Spinner", "Fast Bowler"]
+                      .map(
+                        (cat) =>
+                          `<div class="filter-chip ${tradeState.filter === cat ? "active" : ""}" onclick="setTradeFilter('${cat}')">
+                            ${cat === "All" ? '<i class="bi bi-check2"></i>' : ""} ${cat}
+                         </div>`,
+                      )
+                      .join("")}
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Main Lists Area -->
+        <div class="row g-3 flex-grow-1">
+            <!-- Left: MY PLAYERS -->
+            <div class="col-md-5">
+                <div class="trade-section-title">YOUR PLAYERS (OFFER)</div>
+                <div class="trade-card-container" id="myTradeList">
+                    ${renderPlayerListHTML(myTeam.roster, "mine")}
+                </div>
+            </div>
+
+            <!-- Middle: Arrow -->
+            <div class="col-md-2 d-flex justify-content-center align-items-center">
+                <div class="center-arrow"><i class="bi bi-arrow-right"></i></div>
+            </div>
+
+            <!-- Right: TARGET PLAYERS -->
+            <div class="col-md-5">
+                <div class="trade-section-title">TARGET PLAYERS (REQUEST)</div>
+                <div class="trade-card-container" id="theirTradeList">
+                    ${tradeState.partnerTeamId ? renderTargetPlayerList() : '<div class="text-center text-white-50 mt-5">Select a team to view players</div>'}
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary & Send (Cash/Msg removed as per request) -->
+        <div class="mt-auto">
+            <div class="trade-summary-box mt-3">
+                <div class="summary-row">
+                    <span>Selected (You):</span>
+                    <span id="sumMyCount">0 Players</span>
+                </div>
+                <div class="summary-row">
+                    <span>Selected (Them):</span>
+                    <span id="sumTheirCount">0 Players</span>
+                </div>
+                <div class="summary-row summary-total">
+                    <span>Net Value:</span>
+                    <span id="sumNetVal">₹0 Cr</span>
+                </div>
+            </div>
+
+            <button class="btn-trade-action mt-3" onclick="submitComplexTrade()">Send Trade Proposal</button>
+        </div>
+    </div>
+  `;
+
+  container.innerHTML = html;
+
+  // Re-run calculations to update totals
+  updateTradeTotals();
+}
+
+// --- NEW TRADE HELPERS ---
+
+window.onTradePartnerChange = function (val) {
+  tradeState.partnerTeamId = val;
+  // Clear their selections when team changes
+  tradeState.theirOfferPlayers.clear();
+  // Re-render
+  const theirList = document.getElementById("theirTradeList");
+  if (theirList) theirList.innerHTML = renderTargetPlayerList();
+  updateTradeTotals();
+};
+
+window.setTradeFilter = function (cat) {
+  tradeState.filter = cat;
+  renderTradeCreate(); // Full re-render to update chips and lists
+};
+
+window.updateTradeCash = function (type, val) {
+  const num = parseFloat(val) || 0;
+  if (type === "pay") tradeState.payCash = num;
+  else tradeState.requestCash = num;
+  updateTradeTotals();
+};
+
+function renderTargetPlayerList() {
+  if (!tradeState.partnerTeamId) return "";
+  const team = globalTeams.find((t) => t.bidKey === tradeState.partnerTeamId);
+  if (!team) return '<div class="text-danger">Team not found</div>';
+  return renderPlayerListHTML(team.roster || [], "theirs");
+}
+
+function renderPlayerListHTML(roster, side) {
+  // Filter
+  const filtered = roster.filter((p) => {
+    if (tradeState.filter === "All") return true;
+
+    // Map filter names to internal roles or types
+    const role = (p.roleKey || "").toLowerCase();
+    const cat = (p.category || "").toLowerCase();
+    
+    if (tradeState.filter === "Batsman" && (role.includes("bat") || role.includes("batter"))) return true;
+    if (tradeState.filter === "Wick" && (role.includes("wk") || role.includes("wicket"))) return true;
+    if (tradeState.filter === "Spinner" && (role.includes("spin") || cat.includes("spin"))) return true;
+    if (tradeState.filter === "Fast Bowler" && (role.includes("fast") || role.includes("pace") || cat.includes("fast"))) return true;
+    if (tradeState.filter === "All Rounder" && (role.includes("all") || role.includes("ar"))) return true;
+    if (tradeState.filter === "Bowler" && (role.includes("bowl") || role.includes("pacer") || role.includes("spinner"))) return true;
+
+    return false;
+  });
+
+  if (filtered.length === 0)
+    return '<div class="text-white-50 small p-2">No players match filter</div>';
+
+  return filtered
+    .map((p) => {
+      const isSelected =
+        side === "mine"
+          ? tradeState.myOfferPlayers.has(p.name)
+          : tradeState.theirOfferPlayers.has(p.name);
+      const nameEsc = p.name.replace(/'/g, "\\'");
+
+      return `
+        <div class="trade-player-card ${isSelected ? "selected" : ""}" onclick="toggleTradePlayer('${nameEsc}', '${side}')">
+            <input type="checkbox" class="player-checkbox" ${isSelected ? "checked" : ""}>
+            <div class="player-info">
+                <div class="player-name">${p.name}</div>
+                <div class="player-role text-white-50" style="font-size:0.7em">${p.roleKey ? p.roleKey.toUpperCase() : "PLAYER"}</div>
+            </div>
+            <div class="player-price">${formatAmount(p.price)}</div>
+        </div>`;
+    })
+    .join("");
+}
+
+window.toggleTradePlayer = function (name, side) {
+  const list =
+    side === "mine" ? tradeState.myOfferPlayers : tradeState.theirOfferPlayers;
+  if (list.has(name)) list.delete(name);
+  else list.add(name);
+
+  // Efficient Re-render of just the list container would be better, but full render is safer for sync
+  const containerId = side === "mine" ? "myTradeList" : "theirTradeList";
+  const team =
+    side === "mine"
+      ? globalTeams.find((t) => t.bidKey === window.mySelectedTeamKey)
+      : globalTeams.find((t) => t.bidKey === tradeState.partnerTeamId);
+
+  document.getElementById(containerId).innerHTML = renderPlayerListHTML(
+    team.roster,
+    side,
+  );
+  updateTradeTotals();
+};
+
+function updateTradeTotals() {
+  // Calculate My Value
+  const myTeam = globalTeams.find((t) => t.bidKey === window.mySelectedTeamKey);
+  let myVal = 0;
+  if (myTeam) {
+    tradeState.myOfferPlayers.forEach((name) => {
+      const p = myTeam.roster.find((x) => x.name === name);
+      if (p) myVal += p.price;
+    });
+  }
+
+  // Calculate Their Value
+  let theirVal = 0;
+  if (tradeState.partnerTeamId) {
+    const theirTeam = globalTeams.find(
+      (t) => t.bidKey === tradeState.partnerTeamId,
+    );
+    if (theirTeam) {
+      tradeState.theirOfferPlayers.forEach((name) => {
+        const p = theirTeam.roster.find((x) => x.name === name);
+        if (p) theirVal += p.price;
+      });
+    }
+  }
+
+  // Add Cash (Cr input -> number)
+  // IMPORTANT: Input is in Crores, price is in raw number
+  const payRaw = (tradeState.payCash || 0) * 10000000;
+  const reqRaw = (tradeState.requestCash || 0) * 10000000;
+
+  // My Total Output Value = Players I give + Cash I pay
+  const myTotalOut = myVal + payRaw;
+
+  // Their Total Output Value (My Input) = Players I get + Cash I get
+  const myTotalIn = theirVal + reqRaw;
+
+  const net = myTotalIn - myTotalOut;
+
+  const myCountEl = document.getElementById("sumMyCount");
+  const theirCountEl = document.getElementById("sumTheirCount");
+  if(myCountEl) myCountEl.innerText = `${tradeState.myOfferPlayers.size} Players`;
+  if(theirCountEl) theirCountEl.innerText = `${tradeState.theirOfferPlayers.size} Players`;
+
+  const netEl = document.getElementById("sumNetVal");
+  if (netEl) {
+    netEl.innerText = (net >= 0 ? "+" : "") + formatAmount(net);
+    netEl.className = net >= 0 ? "text-success fw-bold" : "text-danger fw-bold";
+  }
+}
+
+window.submitComplexTrade = function () {
+  if (!tradeState.partnerTeamId) return alert("Select a team to trade with.");
+
+  // Validation
+  if (
+    tradeState.myOfferPlayers.size === 0 &&
+    tradeState.payCash === 0 &&
+    tradeState.theirOfferPlayers.size === 0 &&
+    tradeState.requestCash === 0
+  ) {
+    return alert("Trade cannot be empty.");
+  }
+
+  const payload = {
+    targetTeamId: tradeState.partnerTeamId,
+    offeredPlayerNames: Array.from(tradeState.myOfferPlayers),
+    requestedPlayerNames: Array.from(tradeState.theirOfferPlayers),
+    offeredCash: tradeState.payCash * 10000000,
+    requestedCash: tradeState.requestCash * 10000000,
+    message: (document.getElementById("tradeMsgInput")?.value) || "Direct Trade Request",
+  };
+
+  socket.emit("create_complex_trade", payload);
+
+  // Reset and close or switch tab
+  alert("Trade Proposal Sent!");
+  switchTradeTab("my");
+
+  // Reset state partially
+  tradeState.myOfferPlayers.clear();
+  tradeState.theirOfferPlayers.clear();
+  tradeState.payCash = 0;
+  tradeState.requestCash = 0;
+};
+
+function renderTradeMoney() {
+  const container = document.getElementById("tradeContentArea");
+  const partners = globalTeams.filter(
+    (t) => t.bidKey !== window.mySelectedTeamKey && t.isTaken,
+  );
+
+  let html = `
+    <div class="d-flex flex-column gap-3 h-100">
+        <div class="d-flex justify-content-between align-items-center">
+            <h4 class="text-warning display-font m-0"><i class="bi bi-cash-coin me-2"></i>MONEY TRADE</h4>
+            <span class="badge bg-warning text-dark">NEW</span>
+        </div>
+        <p class="text-white-50 small mb-1">Buy or sell players for cash. Select a team and a player below.</p>
+
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="text-white-50 small mb-1">Trade Partner:</label>
+                <select id="tradePartnerSelect" class="trade-select" onchange="onTradePartnerChange(this.value)">
+                    <option value="" disabled ${!tradeState.partnerTeamId ? "selected" : ""}>Choose team...</option>
+                    ${partners.map((p) => `<option value="${p.bidKey}" ${tradeState.partnerTeamId === p.bidKey ? "selected" : ""}>${p.name}</option>`).join("")}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="text-white-50 small mb-1">You Pay (Cr):</label>
+                <input type="number" class="form-control trade-input" id="tradePayInput" 
+                       value="${tradeState.payCash || ""}" placeholder="0" oninput="updateTradeCash('pay', this.value)">
+            </div>
+            <div class="col-md-4">
+                <label class="text-white-50 small mb-1">You Request (Cr):</label>
+                <input type="number" class="form-control trade-input" id="tradeRequestInput"
+                       value="${tradeState.requestCash || ""}" placeholder="0" oninput="updateTradeCash('request', this.value)">
+            </div>
+        </div>
+
+        <div class="row g-3 flex-grow-1">
+            <div class="col-md-6 border-end border-secondary border-opacity-25">
+                 <div class="text-white-50 small mb-2 text-uppercase fw-bold letter-spacing-1">Their Players</div>
+                 <div class="trade-card-container h-100" id="theirTradeList" style="max-height: 300px;">
+                    ${tradeState.partnerTeamId ? renderTargetPlayerList() : '<div class="text-center text-white-50 mt-5">Select a team...</div>'}
+                 </div>
+            </div>
+            <div class="col-md-6">
+                 <div class="text-white-50 small mb-2 text-uppercase fw-bold letter-spacing-1">Your Players (Optional)</div>
+                 <div class="trade-card-container h-100" id="myTradeList" style="max-height: 300px;">
+                    ${renderPlayerListHTML(globalTeams.find(t => t.bidKey === window.mySelectedTeamKey).roster, "mine")}
+                 </div>
+            </div>
+        </div>
+
+        <button class="btn-trade-action mt-3" onclick="submitComplexTrade()">PROPOSE MONEY TRADE</button>
+    </div>
+  `;
+  container.innerHTML = html;
+  updateTradeTotals();
+}
+
+function renderTradeMarket() {
+  const container = document.getElementById("tradeContentArea");
+  // Filter: Requests NOT from me, Status OPEN, AND Public (no targetTeamId)
+  const market = currentTradeRequests.filter(
+    (r) =>
+      r.senderTeamId !== window.mySelectedTeamKey &&
+      r.status === "OPEN" &&
+      !r.targetTeamId,
+  );
+
+  if (market.length === 0) {
+    container.innerHTML =
+      '<div class="text-center text-white-50 mt-5"><h4>No Active Public Trades</h4><div class="small">Use "Direct Trade" to make specific offers</div></div>';
+    return;
+  }
+
+  let html = '<div class="row g-3">';
+  market.forEach((req) => {
+    // Old legacy rendering for public market items (keeping it simple for now)
+    // Or we could upgrade this too, but let's focus on Direct Trade for now.
+    // Preserving legacy card style but slightly updated
+    let badge =
+      req.type === "CASH_TRADE" ? "bg-warning text-dark" : "bg-info text-dark";
+    let icon = req.type === "CASH_TRADE" ? "bi-cash-stack" : "bi-person-fill";
+    let title =
+      req.type === "CASH_TRADE"
+        ? `WANTS PLAYERS`
+        : `OFFERS ${req.details.playerName}`;
+    let sub =
+      req.type === "CASH_TRADE"
+        ? `Offering: ₹${req.details.amount} Cr`
+        : `Looking for: ${req.details.categories.join(", ") || "Any Offer"}`;
+
+    html += `
+        <div class="col-md-6">
+            <div class="p-3 border border-secondary rounded position-relative" style="background: rgba(255,255,255,0.05);">
+                <span class="badge ${badge} position-absolute top-0 end-0 m-2">${req.type.replace("_", " ")}</span>
+                <div class="h5 text-white mb-1"><i class="bi ${icon} me-2"></i>${req.senderTeamName}</div>
+                <div class="fw-bold text-white fs-4">${title}</div>
+                <div class="text-info mb-3">${sub}</div>
+                <button class="btn btn-outline-light w-100" onclick="openProposalModal('${req.id}')">MAKE OFFER</button>
+            </div>
+        </div>
+        `;
+  });
+  html += "</div>";
+  container.innerHTML = html;
+}
+
+window.acceptDirectOffer = function (reqId) {
+  try {
+    const req = (typeof currentTradeRequests !== 'undefined') ? currentTradeRequests.find(r => r.id === reqId) : null;
+    if (req) {
+      // Build modal if not exists
+      if (!document.getElementById('directOfferAcceptModal')) {
+        const modalHtml = `
+                <div class="modal fade" id="directOfferAcceptModal" tabindex="-1">
+                  <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content bg-dark border-info text-white">
+                      <div class="modal-header">
+                        <h5 class="modal-title">ACCEPT DIRECT OFFER</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                      </div>
+                      <div class="modal-body">
+                        <div class="small text-white-50">From: <strong id="directOfferFrom"></strong></div>
+                        <div class="mt-2 p-2 border rounded bg-black bg-opacity-25">
+                          <div id="directOfferDetails" class="small text-white-50"></div>
+                        </div>
+                      </div>
+                      <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">CANCEL</button>
+                        <button type="button" class="btn btn-success" id="btn-confirm-direct-accept">ACCEPT</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>`;
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        document.body.addEventListener('click', (e) => {
+          if (e.target && e.target.id === 'btn-confirm-direct-accept') {
+            const rid = document.getElementById('btn-confirm-direct-accept').dataset.requestId;
+            if (rid) {
+              socket.emit('accept_proposal', { requestId: rid });
+              const modalEl = document.getElementById('directOfferAcceptModal');
+              const bs = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+              bs.hide();
+            }
+          }
+        });
+      }
+
+      // Populate modal
+      document.getElementById('directOfferFrom').innerText = req.senderTeamName || req.sender || 'Team';
+      const playersOffered = req.details.offeredPlayerNames ? req.details.offeredPlayerNames.join(', ') : '';
+      const cashOffered = req.details.offeredCash ? `₹${req.details.offeredCash} Cr` : '';
+      const playersReq = req.details.requestedPlayerNames ? req.details.requestedPlayerNames.join(', ') : '';
+      const cashReq = req.details.requestedCash ? `₹${req.details.requestedCash} Cr` : '';
+      const offerStr = [playersOffered, cashOffered].filter(Boolean).join(' + ') || 'Nothing';
+      const reqStr = [playersReq, cashReq].filter(Boolean).join(' + ') || 'Nothing';
+      document.getElementById('directOfferDetails').innerHTML = `
+                <div class="fw-bold text-success">You Receive</div>
+                <div class="mb-2">${offerStr}</div>
+                <div class="fw-bold text-danger">You Give</div>
+                <div>${reqStr}</div>
+            `;
+
+      // store request id on confirm button
+      document.getElementById('btn-confirm-direct-accept').dataset.requestId = reqId;
+
+      // show modal
+      const bs = new bootstrap.Modal(document.getElementById('directOfferAcceptModal'));
+      bs.show();
+      return;
+    }
+  } catch (e) {
+    console.warn('Error rendering direct offer modal:', e);
+  }
+
+  // Fallback: try tradeSystem modal, then native confirm
+  try {
+    if (window.tradeSystem && typeof window.tradeSystem.showAcceptConfirmation === 'function') {
+      window.tradeSystem.showAcceptConfirmation(reqId);
+      return;
+    }
+  } catch (e) {
+    console.warn('tradeSystem modal unavailable:', e);
+  }
+
+  if (confirm("Are you sure you want to accept this trade irrevocably?")) {
+    socket.emit("accept_proposal", { requestId: reqId });
+  }
+};
+
+window.rejectDirectOffer = function (reqId) {
+  // Try in-app reject via tradeSystem if available
+  try {
+    if (window.tradeSystem && typeof window.tradeSystem.showRejectConfirmation === 'function') {
+      window.tradeSystem.showRejectConfirmation(reqId);
+      return;
+    }
+  } catch (e) {
+    console.warn('tradeSystem reject modal unavailable:', e);
+  }
+
+  if (confirm('Reject this offer?')) {
+    socket.emit('reject_proposal', { requestId: reqId });
+  }
+};
+
+
+window.cancelMyRequest = function (reqId) {
+  if (confirm("Cancel this request?")) {
+    // To cancel my own request, I treat it like rejecting/closing.
+    // Backend 'rejectProposal' expects (requestId, proposalId).
+    // If I delete the request entirely?
+    // There isn't a dedicated 'delete_request' endpoint in the code I read.
+    // But 'rejectProposal' removes a specific proposal.
+
+    // I'll emit 'reject_proposal' with a dummy ID, maybe the backend logic needs looking at?
+    // Backend: request.proposals = request.proposals.filter(p => p.id !== proposalId);
+    // That only removes a proposal. It doesn't delete the request.
+
+    // Wait, the current system doesn't seem to have a "Delete Request" feature for the sender?
+    // Only "Reject Proposal".
+    // I'll leave it as non-cancellable for now or assume users just wait.
+    alert("Feature not available in this version.");
+  }
+};
+
+function renderTradeMy() {
+  const container = document.getElementById("tradeContentArea");
+
+  // 1. INCOMING OFFERS (Direct Trades targeting ME)
+  const incoming = currentTradeRequests.filter(
+    (r) => r.targetTeamId === window.mySelectedTeamKey && r.status === "OPEN",
+  );
+
+  // 2. OUTGOING REQUESTS (Direct or Public)
+  const outgoing = currentTradeRequests.filter(
+    (r) => r.senderTeamId === window.mySelectedTeamKey && r.status === "OPEN",
+  );
+
+  if (incoming.length === 0 && outgoing.length === 0) {
+    container.innerHTML =
+      '<div class="text-center text-white-50 mt-5"><h4>No Active Offers or Requests</h4></div>';
+    return;
+  }
+
+  let html = '<div class="row g-4">';
+
+  // INCOMING SECTION
+  if (incoming.length > 0) {
+    html +=
+      '<div class="col-12"><h5 class="text-info border-bottom border-secondary pb-2">INCOMING OFFERS</h5></div>';
+    incoming.forEach((req) => {
+      const cashOffered = req.details.offeredCash
+        ? `₹${req.details.offeredCash / 10000000} Cr`
+        : "";
+      const playersOffered =
+        req.details.offeredPlayerNames &&
+        req.details.offeredPlayerNames.length > 0
+          ? req.details.offeredPlayerNames.join(", ")
+          : "";
+      const cashReq = req.details.requestedCash
+        ? `₹${req.details.requestedCash / 10000000} Cr`
+        : "";
+      const playersReq =
+        req.details.requestedPlayerNames &&
+        req.details.requestedPlayerNames.length > 0
+          ? req.details.requestedPlayerNames.join(", ")
+          : "";
+
+      let offerStr = [playersOffered, cashOffered].filter(Boolean).join(" + ");
+      let reqStr = [playersReq, cashReq].filter(Boolean).join(" + ");
+      if (!offerStr) offerStr = "Nothing";
+      if (!reqStr) reqStr = "Nothing";
+
+      html += `
+            <div class="col-md-6">
+                <div class="p-3 border border-info rounded bg-dark position-relative">
+                    <span class="badge bg-info text-dark position-absolute top-0 end-0 m-2">DIRECT OFFER</span>
+                    <div class="h5 text-white mb-1">${req.senderTeamName}</div>
+                    <div class="small text-white-50 mb-2">${new Date(req.createdAt).toLocaleTimeString()}</div>
+                    
+                    <div class="d-flex justify-content-between mb-3 px-2">
+                        <div class="text-success text-start" style="width: 48%;">
+                            <div class="tiny text-white-50 text-uppercase mb-1">You Receive</div>
+                            <div class="fw-bold" style="font-size: 0.9rem;">${offerStr}</div>
+                        </div>
+                        <div class="text-danger text-end" style="width: 48%;">
+                             <div class="tiny text-white-50 text-uppercase mb-1">You Give</div>
+                             <div class="fw-bold" style="font-size: 0.9rem;">${reqStr}</div>
+                        </div>
+                    </div>
+                    
+                    ${req.details.message ? `<div class="alert alert-dark p-2 small text-white-50 mb-3">"${req.details.message}"</div>` : ""}
+
+                    <div class="d-flex gap-2">
+                         <button class="btn btn-success flex-grow-1" onclick="acceptDirectOffer('${req.id}')">ACCEPT</button>
+                         <!-- <button class="btn btn-outline-danger" onclick="rejectDirectOffer('${req.id}')">REJECT</button> -->
+                    </div>
+                </div>
+            </div>`;
+    });
+  }
+
+  // OUTGOING SECTION
+  if (outgoing.length > 0) {
+    html +=
+      '<div class="col-12"><h5 class="text-warning border-bottom border-secondary pb-2 mt-4">OUTGOING REQUESTS</h5></div>';
+    outgoing.forEach((req) => {
+      if (req.targetTeamId) {
+        // Direct Outgoing
+        const cashOffered = req.details.offeredCash
+          ? `₹${req.details.offeredCash / 10000000} Cr`
+          : "";
+        const playersOffered =
+          req.details.offeredPlayerNames &&
+          req.details.offeredPlayerNames.length > 0
+            ? req.details.offeredPlayerNames.join(", ")
+            : "";
+        let offerStr = [playersOffered, cashOffered]
+          .filter(Boolean)
+          .join(" + ");
+
+        html += `
+                <div class="col-md-6">
+                    <div class="p-3 border border-secondary rounded bg-dark position-relative">
+                         <span class="badge bg-secondary position-absolute top-0 end-0 m-2">PENDING</span>
+                         <div class="h5 text-white mb-1">To: ${req.targetTeamId}</div> 
+                         <!-- Note: We don't have targetTeamName easily available in Request object unless added. For now updated to ID or need lookup -->
+                         <div class="small text-white-50">You offered: ${offerStr || "Nothing"}</div>
+                    </div>
+                </div>`;
+      } else {
+        // Legacy Public Request logic...
+        const propCount = req.proposals.length;
+        html += `
+                <div class="col-md-6">
+                    <div class="border border-secondary rounded p-3 bg-dark h-100">
+                        <div class="d-flex justify-content-between align-items-center mb-2"> 
+                            <span class="badge bg-secondary">${req.type}</span>
+                            <span class="text-white-50 small">${new Date(req.createdAt).toLocaleTimeString()}</span>
+                        </div>
+                        <div class="fw-bold text-white mb-2">${req.type === "CASH_TRADE" ? `Offering ₹${req.details.amount} Cr` : `Selling ${req.details.playerName}`}</div>
+                        
+                        <h6 class="text-warning mt-3 border-top border-secondary pt-2">Proposals (${propCount})</h6>
+                        ${
+                          propCount === 0
+                            ? '<div class="text-white-50 small fst-italic">Waiting for offers...</div>'
+                            : req.proposals
+                                .map(
+                                  (p) =>
+                                    `<div class="bg-black bg-opacity-50 p-2 rounded mb-1 small text-white d-flex justify-content-between"><span>${p.proposerTeamName}: ${formatOffer(p.offer)}</span><div><button class="btn btn-sm btn-success py-0" onclick="acceptProposal('${req.id}', '${p.id}')">✓</button></div></div>`,
+                                )
+                                .join("")
+                        }
+                    </div>
+                </div>`;
+      }
+    });
+  }
+
+  html += "</div>";
+  container.innerHTML = html;
+}
+
+function formatOffer(offer) {
+  let str = [];
+  if (offer.offeredPlayers && offer.offeredPlayers.length > 0) {
+    str.push(offer.offeredPlayers.map((x) => x.name).join(", "));
+  }
+  if (offer.offeredCash && offer.offeredCash > 0) {
+    str.push(`₹${offer.offeredCash} Cr`);
+  }
+  return str.join(" + ");
+}
+
+function renderTradeHistory() {
+  const container = document.getElementById("tradeContentArea");
+  if (currentTradeHistory.length === 0) {
+    container.innerHTML =
+      '<div class="text-center text-white-50 mt-5"><h4>No History</h4></div>';
+    return;
+  }
+
+  let html = '<ul class="list-group list-group-flush">';
+  currentTradeHistory.forEach((h) => {
+    html += `<li class="list-group-item bg-transparent text-white-50 border-secondary">
+            <i class="bi bi-clock-history me-2"></i> ${h.text} <span class="float-end tiny">${new Date(h.timestamp).toLocaleTimeString()}</span>
+        </li>`;
+  });
+  html += "</ul>";
+  container.innerHTML = html;
+}
+
+// Proposals
+let activeProposalReqId = null;
+
+window.openProposalModal = function (reqId) {
+  activeProposalReqId = reqId;
+  const req = currentTradeRequests.find((r) => r.id === reqId);
+  if (!req) return;
+
+  const modalBody = document.getElementById("proposalBody");
+  const myTeam = globalTeams.find((t) => t.bidKey === window.mySelectedTeamKey);
+  const myPlayers = myTeam ? myTeam.roster : [];
+
+  // Filter players based on requested category
+  let filteredPlayers = myPlayers;
+
+  if (
+    req.type === "CASH_TRADE" &&
+    req.details.categories &&
+    req.details.categories.length > 0
+  ) {
+    filteredPlayers = myPlayers.filter((p) => {
+      // Handle players without role or with various role formats
+      const playerRole = p.role || p.category || "";
+      if (!playerRole) return false;
+
+      // Check if any requested category matches the player's role
+      return req.details.categories.some((cat) => {
+        const roleStr = playerRole.toLowerCase();
+        const catStr = cat.toLowerCase();
+        return roleStr.includes(catStr);
+      });
+    });
+  }
+
+  let html = `
+        <div class="alert alert-dark border-secondary mb-3">
+             <small class="text-warning">THEY WANT:</small><br>
+             ${req.type === "CASH_TRADE" ? "Players matching: " + (req.details.categories && req.details.categories.length > 0 ? req.details.categories.join(", ") : "Any Role") : "Cash or Players"}
+        </div>
+        
+        <div class="mb-3">
+            <label class="text-white">Offer Cash (Cr)</label>
+            <input type="number" id="propCash" class="form-control bg-dark text-white border-secondary" value="0">
+        </div>
+         <div class="mb-3">
+            <label class="text-white">Offer Players (Select multiple)</label>
+            <div class="card bg-dark border-secondary p-2" style="max-height: 300px; overflow-y:auto;">
+                ${
+                  filteredPlayers.length > 0
+                    ? filteredPlayers
+                        .map(
+                          (p) => `
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="${p.name}" id="popt_${p.name.replace(/ /g, "")}">
+                        <label class="form-check-label text-white-50" for="popt_${p.name.replace(/ /g, "")}">
+                            ${p.name} <span class="badge bg-secondary ms-1">${p.role || p.category || "N/A"}</span>
+                        </label>
+                    </div>
+                `,
+                        )
+                        .join("")
+                    : '<div class="text-warning small"><i>No matching players in your roster</i></div>'
+                }
+            </div>
+        </div>
+    `;
+
+  modalBody.innerHTML = html;
+
+  // Submit Handler Hook
+  document.getElementById("btnSubmitProposal").onclick = function () {
+    // Gather Data
+    const cash = document.getElementById("propCash").value;
+    const selectedPlayers = [];
+    filteredPlayers.forEach((p) => {
+      const cb = document.getElementById(`popt_${p.name.replace(/ /g, "")}`);
+      if (cb && cb.checked) {
+        selectedPlayers.push({ name: p.name, role: p.role }); // Send needed info
+      }
+    });
+
+    if (selectedPlayers.length === 0 && (!cash || cash <= 0)) {
+      return alert("Offer something!");
+    }
+
+    socket.emit("submit_proposal", {
+      requestId: activeProposalReqId,
+      offerDetails: {
+        offeredCash: parseInt(cash) || 0,
+        offeredPlayers: selectedPlayers,
+      },
+    });
+
+    const m = bootstrap.Modal.getInstance(
+      document.getElementById("proposalModal"),
+    );
+    m.hide();
+    setTimeout(() => {
+      const tc = bootstrap.Modal.getInstance(
+        document.getElementById("tradeCenterModal"),
+      );
+      if (!tc._isShown)
+        new bootstrap.Modal(document.getElementById("tradeCenterModal")).show();
+    }, 500);
+  };
+
+  // Show Modal
+  new bootstrap.Modal(document.getElementById("proposalModal")).show();
+};
+
+window.acceptProposal = function (reqId, propId) {
+  if (confirm("Accept this trade? This is final.")) {
+    socket.emit("accept_proposal", { requestId: reqId, proposalId: propId });
+  }
+};
+
+window.rejectProposal = function (reqId, propId) {
+  socket.emit("reject_proposal", { requestId: reqId, proposalId: propId });
+};
+
+// Redefine checkTradeEligibility to be called periodically or on events
+// Added above in socket listener

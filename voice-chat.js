@@ -78,7 +78,8 @@ async function toggleMicrophone() {
 socket.on("voice_user_ready", async (data) => {
   const { userId } = data;
   
-  if (!isMicEnabled || !localStream) return;
+  // ALLOW connection even if mic is disabled (Listener Mode)
+  // if (!isMicEnabled || !localStream) return; // REMOVED Strict Check
   if (userId === socket.id) return; // Don't connect to ourselves
   
   console.log(`📞 Creating peer connection to ${userId}`);
@@ -87,10 +88,15 @@ socket.on("voice_user_ready", async (data) => {
   const pc = new RTCPeerConnection(iceServers);
   peerConnections[userId] = pc;
   
-  // Add local stream
-  localStream.getTracks().forEach(track => {
-    pc.addTrack(track, localStream);
-  });
+  // Add local stream IF AVAILABLE
+  if (localStream) {
+    localStream.getTracks().forEach(track => {
+      pc.addTrack(track, localStream);
+    });
+  } else {
+    // Add recvonly transceiver if we have no stream, to ensure we can receive
+    pc.addTransceiver('audio', { direction: 'recvonly' });
+  }
   
   // Handle incoming stream
   pc.ontrack = (event) => {
@@ -127,7 +133,8 @@ socket.on("voice_user_ready", async (data) => {
 socket.on("voice_offer", async (data) => {
   const { from, offer } = data;
   
-  if (!isMicEnabled || !localStream) return;
+  // ALLOW accepting offer even if mic is disabled (Listener Mode)
+  // if (!isMicEnabled || !localStream) return; // REMOVED Strict Check
   
   console.log(`📞 Received offer from ${from}`);
   
@@ -135,10 +142,12 @@ socket.on("voice_offer", async (data) => {
   const pc = new RTCPeerConnection(iceServers);
   peerConnections[from] = pc;
   
-  // Add local stream
-  localStream.getTracks().forEach(track => {
-    pc.addTrack(track, localStream);
-  });
+  // Add local stream IF AVAILABLE
+  if (localStream) {
+    localStream.getTracks().forEach(track => {
+      pc.addTrack(track, localStream);
+    });
+  }
   
   // Handle incoming stream
   pc.ontrack = (event) => {

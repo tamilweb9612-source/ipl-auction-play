@@ -1,0 +1,621 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard | Arena Protocol</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700;900&family=Teko:wght@400;600;700&display=swap"
+        rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.1/font/bootstrap-icons.min.css">
+    <style>
+        :root {
+            --brand-blue: #007aff;
+            --brand-gold: #ffd700;
+            --brand-gold-glow: rgba(255, 215, 0, 0.4);
+            --bg-dark: #050510;
+            --panel-bg: rgba(255, 255, 255, 0.03);
+            --border-light: rgba(255, 255, 255, 0.1);
+            --font-head: 'Teko', sans-serif;
+            --font-body: 'Rajdhani', sans-serif;
+            --accent: var(--brand-blue);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            background: var(--bg-dark);
+            color: #fff;
+            font-family: var(--font-body);
+            min-height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Futuristic Background */
+        .bg-canvas {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            background: radial-gradient(circle at 50% 50%, #1a1a3a 0%, #050510 100%);
+        }
+
+        .bg-grid {
+            position: absolute;
+            inset: -100%;
+            background-image:
+                linear-gradient(rgba(0, 122, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 122, 255, 0.05) 1px, transparent 1px);
+            background-size: 50px 50px;
+            transform: perspective(1000px) rotateX(60deg) translateY(-100px);
+            animation: gridMove 30s linear infinite;
+            mask-image: radial-gradient(circle at center, black, transparent 70%);
+        }
+
+        @keyframes gridMove {
+            0% {
+                background-position: 0 0;
+            }
+
+            100% {
+                background-position: 0 100%;
+            }
+        }
+
+        /* Top Bar */
+        .top-nav {
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-light);
+            z-index: 100;
+        }
+
+        .brand-logo {
+            font-family: var(--font-head);
+            font-size: 2.2rem;
+            font-weight: 700;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+        }
+
+        .brand-logo span {
+            color: var(--brand-gold);
+        }
+
+        .user-pill {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 5px 5px 5px 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-light);
+            border-radius: 50px;
+            transition: all 0.3s;
+            text-decoration: none;
+        }
+
+        .user-pill:hover {
+            border-color: var(--brand-blue);
+            box-shadow: 0 0 20px rgba(0, 122, 255, 0.2);
+        }
+
+        #userNameDisplay {
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: #fff;
+            text-decoration: none;
+        }
+
+        .logout-circle {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            background: rgba(255, 50, 50, 0.2);
+            border: 1px solid rgba(255, 50, 50, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: #ff5050;
+            transition: all 0.3s;
+        }
+
+        .logout-circle:hover {
+            background: #ff5050;
+            color: #fff;
+            transform: scale(1.1);
+        }
+
+        /* Main Content */
+        .viewport {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            position: relative;
+        }
+
+        .hero-header {
+            text-align: center;
+            margin-bottom: 80px;
+        }
+
+        .hero-title {
+            font-family: var(--font-head);
+            font-size: 5.5rem;
+            margin: 0;
+            line-height: 0.9;
+            text-transform: uppercase;
+            letter-spacing: -2px;
+            opacity: 0;
+            transform: translateY(30px);
+            animation: slideIn 0.8s ease-out forwards;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .hero-subtitle {
+            font-size: 1.2rem;
+            letter-spacing: 8px;
+            text-transform: uppercase;
+            color: rgba(255, 255, 255, 0.3);
+            margin-top: 10px;
+            opacity: 0;
+            animation: fadeIn 1s 0.5s ease-out forwards;
+        }
+
+        @keyframes slideIn {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            to {
+                opacity: 1;
+            }
+        }
+
+        /* Enhanced Card System */
+        .arena-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+            gap: 40px;
+            width: 100%;
+            max-width: 1200px;
+        }
+
+        .protocol-card {
+            position: relative;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-light);
+            border-radius: 32px;
+            padding: 60px 40px;
+            text-decoration: none;
+            color: inherit;
+            overflow: hidden;
+            transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            backdrop-filter: blur(15px);
+            text-align: center;
+        }
+
+        .protocol-card::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at var(--x, 50%) var(--y, 50%), rgba(255, 255, 255, 0.08) 0%, transparent 50%);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .protocol-card:hover {
+            transform: translateY(-15px) scale(1.02);
+            border-color: var(--accent);
+            box-shadow: 0 40px 80px rgba(0, 0, 0, 0.6), 0 0 30px rgba(0, 122, 255, 0.1);
+        }
+
+        .protocol-card:hover::before {
+            opacity: 1;
+        }
+
+        .card-visual {
+            font-size: 5rem;
+            margin-bottom: 30px;
+            filter: drop-shadow(0 0 20px rgba(0, 0, 0, 0.5));
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            color: var(--accent);
+            line-height: 1;
+        }
+
+        .protocol-card:hover .card-visual {
+            transform: scale(1.2) translateY(-10px);
+        }
+
+        .card-label {
+            font-family: var(--font-head);
+            font-size: 3rem;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .card-summary {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 1.1rem;
+            line-height: 1.6;
+            margin-bottom: 40px;
+        }
+
+        .card-action {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-light);
+            color: #fff;
+            padding: 14px 40px;
+            border-radius: 50px;
+            font-family: var(--font-head);
+            font-size: 1.3rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transition: all 0.3s;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        .protocol-card:hover .card-action {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #000;
+            box-shadow: 0 0 30px var(--accent);
+            transform: scale(1.05);
+        }
+
+        .card-features {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 30px;
+            width: 100%;
+            text-align: left;
+        }
+
+        .feature-item {
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.5);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .feature-item i {
+            color: var(--accent);
+            font-size: 1rem;
+        }
+
+        .ipl-mode {
+            --accent: #ff6b35;
+        }
+
+        .blind-mode {
+            --accent: #ffd700;
+        }
+
+        /* Corner Terminal Details */
+        .system-marker {
+            position: fixed;
+            bottom: 30px;
+            left: 30px;
+            font-family: monospace;
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.2);
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .scan-line {
+            width: 150px;
+            height: 1px;
+            background: linear-gradient(to right, var(--brand-blue), transparent);
+            animation: scan 4s linear infinite;
+        }
+
+        @keyframes scan {
+            0% {
+                transform: scaleX(0);
+                opacity: 0;
+            }
+
+            50% {
+                transform: scaleX(1);
+                opacity: 1;
+            }
+
+            100% {
+                transform: scaleX(0);
+                opacity: 0;
+            }
+        }
+
+        /* Secret Stats Terminal */
+        #secretTerminal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 3, 10, 0.98);
+            z-index: 1000;
+            padding: 60px;
+            display: none;
+            flex-direction: column;
+            font-family: 'Courier New', Courier, monospace;
+            color: #00ff66;
+            text-shadow: 0 0 5px #00ff66;
+            overflow-y: auto;
+        }
+
+        #secretTerminal.active {
+            display: flex;
+        }
+
+        .terminal-header {
+            border-bottom: 1px solid #00ff66;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+            font-size: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .terminal-line {
+            margin-bottom: 8px;
+            opacity: 0;
+        }
+
+        .typing {
+            animation: terminalType 0.1s steps(40) forwards;
+        }
+
+        @keyframes terminalType {
+            to {
+                opacity: 1;
+            }
+        }
+
+        .terminal-close {
+            background: transparent;
+            border: 1px solid #00ff66;
+            color: #00ff66;
+            padding: 12px 24px;
+            cursor: pointer;
+            margin-top: 40px;
+            align-self: flex-start;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 1rem;
+        }
+
+        .terminal-close:hover {
+            background: #00ff66;
+            color: #000;
+        }
+
+        @media (max-width: 900px) {
+            .arena-grid {
+                grid-template-columns: 1fr;
+                gap: 30px;
+            }
+
+            .hero-title {
+                font-size: 3.5rem;
+            }
+
+            .top-nav {
+                padding: 15px 20px;
+            }
+
+            body {
+                overflow-y: auto;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="bg-canvas">
+        <div class="bg-grid"></div>
+    </div>
+
+    <nav class="top-nav">
+        <div class="brand-logo">ARENA<span>PROTOCOL</span></div>
+        <div class="user-hub">
+            <div class="user-pill">
+                <a href="profile.html" id="userNameDisplay">OPERATOR_NULL</a>
+                <div id="logoutBtn" class="logout-circle">
+                    <i class="bi bi-power"></i>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="viewport">
+        <div class="hero-header">
+            <h1 class="hero-title" id="triggerTitle">Select Your Auction Game</h1>
+        </div>
+
+
+
+        <div class="arena-grid">
+            <a href="ipl.html" class="protocol-card ipl-mode">
+                <div class="card-visual">🏏</div>
+                <div class="card-label">IPL AUCTION <span style="font-size: 2rem;">⚔️</span></div>
+                <div class="card-summary">Live synchronized bidding engine. Battle other franchise owners in real-time
+                    to build the ultimate squad.</div>
+                <div class="card-features">
+                    <div class="feature-item"><i class="bi bi-people-fill"></i> 540++ Players..</div>
+                    <div class="feature-item"><i class="bi bi-mic-fill"></i> Voice Chat..</div>
+                    <div class="feature-item"><i class="bi bi-graph-up-arrow"></i> Season Sim..</div>
+                    <div class="feature-item"><i class="bi bi-controller"></i> Impact Player..</div>
+                    <div class="feature-item"><i class="bi bi-lightning-fill"></i> Real-time Sync</div>
+                    <div class="feature-item"><i class="bi bi-wallet2"></i> ₹100Cr+ Purse</div>
+                </div>
+                <div class="card-action">Initialize Auction</div>
+            </a>
+
+            <a href="blind-auction.html" class="protocol-card blind-mode">
+                <div class="card-visual">🕶️</div>
+                <div class="card-label">BLIND AUCTION <span style="font-size: 2rem;">🔒</span></div>
+                <div class="card-summary">The ultimate test of valuation. Sealed bids mean you only get one shot. Master
+                    the art of the ghost proxy.</div>
+                <div class="card-features">
+                    <div class="feature-item"><i class="bi bi-incognito"></i> Hidden Bids.</div>
+                    <div class="feature-item"><i class="bi bi-trophy-fill"></i> Winner Reveals</div>
+                    <div class="feature-item"><i class="bi bi-shield-lock-fill"></i> Encrypted</div>
+                    <div class="feature-item"><i class="bi bi-person-bounding-box"></i> Private Lot</div>
+                    <div class="feature-item"><i class="bi bi-chat-dots-fill"></i> Intel Chat</div>
+                    <div class="feature-item"><i class="bi bi-magic"></i> AI Predictor</div>
+                </div>
+                <div class="card-action">Execute Protocol</div>
+            </a>
+        </div>
+    </main>
+
+    <div class="system-marker">
+        <div>STATUS: CRYPTO_STABLE</div>
+        <div>SYS_VERSION: 5.0.2</div>
+        <div class="scan-line"></div>
+    </div>
+
+    <!-- Hidden Stats Terminal -->
+    <div id="secretTerminal">
+        <div class="terminal-header">
+            <span>&gt; ARENA_OS_DECRYPTED [v5.0]</span>
+            <span id="terminalClock">00:00:00</span>
+        </div>
+        <div id="terminalBody"></div>
+        <button class="terminal-close" onclick="closeTerminal()">TERMINATE_SESSION</button>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="auth.js"></script>
+    <script>
+        let activeGameData = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Set user name
+            const user = JSON.parse(localStorage.getItem('user')) || { name: 'GUEST' };
+            const nameDisplay = document.getElementById('userNameDisplay');
+            if (nameDisplay) nameDisplay.textContent = user.name.toUpperCase();
+
+
+
+            // Mouse follow effect on cards
+            const cards = document.querySelectorAll('.protocol-card');
+            cards.forEach(card => {
+                card.addEventListener('mousemove', (e) => {
+                    const rect = card.getBoundingClientRect();
+                    const x = ((e.clientX - rect.left) / rect.width) * 100;
+                    const y = ((e.clientY - rect.top) / rect.height) * 100;
+                    card.style.setProperty('--x', `${x}%`);
+                    card.style.setProperty('--y', `${y}%`);
+                });
+            });
+
+            // Hidden terminal trigger (5 clicks on title or ~ key)
+            let clicks = 0;
+            const trigger = document.getElementById('triggerTitle');
+            trigger.addEventListener('click', () => {
+                clicks++;
+                if (clicks >= 5) {
+                    openTerminal();
+                    clicks = 0;
+                }
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === '~' || e.key === '`') {
+                    openTerminal();
+                }
+            });
+        });
+
+        // ✨ Check for active game
+
+
+        function openTerminal() {
+            const term = document.getElementById('secretTerminal');
+            const body = document.getElementById('terminalBody');
+            term.classList.add('active');
+            body.innerHTML = '';
+
+            const lines = [
+                "&gt; INITIALIZING ENCRYPTED UPLINK...",
+                "&gt; AUTHENTICATING OPERATOR: " + (JSON.parse(localStorage.getItem('user'))?.name || 'UNKNOWN'),
+                "&gt; CONNECTION_PORT: 3005",
+                "&gt; MONGODB_REPLICA_SET: UP",
+                "&gt; ACTIVE_CLIENTS: " + (Math.floor(Math.random() * 100) + 1),
+                "&gt; DATABASE_LATENCY: 12ms",
+                "&gt; TOTAL_LOTS: 540",
+                "&gt; CURRENT_ARENA: LOCALHOST",
+                "&gt; SYSTEM_INTEGRITY: 99.98%",
+                "&gt; ---------------------------",
+                "&gt; WAR_CHEST_ESTIMATE: ₹450,000,000",
+                "&gt; SUCCESS_PROBABILITY: HIGH",
+                "&gt; GLHF_COMMANDER."
+            ];
+
+            let i = 0;
+            function addLine() {
+                if (i < lines.length) {
+                    const div = document.createElement('div');
+                    div.className = 'terminal-line typing';
+                    div.innerHTML = lines[i];
+                    body.appendChild(div);
+                    i++;
+                    setTimeout(addLine, 150);
+                }
+            }
+            addLine();
+
+            // Update clock
+            setInterval(() => {
+                document.getElementById('terminalClock').textContent = new Date().toLocaleTimeString();
+            }, 1000);
+        }
+
+        function closeTerminal() {
+            document.getElementById('secretTerminal').classList.remove('active');
+        }
+
+
+        // Logout functionality handled by auth.js
+    </script>
+
+
+</body>
+
+</html>

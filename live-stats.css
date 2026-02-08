@@ -1,0 +1,185 @@
+/* Live Auction Statistics Dashboard Styles */
+
+.live-stats-dashboard {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    width: 320px;
+    background: linear-gradient(135deg, rgba(20, 20, 30, 0.95) 0%, rgba(10, 10, 20, 0.98) 100%);
+    border: 2px solid rgba(255, 215, 0, 0.3);
+    border-radius: 16px;
+    padding: 20px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    animation: slideInRight 0.5s ease-out;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.stats-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid rgba(255, 215, 0, 0.2);
+}
+
+.stats-title {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #FFD700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.stats-toggle {
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: transform 0.3s;
+}
+
+.stats-toggle:hover {
+    transform: scale(1.2);
+}
+
+.stat-item {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 10px;
+    border-left: 3px solid;
+    transition: all 0.3s;
+}
+
+.stat-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateX(5px);
+}
+
+.stat-item.gold {
+    border-color: #FFD700;
+}
+
+.stat-item.blue {
+    border-color: #4A90E2;
+}
+
+.stat-item.green {
+    border-color: #50C878;
+}
+
+.stat-item.red {
+    border-color: #FF6B6B;
+}
+
+.stat-item.purple {
+    border-color: #9B59B6;
+}
+
+.stat-label {
+    font-size: 0.75rem;
+    color: #aaa;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+.stat-value {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #fff;
+    font-family: 'Teko', sans-serif;
+}
+
+.stat-subvalue {
+    font-size: 0.85rem;
+    color: #FFD700;
+    margin-top: 2px;
+}
+
+.stat-icon {
+    font-size: 1.5rem;
+    margin-right: 8px;
+}
+
+.stat-trend {
+    display: inline-block;
+    margin-left: 8px;
+    font-size: 0.9rem;
+}
+
+.stat-trend.up {
+    color: #50C878;
+}
+
+.stat-trend.down {
+    color: #FF6B6B;
+}
+
+.mini-chart {
+    height: 40px;
+    margin-top: 8px;
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+}
+
+.mini-chart-bar {
+    flex: 1;
+    background: linear-gradient(to top, #FFD700, #FFA500);
+    border-radius: 2px;
+    transition: all 0.3s;
+}
+
+.mini-chart-bar:hover {
+    background: linear-gradient(to top, #FFA500, #FFD700);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .live-stats-dashboard {
+        width: 280px;
+        right: 10px;
+        top: 70px;
+        padding: 15px;
+    }
+    
+    .stats-title {
+        font-size: 1.1rem;
+    }
+    
+    .stat-value {
+        font-size: 1.1rem;
+    }
+}
+
+/* Minimized State */
+.live-stats-dashboard.minimized {
+    width: 60px;
+    height: 60px;
+    padding: 15px;
+    overflow: hidden;
+}
+
+.live-stats-dashboard.minimized .stats-content {
+    display: none;
+}
+
+.live-stats-dashboard.minimized .stats-title {
+    display: none;
+}

@@ -722,7 +722,7 @@ body::before {
     box-shadow: 0 0 0 15px rgba(0, 230, 118, 0);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(0, 230, 118, 0);
+  box-shadow: 0 0 0 0 rgba(0, 230, 118, 0);
   }
 }
 
@@ -731,8 +731,7 @@ body::before {
   width: 90px;
   height: 90px;
   border-radius: 50%;
-  border: 6px solid #222;
-  border-top-color: var(--brand-gold);
+  border: 6px solid transparent; /* Placeholder for spacing */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -742,10 +741,26 @@ body::before {
   background: rgba(0, 0, 0, 0.6);
   position: relative;
   transition: all 0.2s;
+  z-index: 1;
+}
+
+/* Dynamic Ring Overlay */
+.timer-ring::before {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  padding: 6px; /* Thickness */
+  background: conic-gradient(var(--ring-color, var(--brand-gold)) var(--progress, 100%), #222 0);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  z-index: -1;
 }
 
 .timer-danger {
-  border-top-color: var(--accent-unsold);
+  --ring-color: var(--accent-unsold); /* Change ring color */
   color: var(--accent-unsold);
   animation: shake 0.5s infinite;
   box-shadow: 0 0 20px var(--accent-unsold);
@@ -1754,9 +1769,14 @@ h5,
     flex-direction: column;
   }
   
-  .chat-panel,
+  .chat-panel {
+    height: 70%;
+    flex: 0 0 70%;
+  }
+
   .log-panel {
-    height: 50%;
+    height: 30%;
+    flex: 0 0 30%;
   }
 }
 
@@ -1789,4 +1809,30 @@ h5,
     width: 35px;
     height: 35px;
   }
+}
+
+/* Utility Classes */
+.hidden {
+    display: none !important;
+}
+
+.visible {
+    display: block !important;
+}
+
+.d-none {
+    display: none !important;
+}
+
+/* Utility Classes */
+.hidden {
+    display: none !important;
+}
+
+.visible {
+    display: block !important;
+}
+
+.d-none {
+    display: none !important;
 }

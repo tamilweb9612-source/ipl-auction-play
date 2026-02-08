@@ -1,851 +1,959 @@
 // =================================================================
-// 🚀 AI ENGINE: Batting, Bowling & Tournament Logic (FINAL v4)
+// 🚀 AI ENGINE: Batting, Bowling & Tournament Logic
 // =================================================================
 
 // --- 1. CONFIGURATION & WEIGHTS ---
-const OUTCOMEWEIGHTS = {
-    anchor:      { 0: 30, 1: 40, 2: 15, 3: 5, 4: 6, 6: 2, 'W': 2, 'WD': 0, 'NB': 0 },
-    normal:      { 0: 26, 1: 34, 2: 21, 3: 8, 4: 5, 6: 2, 'W': 6, 'WD': 2, 'NB': 1 },
-    controlled:  { 0: 22, 1: 36, 2: 23, 3: 9, 4: 6, 6: 3, 'W': 7, 'WD': 2, 'NB': 1 },
-    aggressive:  { 0: 21, 1: 29, 2: 17, 3: 10, 4: 8, 6: 7, 'W': 8, 'WD': 2, 'NB': 2 },
-    desperate:   { 0: 14, 1: 22, 2: 12, 3: 8, 4: 10, 6: 14, 'W': 16, 'WD': 3, 'NB': 3 }
+// Enhanced realism: More realistic T20 outcome distributions based on IPL data
+const OUTCOME_WEIGHTS = {
+  anchor:     { 0: 28, 1: 38, 2: 18, 3: 4, 4: 7, 6: 2, 'W': 2, 'WD': 1, 'NB': 0 }, // Consolidate - Focus on singles
+  normal:     { 0: 24, 1: 32, 2: 22, 3: 6, 4: 8, 6: 4, 'W': 5, 'WD': 2, 'NB': 1 }, // Standard T20 batting
+  controlled: { 0: 20, 1: 35, 2: 25, 3: 7, 4: 7, 6: 3, 'W': 4, 'WD': 2, 'NB': 1 }, // Strike rotation focus
+  aggressive: { 0: 18, 1: 26, 2: 18, 3: 8, 4: 12, 6: 10, 'W': 7, 'WD': 2, 'NB': 2 }, // Attacking play
+  desperate:  { 0: 12, 1: 18, 2: 14, 3: 6, 4: 14, 6: 18, 'W': 14, 'WD': 3, 'NB': 4 }, // All-out attack
+  powerplay:  { 0: 20, 1: 30, 2: 20, 3: 5, 4: 12, 6: 6, 'W': 6, 'WD': 2, 'NB': 1 }, // Powerplay specific
+  death:      { 0: 16, 1: 22, 2: 16, 3: 7, 4: 15, 6: 14, 'W': 9, 'WD': 2, 'NB': 3 }  // Death overs specific
 };
 
-const PITCHEFFECTS = {
-    flat:   { 4: 2, 6: 2, 'W': -1 },
-    green:  { 'W': 3, 0: 4, 4: -2 },
-    dusty:  { 'W': 2, 0: 3, 1: -2 },
-    slow:   { 6: -3, 2: 4, 1: 3 } 
+const PITCH_EFFECTS = {
+  flat:   { 4: 3, 6: 3, 'W': -2 },
+  green:  { 'W': 3, 0: 4, 4: -2 }, // Swing helps bowlers
+  dusty:  { 'W': 2, 0: 3, 1: -2 }, // Spin grip
+  slow:   { 6: -3, 2: 4, 1: 3 }    // Hard to hit boundaries
 };
 
-const VENUEMAP = {
-    "CSK": { name: "M. A. Chidambaram Stadium", city: "Chennai", range: [160, 185], chaseProb: 0.55, pitch: "dusty", boundary: "large", dewChance: 0.60 },
-    "MI": { name: "Wankhede Stadium", city: "Mumbai", range: [190, 225], chaseProb: 0.60, pitch: "flat", boundary: "small", dewChance: 0.80 }, 
-    "RCB": { name: "M. Chinnaswamy Stadium", city: "Bengaluru", range: [200, 240], chaseProb: 0.65, pitch: "flat", boundary: "tiny", dewChance: 0.40 }, 
-    "GT": { name: "Narendra Modi Stadium", city: "Ahmedabad", range: [170, 200], chaseProb: 0.60, pitch: "green", boundary: "large", dewChance: 0.50 },
-    "LSG": { name: "Ekana Cricket Stadium", city: "Lucknow", range: [140, 165], chaseProb: 0.40, pitch: "slow", boundary: "large", dewChance: 0.20 },
-    "PBKS": { name: "PCA Stadium Mohali", city: "Mohali", range: [175, 205], chaseProb: 0.60, pitch: "green", boundary: "medium", dewChance: 0.30 },
-    "KKR": { name: "Eden Gardens", city: "Kolkata", range: [185, 220], chaseProb: 0.60, pitch: "slow", boundary: "medium", dewChance: 0.70 },
-    "RR": { name: "Sawai Mansingh Stadium", city: "Jaipur", range: [170, 195], chaseProb: 0.50, pitch: "dusty", boundary: "large", dewChance: 0.30 },
-    "DC": { name: "Arun Jaitley Stadium", city: "Delhi", range: [180, 210], chaseProb: 0.65, pitch: "flat", boundary: "small", dewChance: 0.60 },
-    "SRH": { name: "Rajiv Gandhi Intl", city: "Hyderabad", range: [195, 235], chaseProb: 0.50, pitch: "flat", boundary: "medium", dewChance: 0.30 }
+// VENUE MAP provided by User
+const VENUE_MAP = {
+  "CSK": { name: "M. A. Chidambaram Stadium", city: "Chennai", range: [160, 185], chaseProb: 0.55, pitch: "dusty", boundary: "large" },
+  "MI": { name: "Wankhede Stadium", city: "Mumbai", range: [190, 225], chaseProb: 0.65, pitch: "flat", boundary: "small" }, // Capped at 0.65
+  "RCB": { name: "M. Chinnaswamy Stadium", city: "Bengaluru", range: [200, 240], chaseProb: 0.70, pitch: "flat", boundary: "tiny" }, // Capped at 0.70
+  "GT": { name: "Narendra Modi Stadium", city: "Ahmedabad", range: [170, 200], chaseProb: 0.60, pitch: "green", boundary: "large" },
+  "LSG": { name: "Ekana Cricket Stadium", city: "Lucknow", range: [140, 165], chaseProb: 0.40, pitch: "slow", boundary: "large" },
+  "PBKS": { name: "PCA Stadium Mohali", city: "Mohali", range: [175, 205], chaseProb: 0.60, pitch: "green", boundary: "medium" },
+  "KKR": { name: "Eden Gardens", city: "Kolkata", range: [185, 220], chaseProb: 0.65, pitch: "slow", boundary: "medium" },
+  "RR": { name: "Sawai Mansingh Stadium", city: "Jaipur", range: [170, 195], chaseProb: 0.50, pitch: "dusty", boundary: "large" },
+  "DC": { name: "Arun Jaitley Stadium", city: "Delhi", range: [180, 210], chaseProb: 0.65, pitch: "flat", boundary: "small" },
+  "SRH": { name: "Rajiv Gandhi Intl", city: "Hyderabad", range: [195, 235], chaseProb: 0.45, pitch: "flat", boundary: "medium" }
 };
 
-// --- 4. TOURNAMENT SIMULATION (Main Wrapper) ---
-function runFullTournament(tourneyTeams) {
-    if(tourneyTeams.length < 2) throw new Error("Need at least 2 teams to simulate.");
+let rngSeed = Date.now();
+function seededRandom() {
+  rngSeed = (rngSeed * 9301 + 49297) % 233280;
+  return rngSeed / 233280;
+}
 
-    let rngSeed = Date.now();
-    const formTracker = {};
-    const allStats = {};
-    const impactPlayerStats = {}; 
-
-    function seededRandom() {
-        rngSeed = (rngSeed * 9301 + 49297) % 233280;
-        return rngSeed / 233280;
+// Global Form Tracker
+const formTracker = {}; 
+function getForm(name) {
+    if(!formTracker[name]) formTracker[name] = 1.0;
+    return formTracker[name];
+}
+function updateForm(name, runs, balls) {
+    if(!formTracker[name]) formTracker[name] = 1.0;
+    if(balls > 10) {
+        const sr = (runs/balls)*100;
+        if(sr > 160) formTracker[name] = Math.min(1.25, formTracker[name] + 0.05);
+        else if(sr < 100) formTracker[name] = Math.max(0.75, formTracker[name] - 0.05);
     }
+}
+function updateBowlingForm(name, figures) {
+    if(!formTracker[name]) formTracker[name] = 1.0;
+    // figures: { runs, wkts }
+    if(figures.wkts >= 2) formTracker[name] = Math.min(1.2, formTracker[name] + 0.05);
+    else if(figures.runs > 50 && figures.wkts === 0) formTracker[name] = Math.max(0.8, formTracker[name] - 0.05);
+}
 
-    // Normalize only active players to avoid unrealistic bench decay.
-    function normalizeForm(activePlayerNames) {
-        if(!activePlayerNames) return;
-        activePlayerNames.forEach(name => {
-            if(formTracker[name]) {
-                // Decay form towards 1.0 by 30% only if they played
-                formTracker[name] = 1.0 + (formTracker[name] - 1.0) * 0.7;
-            }
-        });
+// Helper for Venue Mapping
+function getVenueForTeam(teamName) {
+    // Try to match team name directly with keys
+    for (const key of Object.keys(VENUE_MAP)) {
+        if (teamName.toUpperCase().includes(key)) return VENUE_MAP[key];
     }
+    // Default fallback: Random venue instead of always Wankhede
+    const venueKeys = Object.keys(VENUE_MAP);
+    return VENUE_MAP[venueKeys[Math.floor(seededRandom() * venueKeys.length)]];
+}
 
-    function getForm(name) {
-        if(!formTracker[name]) formTracker[name] = 1.0;
-        return formTracker[name];
+// --- 2. BOWLING LOGIC ---
+const bowlingLogic = {
+  getBowlerType: (player) => {
+    const role = (player.roleKey?.toLowerCase() || player.role?.toLowerCase() || '');
+    const name = (player.name || '').toLowerCase();
+    let type = 'pacer';
+    
+    if (role.includes('off') || name.includes('ashwin') || name.includes('narine')) type = 'off-spinner';
+    else if (role.includes('leg') || name.includes('chahal') || name.includes('rashid')) type = 'leg-spinner';
+    else if (role.includes('spin') || name.includes('jadeja')) type = 'spinner';
+    else if (role.includes('fast') || role.includes('pace')) type = 'pacer';
+    
+    if (role.includes('ar') || role.includes('all')) {
+      const bat = player.stats?.bat || 0;
+      const bowl = player.stats?.bowl || 0;
+      if (bat >= 80 && bowl >= 60) return `ar-balanced-${type}`;
+      return `ar-bowler-${type}`;
     }
+    return type;
+  },
 
-    function updateForm(name, runs, balls) {
-        if(!formTracker[name]) formTracker[name] = 1.0;
-        if(balls > 8) { 
-            const sr = (runs/balls) * 100;
-            if(sr > 175) formTracker[name] = Math.min(1.30, formTracker[name] + 0.05);
-            else if(sr < 100) formTracker[name] = Math.max(0.70, formTracker[name] - 0.05);
-        }
-    }
+  prepareBowlersForInnings: (playing11) => {
+    // 1. Filter, then Map to NEW Objects to break reference accumulation
+    let bowlers = playing11
+        .filter(p => {
+            const r = (p.roleKey || p.role || '').toLowerCase();
+            if(r.includes('wk')) return false;
+            return (r.includes('bowl') || r.includes('fast') || r.includes('spin') || r.includes('ar') || r.includes('all'));
+        })
+        .map(p => ({
+            ...p, // Copy basic props
+            maxOvers: 4,
+            remaining: 4,
+            oversUsed: 0,
+            balls: 0,
+            wkts: 0,
+            runs: 0,
+            lastBowledOver: -2,
+            economy: 0,
+            oversDisplay: "0.0"
+        }));
 
-    function getVenueForTeam(teamName) {
-        for (const key of Object.keys(VENUEMAP)) {
-            if (teamName.toUpperCase().includes(key)) return VENUEMAP[key];
-        }
-        const venueKeys = Object.keys(VENUEMAP);
-        return VENUEMAP[venueKeys[Math.floor(seededRandom() * venueKeys.length)]];
-    }
+    // 2. Calculate Capacity
+    let totalCapacity = bowlers.reduce((sum, b) => sum + b.remaining, 0);
 
-    // --- 2. BOWLING LOGIC ---
-    const bowlingLogic = {
-        getBowlerType: (player) => {
-            const role = (player.roleKey?.toLowerCase() || player.role?.toLowerCase() || '');
-            const name = (player.name || '').toLowerCase();
-            let type = 'pacer';
-            
-            if (role.includes('off') || name.includes('ashwin') || name.includes('narine')) type = 'off-spinner';
-            else if (role.includes('leg') || name.includes('chahal') || name.includes('rashid')) type = 'leg-spinner';
-            else if (role.includes('spin') || name.includes('jadeja')) type = 'spinner';
-            else if (role.includes('fast') || role.includes('pace')) type = 'pacer';
-            
-            if (role.includes('ar') || role.includes('all')) {
-                const bat = player.stats?.bat || 0;
-                const bowl = player.stats?.bowl || 0;
-                if (bat >= 80 && bowl >= 60) return `ar-balanced-${type}`;
-                return `ar-bowler-${type}`;
-            }
-            return type;
-        },
-
-        prepareBowlersForInnings: (playing11, maxOversPerBowler = 4) => {
-            const bowlers = playing11
-                .filter(p => {
-                    const r = (p.roleKey || p.role || '').toLowerCase();
-                    if(r.includes('wk')) return false;
-                    return (r.includes('bowl') || r.includes('fast') || r.includes('spin') || r.includes('ar') || r.includes('all'));
-                })
-                .map(p => ({
-                    ...p,
-                    maxOvers: maxOversPerBowler,
-                    remaining: maxOversPerBowler,
-                    oversUsed: 0,
-                    balls: 0,
-                    wkts: 0,
-                    runs: 0,
-                    lastBowledOver: -2,
-                    economy: 0,
-                    oversDisplay: "0.0"
-                }));
-
-            if (bowlers.length < 5) {
-                const others = playing11.filter(p => !bowlers.find(b => b.name === p.name));
-                if(others.length > 0) {
-                     bowlers.push({
-                         ...others[0], 
-                         isPartTime: true,
-                         maxOvers: Math.min(2, maxOversPerBowler),
-                         remaining: Math.min(2, maxOversPerBowler),
-                         oversUsed: 0, balls: 0, wkts: 0, runs: 0,
-                         lastBowledOver: -2, economy: 0, oversDisplay: "0.0"
-                     });
-                }
-            }
-
-            const ranked = bowlers.sort((a,b) => (b.stats?.bowl || 0) - (a.stats?.bowl || 0));
-
-            ranked.forEach(b => {
-                if(b.isPartTime) { 
-                    b.maxOvers = Math.min(2, maxOversPerBowler); 
-                    b.remaining = Math.min(2, maxOversPerBowler); 
-                }
-            });
-
-            if(ranked.length >= 6 && maxOversPerBowler >= 2) {
-                if(ranked[4]) { ranked[4].maxOvers = 2; ranked[4].remaining = 2; }
-                if(ranked[5]) { ranked[5].maxOvers = 2; ranked[5].remaining = 2; }
-            }
-
-            return ranked;
-        },
-
-        selectBowlerForOver: (bowlable, overNumber, phase) => {
-            let candidates = bowlable.filter(b => b.remaining > 0 && b.lastBowledOver !== overNumber - 1);
-            
-            if(candidates.length === 0) {
-                candidates = bowlable.filter(b => b.remaining > 0).sort((a,b) => b.remaining - a.remaining);
-                if(candidates.length === 0) return null;
-            }
-
-            const type = (b) => bowlingLogic.getBowlerType(b);
-            
-            candidates.sort((a, b) => {
-                let scoreA = a.stats?.bowl || 50;
-                let scoreB = b.stats?.bowl || 50;  
-
-                if(phase === 'death') {
-                    if(type(a).includes('pacer')) scoreA += 30; 
-                    if(type(b).includes('pacer')) scoreB += 30;
-                }
-                if(phase === 'pp') {
-                    if(type(a).includes('pacer')) scoreA += 15;
-                    if(type(b).includes('pacer')) scoreB += 15;
-                }
-                if(phase === 'mid') {
-                    if(type(a).includes('spin')) scoreA += 15;
-                    if(type(b).includes('spin')) scoreB += 15;
-                }
-
-                if (a.runs > 11 * (a.oversUsed || 1)) scoreA -= 20; 
-                if (b.runs > 11 * (b.oversUsed || 1)) scoreB -= 20;
-                
-                return (scoreB + seededRandom() * 15) - (scoreA + seededRandom() * 15);
-            });
-
-            const selected = candidates[0];
-            selected.lastBowledOver = overNumber;
-            return selected;
-        },
-
-        updateBowlerStats: (bowler, runs) => {
-             bowler.runs += runs;
-        },
+    // 3. Fill Shortage with Non-Bowlers if needed
+    if (totalCapacity < 20) {
+        // Find others who are NOT in the bowlers list
+        const others = playing11.filter(p => !bowlers.find(b => b.name === p.name));
         
-        endBowlerOver: (bowler) => {
-             bowler.remaining--;
-             bowler.oversUsed++;
-
-             const overs = Math.floor(bowler.balls / 6);
-             const balls = bowler.balls % 6;
-             bowler.oversDisplay = `${overs}.${balls}`;
-
-             const totalOvers = bowler.balls / 6;
-             const eco = totalOvers > 0 ? (bowler.runs / totalOvers) : 0;
-             bowler.economy = parseFloat(eco.toFixed(2)); 
+        let otherIndex = 0;
+        while(totalCapacity < 20 && otherIndex < others.length) {
+             const newBowler = {
+                 ...others[otherIndex], 
+                 isPartTime: true,
+                 maxOvers: 4, // Give full quota to ensure we cross 20
+                 remaining: 4,
+                 oversUsed: 0,
+                 balls: 0,
+                 wkts: 0,
+                 runs: 0,
+                 lastBowledOver: -2,
+                 economy: 0,
+                 oversDisplay: "0.0"
+             };
+             bowlers.push(newBowler);
+             totalCapacity += 4;
+             otherIndex++;
         }
-    };
+    }
+    
+    // 4. Emergency Fallback: If still < 20 (e.g. very small squad), force over-bowling
+    if(totalCapacity < 20 && bowlers.length > 0) {
+         let i = 0;
+         while(totalCapacity < 20) {
+             bowlers[i % bowlers.length].remaining++;
+             bowlers[i % bowlers.length].maxOvers++;
+             totalCapacity++;
+             i++;
+         }
+    }
 
-    // --- 3. BATTING LOGIC ---
-    const battingLogic = {
-        getRole: (p) => {
-             const n = (p.name || '').toLowerCase();
-             if(n.includes('russell') || n.includes('sky') || n.includes('maxwell') || n.includes('poor')) return 'finisher';
-             if(n.includes('kohli') || n.includes('rohit') || n.includes('williamson')) return 'anchor';
-             return 'normal';
-        },
+    // Sort by skill for selection priority
+    const ranked = bowlers.sort((a,b) => (b.stats?.bowl || 0) - (a.stats?.bowl || 0));
 
-        getWicketType: (batter, bowler, phase) => {
-             const r = seededRandom();
-             if(phase === 'death' && r < 0.01) return 'run out'; 
-             if(phase !== 'death' && r < 0.003) return 'run out';
+    return ranked;
+  },
 
-             const wR = seededRandom();
-             const bType = bowlingLogic.getBowlerType(bowler);
-             
-             if(bType.includes('spin')) {
-                 if(wR < 0.55) return 'caught'; 
-                 if(wR < 0.75) return 'lbw';
-                 if(wR < 0.90) return 'bowled';
-                 return 'stumped';
-             } else {
-                 if(wR < 0.65) return 'caught';
-                 if(wR < 0.85) return 'bowled';
-                 return 'lbw';
-             }
-        },
+  selectBowlerForOver: (bowlable, overNumber, phase) => {
+    // Candidates who have overs left and didn't bowl the last over
+    let candidates = bowlable.filter(b => b.remaining > 0 && b.lastBowledOver !== overNumber - 1);
+    
+    // Fallback: If no one is eligible (e.g. only 1 bowler left with overs), pick ANYONE with overs
+    if(candidates.length === 0) {
+        const any = bowlable.filter(b => b.remaining > 0).sort((a,b) => b.remaining - a.remaining)[0];
+        if(!any) return null; // Truly no overs left
+        return any;
+    }
 
-        calculateBallOutcome: (batter, bowler, matchState, venue) => {
-             const { phase, reqRR, isChasing, recentCollpase, momentum, ballsLeft, currentScore, ballsBowled, dewActive } = matchState;
-             let mode = 'normal';
-             const role = battingLogic.getRole(batter);
+    // Phase Priorities
+    const type = (b) => bowlingLogic.getBowlerType(b);
+    
+    // Sort by suitability for phase
+    // Sort by suitability for phase
+    candidates.sort((a, b) => {
+        let scoreA = a.stats?.bowl || 50;
+        let scoreB = b.stats?.bowl || 50;  
 
-             let rangeAggression = 0;
-             if (venue.range) {
-                 const safeOvers = ballsBowled / 6 || 1; 
-                 const estimatedTotal = (currentScore / safeOvers) * 20; 
-                 
-                 if(ballsBowled > 36) { 
-                     if (estimatedTotal < venue.range[0]) rangeAggression = 1; 
-                     if (estimatedTotal > venue.range[1]) rangeAggression = -1; 
-                 }
-             }
-
-             mode = 'normal';
-             if (recentCollpase) mode = 'anchor';
-             
-             if (isChasing && reqRR < 6) mode = 'controlled';
-             if (rangeAggression === -1) mode = 'controlled';
-             
-             if (phase === 'death') mode = 'aggressive';
-             if (momentum > 2) mode = 'aggressive';
-             
-             if (role === 'finisher' && (phase === 'death' || (phase === 'mid' && ballsLeft < 18))) mode = 'aggressive';
-             
-             if (isChasing && reqRR > 10) mode = 'aggressive';
-             if (dewActive && isChasing) mode = 'aggressive';
-             if (rangeAggression === 1) mode = 'aggressive';
-             
-             if (isChasing && (reqRR > 13 || (reqRR > 0 && ballsLeft < 18))) mode = 'desperate';
-             
-             let weights = { ...OUTCOMEWEIGHTS[mode] };
-
-             if(dewActive) {
-                 weights['W'] = Math.max(1, weights['W'] - 1); 
-                 weights[4] += 1; 
-                 weights[6] += 1;
-                 if(weights['WD'] !== undefined) weights['WD'] += 1; 
-                 if(weights['NB'] !== undefined) weights['NB'] += 0; 
-             }
-             
-             if(PITCHEFFECTS[venue.pitch]) {
-                 const eff = PITCHEFFECTS[venue.pitch];
-                 for(let k in eff) {
-                     if(weights[k] !== undefined) weights[k] += eff[k];
-                 }
-             }
-             
-             if(venue.boundary === 'tiny') { 
-                 if(phase === 'death' || momentum > 2) { weights[6] += 4; weights[4] += 3; } 
-                 else { weights[6] += 2; weights[4] += 1; }
-             }
-             if(venue.boundary === 'small') {
-                 if(phase === 'death' || momentum > 2) { weights[6] += 2; weights[4] += 2; }
-                 else { weights[6] += 1; weights[4] += 1; }
-             }
-             if(venue.boundary === 'large') { 
-                 weights[1] += 2; weights[2] += 2; weights[6] -= 2; 
-                 weights[0] = Math.max(0, weights[0] - 2); 
-             }
-
-             const f = getForm(batter.name);
-             const batSkill = (batter.stats?.bat || 75) * f;
-             const bowlSkill = (bowler.stats?.bowl || 75) * getForm(bowler.name);
-             const diff = batSkill - bowlSkill;
-
-             if (diff > 15) {
-                 weights[4] += 5; weights[6] += 3; weights['W'] = Math.max(1, weights['W'] - 4);
-             } else if (diff < -15) {
-                 weights[0] += 6; weights['W'] += 5; weights[6] -= 2;
-             }
-             
-             if(weights['WD'] > 5) weights['WD'] = 5;
-             if(weights['NB'] > 3) weights['NB'] = 3;
-
-             const total = Object.values(weights).reduce((a,b)=>a+b,0);
-             let r = seededRandom() * total;
-             let result = '0';
-             for(const [k,v] of Object.entries(weights)) {
-                 r -= v;
-                 if(r <= 0) { result = k; break; }
-             }
-
-             let out = { runs: 0, wicket: false, extra: null, wicketType: null };
-             if (result === 'W') {
-                 out.wicket = true;
-                 out.wicketType = battingLogic.getWicketType(batter, bowler, phase);
-             } else if (result === 'WD' || result === 'NB') {
-                 out.extra = result;
-                 out.runs = 1; 
-             } else {
-                 out.runs = parseInt(result);
-             }
-             return out;
+        // Death: Pacers + High Skill
+        if(phase === 'death') {
+            if(type(a).includes('pacer')) scoreA += 25; // Boost pacers
+            if(type(b).includes('pacer')) scoreB += 25;
         }
-    };
+        // PP: Swing / Pacers
+        if(phase === 'pp') {
+            if(type(a).includes('pacer')) scoreA += 15;
+            if(type(b).includes('pacer')) scoreB += 15;
+        }
+        // Mid: Spinners
+        if(phase === 'mid') {
+            if(type(a).includes('spin')) scoreA += 10;
+            if(type(b).includes('spin')) scoreB += 10;
+        }
 
-    const getPStat = (name) => {
-        if(!allStats[name]) allStats[name] = { name, runs:0, wkts:0, pts:0, fours:0, sixes:0 };
-        return allStats[name];
-    };
-
-    const getImpactStat = (name) => {
-        if(!impactPlayerStats[name]) impactPlayerStats[name] = { name, gamesAsImpact: 0, impactRuns: 0, impactWickets: 0, impactPoints: 0 };
-        return impactPlayerStats[name];
-    };
-
-    tourneyTeams.forEach(t => {
-        t.stats = { played:0, won:0, lost:0, tied:0, pts:0, nrr:0, rs:0, rc:0, of:0, ob:0 };
+        // Economy influence (don't pick expensive bowlers in death if avoided)
+        if (a.runs > 11 * (a.oversUsed || 1)) scoreA -= 15;
+        if (b.runs > 11 * (b.oversUsed || 1)) scoreB -= 15;
+        
+        return (scoreB + seededRandom()*15) - (scoreA + seededRandom()*15);
     });
 
-    // --- SUPER OVER SIMULATION ---
-    function simulateSuperOver(team1, team2, venue) {
-        function getStarBatsmen(xi) {
-            return xi.sort((a,b) => (b.stats?.bat || 0) - (a.stats?.bat || 0)).slice(0, 3);
-        }
+    const selected = candidates[0];
+    selected.lastBowledOver = overNumber;
+    return selected;
+  },
 
-        function getStarBowler(xi) {
-            const bowlers = xi.filter(p => {
-                const r = (p.roleKey || p.role || '').toLowerCase();
-                return (r.includes('bowl') || r.includes('fast') || r.includes('spin') || r.includes('ar'));
-            });
-            return bowlers.sort((a,b) => ((b.stats?.bowl || 0) + (b.roleKey?.includes('fast') ? 10 : 0)) - ((a.stats?.bowl || 0) + (a.roleKey?.includes('fast') ? 10 : 0)))[0];
-        }
+  updateBowlerStats: (bowler, runs) => {
+      bowler.runs += runs;
+  },
+  
+  endBowlerOver: (bowler) => {
+      bowler.remaining--;
+      bowler.oversUsed++; // FIX: Increment oversUsed for accurate economy penalty calculation
 
-        function simSuperOverInning(batTeam, bowlTeam) {
-            const batXI = batTeam.playing11 || batTeam.squad.slice(0, 11);
-            const bowlXI = bowlTeam.playing11 || bowlTeam.squad.slice(0, 11);
+      // Accurate Overs Display
+      const overs = Math.floor(bowler.balls / 6);
+      const balls = bowler.balls % 6;
+      bowler.oversDisplay = `${overs}.${balls}`;
+
+      // Accurate Economy (avoid division by zero)
+      const totalOvers = bowler.balls / 6;
+      const eco = totalOvers > 0 ? (bowler.runs / totalOvers) : 0;
+      bowler.economy = eco.toFixed(2); 
+  }
+};
+
+function layoutOvers(balls) {
+    if(!balls) return "0.0";
+    const o = Math.floor(balls/6);
+    const b = balls%6;
+    return `${o}.${b}`;
+}
+
+// --- 3. BATTING LOGIC ---
+const battingLogic = {
+  // Enhanced role detection with more player types for realistic simulation
+  getRole: (p) => {
+      const n = (p.name || '').toLowerCase();
+      const role = (p.roleKey || p.role || '').toLowerCase();
+      
+      // Finishers - Big hitters who accelerate in death overs
+      const finishers = ['russell', 'sky', 'maxwell', 'hardik', 'pollard', 'pant', 'jadeja', 'sam curran', 'stoinis', 'miller', 'tewatia', 'rinku'];
+      if(finishers.some(f => n.includes(f))) return 'finisher';
+      
+      // Anchors - Build innings with consistent scoring
+      const anchors = ['kohli', 'rohit', 'williamson', 'rahul', 'du plessis', 'gill', 'dhawan', 'iyer', 'head', 'conway'];
+      if(anchors.some(a => n.includes(a))) return 'anchor';
+      
+      // Power Hitters - Aggressive openers
+      const powerHitters = ['warner', 'bairstow', 'buttler', 'gayle', 'narine', 'salt', 'gaikwad', 'shaw'];
+      if(powerHitters.some(h => n.includes(h))) return 'powerHitter';
+      
+      // Accumulators - Strike rotators (typically WK batters)
+      if(role.includes('wk')) return 'accumulator';
+      
+      // Default based on batting position in squad (if available)
+      return 'normal';
+  },
+
+  getWicketType: (batter, bowler, phase) => {
+      const r = seededRandom();
+      // 1. Run Outs are rare/situational events (approx 5% overall, higher in death)
+      // Death Phase Pressure: Slightly higher chance of mix-ups
+      if(phase === 'death' && r < 0.10) return 'run out';
+      if(phase !== 'death' && r < 0.03) return 'run out';
+
+      // 2. Normal Wickets: Re-roll for distribution
+      const wR = seededRandom();
+      
+      if(bowlingLogic.getBowlerType(bowler).includes('spin')) {
+          if(wR < 0.50) return 'caught';
+          if(wR < 0.75) return 'lbw';
+          if(wR < 0.90) return 'bowled';
+          return 'stumped';
+      } else {
+          // Pacers
+          if(wR < 0.60) return 'caught';
+          if(wR < 0.85) return 'bowled'; // Pacers get more bowled/lbw
+          return 'lbw';
+      }
+  },
+
+  calculateBallOutcome: (batter, bowler, matchState, venue) => {
+      const { phase, reqRR, isChasing, recentCollpase, momentum, ballsLeft, currentScore, ballsBowled, dewActive } = matchState;
+      let mode = 'normal';
+      const role = battingLogic.getRole(batter);
+
+      // --- VENUE RANGE LOGIC ---
+      let rangeAggression = 0;
+      if (venue.range) {
+          const oversBowled = (120 - ballsLeft) / 6;
+          const safeOvers = oversBowled === 0 ? 1 : oversBowled; 
+          const estimatedTotal = (currentScore / safeOvers) * 20; 
+          const targetMin = venue.range[0];
+          const targetMax = venue.range[1];
+
+          // Check only after 10 overs (60 balls) to avoid early game bias
+          if(ballsBowled > 60) { 
+              if (estimatedTotal < targetMin) rangeAggression = 1; 
+              if (estimatedTotal > targetMax) rangeAggression = -1; 
+          }
+      }
+
+      // 1. Situation Analysis - Enhanced with phase-specific weights
+      if (recentCollpase) {
+          mode = 'anchor'; // Rebuild after wickets
+      } else if (phase === 'pp') {
+          mode = 'powerplay'; // Use dedicated powerplay weights
+      } else if (phase === 'death') {
+          mode = 'death'; // Use dedicated death over weights
+      } else if (momentum > 2) {
+          mode = 'aggressive'; // Riding the wave
+      }
+
+      // Role-based adjustments for more realistic player behavior
+      if(role === 'finisher' && (phase === 'death' || (phase === 'mid' && ballsLeft < 30))) {
+           mode = 'death'; // Finishers go all out in death
+      }
+      if(role === 'powerHitter' && phase === 'pp') {
+           mode = 'aggressive'; // Power hitters attack in powerplay
+      }
+      if(role === 'accumulator') {
+           mode = (mode === 'desperate') ? 'aggressive' : 'controlled'; // Strike rotators
+      }
+      if(role === 'anchor' && recentCollpase) {
+           // Anchors get extra consolidation bonus after wickets
+           mode = 'anchor';
+      }
+
+      // Chase Pressure - More realistic run rate based decisions
+      if (isChasing) {
+          if (reqRR > 14 || (reqRR > 12 && ballsLeft < 18)) mode = 'desperate';
+          else if (reqRR > 11) mode = 'death'; // Death mode for high RRR
+          else if (reqRR > 9) mode = 'aggressive';
+          else if (reqRR < 6) mode = 'controlled';
+          
+          if(dewActive && mode === 'normal') mode = 'aggressive';
+      } else if (rangeAggression === 1 && mode !== 'desperate') {
+          mode = 'aggressive';
+      } else if (rangeAggression === -1 && (mode === 'aggressive' || mode === 'death')) {
+           mode = 'controlled'; 
+      }
+      
+      // 2. Base Weights from Mode (now uses phase-specific weights)
+      let weights = { ...OUTCOME_WEIGHTS[mode] };
+
+      // Dew Factor
+      if(dewActive) {
+           weights['W'] = Math.max(1, weights['W'] - 2);
+           weights[4] += 2; 
+           weights[6] += 1;
+           // Slippery ball: More extras
+           if(weights['WD'] !== undefined) weights['WD'] += 1;
+           if(weights['NB'] !== undefined) weights['NB'] += 1;
+      }
+      
+      // 3. Venue & Pitch Adjustments
+      if(VENUE_EFFECTS[venue.pitch]) {
+           const eff = VENUE_EFFECTS[venue.pitch];
+           for(let k in eff) {
+               if(weights[k] !== undefined) weights[k] += eff[k];
+           }
+      }
+      if(venue.boundary === 'tiny') { weights[6] += 4; weights[4] += 3; }
+      if(venue.boundary === 'large') { 
+          weights[1] += 2; weights[2] += 2; weights[6] -= 2; 
+          weights[0] = Math.max(0, weights[0] - 2); 
+      }
+
+      // 4. Form & Skill Diff
+      const f = getForm(batter.name);
+      const batSkill = (batter.stats?.bat || 75) * f;
+      const bowlSkill = (bowler.stats?.bowl || 75) * getForm(bowler.name);
+      
+      const diff = batSkill - bowlSkill;
+
+      if (diff > 15) {
+          weights[4] += 5; weights[6] += 3; weights['W'] = Math.max(1, weights['W'] - 4);
+      } else if (diff < -15) {
+          weights[0] += 6; weights['W'] += 5; weights[6] -= 2;
+      }
+      
+      // Death Over Acceleration
+      if(phase === 'death') {
+          weights[4] += 3; weights[6] += 4;
+      }
+
+      // 5. Select Outcome
+      const total = Object.values(weights).reduce((a,b)=>a+b,0);
+      let r = seededRandom() * total;
+      let result = '0';
+      for(const [k,v] of Object.entries(weights)) {
+          r -= v;
+          if(r <= 0) { result = k; break; }
+      }
+
+      let out = { runs: 0, wicket: false, extra: null, wicketType: null };
+      
+      if (result === 'W') {
+          out.wicket = true;
+          out.wicketType = battingLogic.getWicketType(batter, bowler, phase);
+      } else if (result === 'WD' || result === 'NB') {
+          out.extra = result;
+          out.runs = 1; // 1 run for extra
+      } else {
+          out.runs = parseInt(result);
+      }
+      return out;
+  }
+};
+
+// Helper for Pitch effects (renamed for clarity inside logic)
+const VENUE_EFFECTS = PITCH_EFFECTS;
+
+const allStats = {};
+const playerToTeam = {};
+
+const getPStat = (name, currentTeamName = "Unknown Team") => {
+    if (!allStats[name]) {
+        allStats[name] = { 
+            name, 
+            team: playerToTeam[name] || currentTeamName, 
+            runs: 0, wkts: 0, pts: 0, fours: 0, sixes: 0 
+        };
+    }
+    return allStats[name];
+};
+
+// --- HELPER: GET XI BASED ON ROLE ---
+function getActiveXI(team, mode) {
+    const squad = team.squad || []; // 12 Players
+    const batImp = team.batImpact;
+    const bowlImp = team.bowlImpact;
+
+    if (!batImp || !bowlImp) return squad.slice(0, 11); // Fallback
+
+    const unwanted = mode === 'bat' ? bowlImp.name : batImp.name;
+    return squad.filter(p => p.name !== unwanted).slice(0, 11);
+}
+
+function simInnings(batTeam, bowlTeam, target, innIndex) {
+    const batXI = getActiveXI(batTeam, 'bat');
+    const bowlXI = getActiveXI(bowlTeam, 'bowl');
+    let batOrder = [...batXI];
+    const bowlers = bowlingLogic.prepareBowlersForInnings(bowlXI);
+    
+    let score = 0, wkts = 0, balls = 0;
+    let striker = 0, nonStriker = 1;
+    let nextBat = 2;
+    let recentWickets = 0; 
+    let momentum = 0;
+    const ballLog = [];
+    
+    // FIX: Initialize dew effect properly
+    // Dew is more likely in 2nd innings at certain venues
+    const dewActive = (innIndex === 2 && seededRandom() < 0.4); // 40% chance in 2nd innings
+    
+    // Bat Cards Init
+    const bCards = batOrder.map(p => ({ name: p.name, runs: 0, balls: 0, status: 'dnb', fours:0, sixes:0 }));
+    if(bCards[0]) bCards[0].status = 'not out';
+    if(bCards[1]) bCards[1].status = 'not out';
+
+    for(let over=0; over<20; over++) {
+        if(wkts>=10 || (target && score > target)) break;
+
+        const phase = over<6?'pp':over<15?'mid':'death';
+        
+        const bowler = bowlingLogic.selectBowlerForOver(bowlers, over, phase);
+        if(!bowler) break; 
+
+        // Reset momentum slightly
+        if(momentum > 0) momentum--;
+
+        let legalBallsInOver = 0;
+        while(legalBallsInOver < 6) {
+            if(wkts>=10 || (target && score > target)) break;
+
+            const bat = batOrder[striker];
+            const bStat = bCards[striker];
             
-            const batsmen = getStarBatsmen(batXI);
-            const bowler = getStarBowler(bowlXI);
+            let reqRR = 0;
+            if(target) {
+                const remRuns = target - score;
+                const remBalls = 120 - balls;
+                reqRR = remBalls > 0 ? (remRuns/(remBalls/6)) : 99;
+            }
 
-            if (!bowler) return { score: 0, wickets: 2, balls: 6, boundaries: 0 };
+            const recentCollpase = recentWickets > 0;
+            const outcome = battingLogic.calculateBallOutcome(bat, bowler, {
+                phase, reqRR, isChasing: !!target, recentCollpase, momentum, 
+                ballsLeft: 120-balls, ballsBowled: balls, currentScore: score,
+                dewActive: dewActive // FIX: Now properly passed
+            }, getVenueForTeam(batTeam.name)); // Pass venue here
 
-            let score = 0, wickets = 0, balls = 0, boundaries = 0;
-            let striker = 0, nonStriker = 1;
-            let nextBat = 2;
+            score += outcome.runs;
+            bowlingLogic.updateBowlerStats(bowler, outcome.runs);
+            
+            if(!outcome.extra) bowler.balls++; 
+            
+            ballLog.push({ over: `${over}.${legalBallsInOver+1}`, bat: bat.name, bowl: bowler.name, ...outcome });
 
-            const bowlerObj = {
-                ...bowler,
-                maxOvers: 1, remaining: 1, oversUsed: 0, balls: 0,
-                wkts: 0, runs: 0, economy: 0, oversDisplay: "0.0"
-            };
+            // Global Stats (Bowler)
+            const bs = getPStat(bowler.name, bowlTeam.name);
+            if(!bs.runsConceded) bs.runsConceded = 0;
+            if(!bs.ballsBowled) bs.ballsBowled = 0;
+            
+            bs.runsConceded += outcome.runs; 
+            if(!outcome.extra) bs.ballsBowled++;
 
-            let legalBalls = 0;
-            while(legalBalls < 6 && wickets < 2) {
-                const bat = batsmen[striker];
-                if (!bat) break;
-
-                const outcome = battingLogic.calculateBallOutcome(bat, bowlerObj, {
-                    phase: 'death',
-                    reqRR: 0, isChasing: false, recentCollpase: false, momentum: 3,
-                    ballsLeft: 6 - legalBalls, ballsBowled: legalBalls, currentScore: score, dewActive: false
-                }, venue);
-
-                score += outcome.runs;
-                bowlerObj.runs += outcome.runs;
+            if(outcome.wicket) {
+                wkts++;
+                recentWickets = 2; 
+                momentum = 0;
+                bStat.status = 'out';
+                bStat.balls++;
+                updateForm(bat.name, bStat.runs, bStat.balls); 
                 
-                if(!outcome.extra) {
-                    if(outcome.runs === 4 || outcome.runs === 6) boundaries++;
+                // FIX: Only credit bowler if NOT a run out
+                if(outcome.wicketType !== 'run out') {
+                    bs.wkts++; 
+                    bs.pts+=25;
+                    bowler.wkts++;
                 }
 
-                if(!outcome.extra) {
-                    bowlerObj.balls++;
-                    legalBalls++;
-                    balls++;
-                }
-
-                if(outcome.wicket) {
-                    wickets++;
-                    if(nextBat < batsmen.length && wickets < 2) {
-                        striker = nextBat++;
-                    }
+                if(nextBat < batOrder.length) {
+                    striker = nextBat++;
+                    bCards[striker].status = 'not out';
                 } else {
-                    if(!outcome.extra && outcome.runs % 2 !== 0) {
+                    striker = -1;
+                }
+            } else {
+                if(!outcome.extra) {
+                    bStat.runs += outcome.runs;
+                    bStat.balls++;
+                    
+                    if(outcome.runs >= 4) momentum++;
+                    else momentum = Math.max(0, momentum-1);
+
+                    const ps = getPStat(bat.name, batTeam.name);
+                    if(!ps.ballsFaced) ps.ballsFaced = 0;
+                    
+                    ps.runs += outcome.runs; 
+                    ps.ballsFaced++;
+                    ps.pts += outcome.runs;
+                    
+                    if(outcome.runs===4) { ps.fours++; bStat.fours++; }
+                    if(outcome.runs===6) { ps.sixes++; bStat.sixes++; }
+
+                    if(outcome.runs % 2 !== 0) {
                         [striker, nonStriker] = [nonStriker, striker];
                     }
                 }
             }
-            return { score, wickets, balls: legalBalls, boundaries };
-        }
-
-        const so1 = simSuperOverInning(team1, team2);
-        const so2 = simSuperOverInning(team2, team1);
-
-        let winner = null;
-        let margin = "Super Over";
-
-        if(so1.score > so2.score) {
-            winner = team1.name;
-            margin = `Super Over (${so1.score}/${so1.wickets} vs ${so2.score}/${so2.wickets})`;
-        } else if(so2.score > so1.score) {
-            winner = team2.name;
-            margin = `Super Over (${so2.score}/${so2.wickets} vs ${so1.score}/${so1.wickets})`;
-        } else {
-            if(so1.boundaries > so2.boundaries) {
-                winner = team1.name;
-                margin = `Super Over - Boundary Count (${so1.boundaries} vs ${so2.boundaries})`;
-            } else if (so2.boundaries > so1.boundaries) {
-                winner = team2.name;
-                margin = `Super Over - Boundary Count (${so2.boundaries} vs ${so1.boundaries})`;
-            } else {
-                winner = seededRandom() > 0.5 ? team1.name : team2.name;
-                margin = "Super Over - Draw (Coin Toss)";
+            if(!outcome.extra) {
+                balls++;
+                legalBallsInOver++;
             }
         }
 
-        return { winner, margin, so1, so2 };
+        bowlingLogic.endBowlerOver(bowler);
+        [striker, nonStriker] = [nonStriker, striker];
+        if(recentWickets > 0) recentWickets--;
     }
-
-    function simulateMatch(t1, t2, type) {
-        const venue = getVenueForTeam(t1.name);
-
-        const isDewyNight = seededRandom() < (venue.dewChance || 0.3);
-
-        function getActiveXI(team, mode) {
-            const squad = team.squad || [];
-            const batImp = team.batImpact;
-            const bowlImp = team.bowlImpact;
-
-            if (!batImp || !bowlImp) return squad.slice(0, 11);
-            if (batImp.name === bowlImp.name) return squad.slice(0, 11);
-
-            const unwanted = mode === 'bat' ? bowlImp.name : batImp.name;
-            const wantedImpact = mode === 'bat' ? batImp : bowlImp;
-            
-            const filtered = squad.filter(p => p.name !== unwanted);
-            if (filtered.length < 11) return squad.slice(0, 11);
-            
-            const hasWanted = filtered.find(p => p.name === wantedImpact.name);
-            if(!hasWanted) {
-                filtered.pop(); 
-                filtered.push(wantedImpact);
-            }
-            
-            return filtered.slice(0, 11);
-        }
-
-        function simInnings(batTeam, bowlTeam, target, innIndex) {
-            const batXI = getActiveXI(batTeam, 'bat');
-            const bowlXI = getActiveXI(bowlTeam, 'bowl');
-            
-            batTeam.playing11 = batXI;
-            bowlTeam.playing11 = bowlXI;
-            
-            let batOrder = [...batXI];
-            const bowlers = bowlingLogic.prepareBowlersForInnings(bowlXI);
-            
-            let score = 0, wkts = 0, balls = 0;
-            let striker = 0, nonStriker = 1;
-            let nextBat = 2;
-            let recentWickets = 0; 
-            let momentum = 0;
-            let consecutiveDots = 0; 
-            
-            const dewActive = (innIndex === 1 && isDewyNight); 
-            
-            const bCards = batOrder.map(p => ({ name: p.name, runs: 0, balls: 0, status: 'dnb', fours:0, sixes:0 }));
-            if(bCards[0]) bCards[0].status = 'not out';
-            if(bCards[1]) bCards[1].status = 'not out';
-
-            for(let over=0; over<20; over++) {
-                if(wkts>=10 || (target && score >= target)) break;
-
-                const phase = over<6?'pp':over<15?'mid':'death';
-                const bowler = bowlingLogic.selectBowlerForOver(bowlers, over, phase);
-                if(!bowler) break; 
-
-                // Track Impact usage
-                if(bowlTeam.bowlImpact && bowlTeam.bowlImpact.name === bowler.name) {
-                     const impStat = getImpactStat(bowler.name);
-                     if (!impStat.hasPlayedThisMatch) {
-                         impStat.gamesAsImpact++;
-                         impStat.hasPlayedThisMatch = true;
-                     }
-                }
-
-                let legalBallsInOver = 0;
-                while(legalBallsInOver < 6) {
-                    if(wkts>=10 || (target && score >= target)) break;
-
-                    const bat = batOrder[striker];
-                    const bStat = bCards[striker];
-                    
-                    // Track Impact usage
-                    if(batTeam.batImpact && batTeam.batImpact.name === bat.name) {
-                        const impStat = getImpactStat(bat.name);
-                        if (!impStat.hasPlayedThisMatch) {
-                            impStat.gamesAsImpact++;
-                            impStat.hasPlayedThisMatch = true;
-                        }
-                    }
-
-                    let reqRR = 0;
-                    if(target) {
-                        const remRuns = target - score;
-                        const remBalls = 120 - balls;
-                        reqRR = remBalls > 0 ? (remRuns/(remBalls/6)) : 99;
-                    }
-
-                    const outcome = battingLogic.calculateBallOutcome(bat, bowler, {
-                        phase, reqRR, isChasing: !!target, recentCollpase: recentWickets > 0, momentum, 
-                        ballsLeft: 120-balls, ballsBowled: balls, currentScore: score, dewActive
-                    }, venue);
-
-                    score += outcome.runs;
-                    bowlingLogic.updateBowlerStats(bowler, outcome.runs);
-                    if(!outcome.extra) bowler.balls++; 
-                    
-                    const bs = getPStat(bowler.name);
-                    if(!bs.runsConceded) bs.runsConceded = 0;
-                    if(!bs.ballsBowled) bs.ballsBowled = 0;
-                    
-                    bs.runsConceded += outcome.runs; 
-                    if(!outcome.extra) bs.ballsBowled++;
-
-                    const isImpactBatter = batTeam.batImpact && batTeam.batImpact.name === bat.name;
-                    const isImpactBowler = bowlTeam.bowlImpact && bowlTeam.bowlImpact.name === bowler.name;
-
-                    if(outcome.wicket) {
-                        wkts++;
-                        recentWickets = 1; 
-                        momentum = 0; 
-                        consecutiveDots = 0;
-                        bStat.status = 'out';
-                        bStat.balls++;
-                        updateForm(bat.name, bStat.runs, bStat.balls); 
-                        
-                        if(outcome.wicketType !== 'run out') {
-                            bs.wkts++; 
-                            bs.pts+=25;
-                            bowler.wkts++;
-                            
-                            if(isImpactBowler) {
-                                const impStat = getImpactStat(bowler.name);
-                                impStat.impactWickets++;
-                                impStat.impactPoints += 25;
-                            }
-                        } else {
-                             momentum = 0;
-                        }
-
-                        if(nextBat < batOrder.length) {
-                            striker = nextBat++;
-                            bCards[striker].status = 'not out';
-                        } else {
-                            striker = -1;
-                        }
-                    } else {
-                        if(!outcome.extra) {
-                            bStat.runs += outcome.runs;
-                            bStat.balls++;
-                            
-                            if(outcome.runs >= 4) {
-                                momentum++;
-                                consecutiveDots = 0;
-                            } else if (outcome.runs === 0) {
-                                consecutiveDots++;
-                                if(consecutiveDots >= 2) momentum = Math.max(0, momentum-1);
-                            } else {
-                                consecutiveDots = 0;
-                            }
-
-                            const ps = getPStat(bat.name);
-                            if(!ps.ballsFaced) ps.ballsFaced = 0;
-                            
-                            ps.runs += outcome.runs; 
-                            ps.ballsFaced++;
-                            ps.pts += outcome.runs;
-                            
-                            if(outcome.runs===4) { 
-                                ps.fours++; bStat.fours++; ps.pts += 1; 
-                                if(isImpactBatter) getImpactStat(bat.name).impactPoints += 1; 
-                            }
-                            if(outcome.runs===6) { 
-                                ps.sixes++; bStat.sixes++; ps.pts += 2; 
-                                if(isImpactBatter) getImpactStat(bat.name).impactPoints += 2;
-                            }
-
-                            if(isImpactBatter) {
-                                const impStat = getImpactStat(bat.name);
-                                impStat.impactRuns += outcome.runs;
-                                impStat.impactPoints += outcome.runs;
-                            }
-
-                            if(outcome.runs % 2 !== 0) [striker, nonStriker] = [nonStriker, striker];
-                        }
-                    }
-                    if(!outcome.extra) {
-                        balls++;
-                        legalBallsInOver++;
-                    }
-                }
-                bowlingLogic.endBowlerOver(bowler);
-                [striker, nonStriker] = [nonStriker, striker];
-                if(recentWickets > 0) recentWickets--;
-            }
-            
-            bCards.forEach(c => {
-                if(c.status === 'not out') updateForm(c.name, c.runs, c.balls);
-            });
-
-            return { team: batTeam.name, score, wkts, balls, batting: bCards, bowling: bowlers };
-        }
-
-        let firstBat, secondBat;
-        const tossWinner = seededRandom() > 0.5 ? t1 : t2; 
-        const tossLoser = tossWinner === t1 ? t2 : t1;
-        
-        const effectiveChaseProb = venue.chaseProb + (isDewyNight ? 0.15 : 0);
-
-        let electedTo = "bat";
-        if (seededRandom() < effectiveChaseProb) { 
-            firstBat = tossLoser;
-            secondBat = tossWinner;
-            electedTo = "bowl";
-        } else { 
-            firstBat = tossWinner;
-            secondBat = tossLoser;
-        }
-
-        // Clean slate for new match impact tracking
-        Object.values(impactPlayerStats).forEach(s => delete s.hasPlayedThisMatch);
-
-        const inn1 = simInnings(firstBat, secondBat, null, 0);
-        const inn2 = simInnings(secondBat, firstBat, inn1.score + 1, 1);
-        
-        const activePlayers = new Set();
-        [...inn1.batting, ...inn1.bowling, ...inn2.batting, ...inn2.bowling].forEach(p => activePlayers.add(p.name));
-        normalizeForm(Array.from(activePlayers));
-
-        let result = {};
-        if (inn2.score > inn1.score) {
-            result = {
-                winner: secondBat.name,
-                margin: `${10 - inn2.wkts} wickets`,
-                score: `${inn2.score}/${inn2.wkts} (${(inn2.balls/6).toFixed(1)})`
-            };
-            secondBat.stats.won++; secondBat.stats.pts += 2;
-            firstBat.stats.lost++;
-        } else if (inn1.score > inn2.score) {
-            result = {
-                winner: firstBat.name,
-                margin: `${inn1.score - inn2.score} runs`,
-                score: `${inn2.score}/${inn2.wkts} (${(inn2.balls/6).toFixed(1)})`
-            };
-            firstBat.stats.won++; firstBat.stats.pts += 2;
-            secondBat.stats.lost++;
-        } else {
-            const superOver = simulateSuperOver(firstBat, secondBat, venue);
-            result = {
-                winner: superOver.winner,
-                margin: superOver.margin,
-                score: "Tie",
-                superOver: true
-            };
-            if(superOver.winner === firstBat.name) {
-                firstBat.stats.won++; firstBat.stats.pts += 2;
-                secondBat.stats.lost++;
-            } else {
-                secondBat.stats.won++; secondBat.stats.pts += 2;
-                firstBat.stats.lost++;
-            }
-            firstBat.stats.tied++;
-            secondBat.stats.tied++;
-        }
-
-        // Note: Standard IPL NRR rule - 1st innings is always 20 overs denominator if completed/all-out.
-        firstBat.stats.rs += inn1.score;
-        firstBat.stats.of += 20; 
-        firstBat.stats.rc += inn2.score; 
-        firstBat.stats.ob += inn2.balls/6;
-
-        secondBat.stats.rs += inn2.score;
-        secondBat.stats.of += inn2.balls/6;
-        secondBat.stats.rc += inn1.score;
-        secondBat.stats.ob += 20;
-
-        // Cleanup temporary memory for impact stats
-        Object.values(impactPlayerStats).forEach(s => delete s.hasPlayedThisMatch);
-
-        return { inn1, inn2, result, venue };
-    }
-
-    // --- MAIN MATCH LOOP ---
-    const results = [];
-    for(let i=0; i<tourneyTeams.length; i++) {
-        for(let j=i+1; j<tourneyTeams.length; j++) {
-            results.push(simulateMatch(tourneyTeams[i], tourneyTeams[j], 'league'));
-            results.push(simulateMatch(tourneyTeams[j], tourneyTeams[i], 'league'));
-        }
-    }
-
-    tourneyTeams.forEach(t => {
-        if(t.stats.of > 0 && t.stats.ob > 0) {
-            const batRate = t.stats.rs / t.stats.of;
-            const bowlRate = t.stats.rc / t.stats.ob;
-            t.stats.nrr = (batRate - bowlRate).toFixed(3);
-        }
-        t.stats.played = t.stats.won + t.stats.lost + t.stats.tied;
+    
+    bCards.forEach(c => {
+        if(c.status === 'not out') updateForm(c.name, c.runs, c.balls);
     });
 
-    // Sort teams by points and NRR
-    tourneyTeams.sort((a, b) => b.stats.pts - a.stats.pts || parseFloat(b.stats.nrr) - parseFloat(a.stats.nrr));
+    return { team: batTeam.name, score, wkts, balls, batting: bCards, bowling: bowlers, ballLog };
+}
 
-    // --- PLAYOFFS ---
-    const playoffs = [];
-    let champion = tourneyTeams[0]?.name;
-    let runnerUp = tourneyTeams[1]?.name;
+function simulateMatch(t1, t2, type = "LEAGUE") {
+    // TOSS & CHASE DECISION
+    let firstBat, secondBat;
+    const tossWinner = seededRandom() > 0.5 ? t1 : t2; 
+    const tossLoser = tossWinner === t1 ? t2 : t1;
+    let electedTo = "bat";
 
-    if (tourneyTeams.length >= 4) {
-        // Simulate playoffs (simplified - just use standings)
-        const q1Winner = tourneyTeams[0];
-        const q2Winner = tourneyTeams[1];
-        
-        playoffs.push({
-            type: "Qualifier 1",
-            t1: tourneyTeams[0].name,
-            t2: tourneyTeams[1].name,
-            winner: q1Winner.name,
-            margin: "Qualified for Final"
-        });
-        
-        playoffs.push({
-            type: "Eliminator",
-            t1: tourneyTeams[2].name,
-            t2: tourneyTeams[3].name,
-            winner: tourneyTeams[2].name,
-            margin: "Qualified for Qualifier 2"
-        });
-        
-        playoffs.push({
-            type: "Qualifier 2",
-            t1: tourneyTeams[1].name,
-            t2: tourneyTeams[2].name,
-            winner: q2Winner.name,
-            margin: "Qualified for Final"
-        });
-        
-        playoffs.push({
-            type: "FINAL",
-            t1: q1Winner.name,
-            t2: q2Winner.name,
-            winner: champion,
-            margin: "Champions!"
-        });
+    const venue = getVenueForTeam(t1.name); // Venue based on t1 (home team)
+
+    if (seededRandom() < venue.chaseProb) { 
+        firstBat = tossLoser;
+        secondBat = tossWinner;
+        electedTo = "bowl";
+    } else { 
+        firstBat = tossWinner;
+        secondBat = tossLoser;
     }
 
-    // --- AWARDS ---
-    const statsArr = Object.values(allStats);
-    const orange = statsArr.sort((a,b) => b.runs - a.runs)[0] || { name: "N/A", runs: 0 };
-    const purple = statsArr.sort((a,b) => b.wkts - a.wkts)[0] || { name: "N/A", wkts: 0 };
-    const mvp = statsArr.sort((a,b) => b.pts - a.pts)[0] || { name: "N/A", pts: 0 };
-    const sixes = statsArr.sort((a,b) => b.sixes - a.sixes)[0] || { name: "N/A", sixes: 0 };
+    // Innings 1: firstBat batting (ActiveXI='bat'), secondBat bowling (ActiveXI='bowl')
+    const i1 = simInnings(firstBat, secondBat, null, 1);
+    
+    // Innings 2: secondBat batting (ActiveXI='bat'), firstBat bowling (ActiveXI='bowl')
+    // This implicitly handles the SWAP because simInnings calls getActiveXI(team, mode)
+    const i2 = simInnings(secondBat, firstBat, i1.score, 2);
 
-    const bestSR = statsArr.filter(p => p.runs > 50).sort((a,b) => {
-        const srA = (a.runs / Math.max(1, a.ballsFaced || 1)) * 100;
-        const srB = (b.runs / Math.max(1, b.ballsFaced || 1)) * 100;
-        return srB - srA;
-    })[0];
+    // Determine Winner (Robust)
+    const s1 = parseInt(i1.score);
+    const s2 = parseInt(i2.score);
+    
+    let winner = s1 > s2 ? firstBat.name : secondBat.name;
+    if(s1 === s2) winner = "Tie";
 
-    const bestEco = statsArr.filter(p => p.ballsBowled > 24).sort((a,b) => {
-        const ecoA = (a.runsConceded || 0) / (a.ballsBowled / 6 || 1);
-        const ecoB = (b.runsConceded || 0) / (b.ballsBowled / 6 || 1);
-        return ecoA - ecoB;
-    })[0];
+    // Margin Logic
+    let margin = "Tie";
+    if(winner === firstBat.name) {
+        margin = `${s1 - s2} runs`;
+    } else if (winner === secondBat.name) {
+        margin = `${10 - i2.wkts} wickets`;
+    } // Tie case handled implicitly
 
-    // Convert results to match format
-    const leagueMatches = results.map((r, idx) => ({
-        matchId: idx + 1,
-        t1: r.inn1.team,
-        t2: r.inn2.team,
-        score1: `${r.inn1.score}/${r.inn1.wkts}`,
-        score2: `${r.inn2.score}/${r.inn2.wkts}`,
-        winner: r.result.winner,
-        winnerName: r.result.winner,
-        margin: r.result.margin,
-        venue: r.venue,
-        type: "League",
-        details: {
-            i1: r.inn1,
-            i2: r.inn2
-        }
-    }));
+    // Correctly map scores to t1 and t2
+    const t1Score = firstBat.name === t1.name ? i1 : i2;
+    const t2Score = firstBat.name === t2.name ? i1 : i2;
 
     return {
-        champion,
-        winner: tourneyTeams[0],
-        runnerUp: tourneyTeams[1],
-        standings: tourneyTeams,
-        pointsTable: tourneyTeams,
-        matches: leagueMatches,
-        leagueMatches,
-        playoffs,
-        orangeCap: orange,
-        purpleCap: purple,
-        mvp: mvp,
-        awards: {
-            orange: { name: orange.name, val: orange.runs },
-            purple: { name: purple.name, val: purple.wkts },
-            mvp: { name: mvp.name, val: mvp.pts },
-            sixes: { name: sixes.name, val: sixes.sixes },
-            impact: { name: mvp.name, val: mvp.pts },
-            sr: { name: bestSR?.name || "N/A", val: bestSR ? ((bestSR.runs / bestSR.ballsFaced) * 100).toFixed(2) : 0 },
-            eco: { name: bestEco?.name || "N/A", val: bestEco ? ((bestEco.runsConceded / (bestEco.ballsBowled / 6)).toFixed(2)) : 0 }
+        t1: t1.name, t2: t2.name,
+        score1: `${t1Score.score}/${t1Score.wkts}`,
+        score2: `${t2Score.score}/${t2Score.wkts}`,
+        winner: winner,  
+        winnerName: winner,
+        margin: margin,
+        toss: `${tossWinner.name} won toss & chose to ${electedTo}`,
+        tossDetails: { winner: tossWinner.name, decision: electedTo },
+        venue: venue,
+        type,
+        details: { 
+            i1: { ...i1, teamName: firstBat.name }, 
+            i2: { ...i2, teamName: secondBat.name } 
         },
-        allTeamsData: tourneyTeams,
-        impactPlayerStats
+        batFirst: firstBat.name 
     };
 }
 
-module.exports = { runFullTournament };
+// --- 4. TOURNAMENT SIMULATION ---
+// --- 4. TOURNAMENT SIMULATION ---
+function runLocalTournament(tourneyTeams) {
+    if(!tourneyTeams || tourneyTeams.length < 2) throw new Error("Need at least 2 teams to simulate.");
+
+    // Clear stats for new tournament
+    for (const key in allStats) delete allStats[key];
+    for (const key in playerToTeam) delete playerToTeam[key];
+
+    // Safety: Ensure all teams have minimal squad to prevent crash
+    tourneyTeams.forEach(t => {
+        if(!t.squad) t.squad = [];
+        // Auto-fill dummy players if < 11
+        while(t.squad.length < 12) {
+             t.squad.push({
+                 name: `Player_${t.name}_${t.squad.length+1}`, 
+                 roleKey: 'ar', 
+                 stats: { bat: 60, bowl: 60, luck: 50 }
+             });
+        }
+        // Map players to teams for awards
+        t.squad.forEach(p => playerToTeam[p.name] = t.name);
+        t.stats = { played:0, won:0, lost:0, pts:0, nrr:0, rs:0, rc:0, of:0, ob:0 };
+    });
+
+    const matches = [];
+
+    // Helper to update NRR and Points
+    function handleLeaguePoints(match) {
+        const t1 = tourneyTeams.find(t => t.name === match.t1);
+        const t2 = tourneyTeams.find(t => t.name === match.t2);
+        if(!t1 || !t2) return;
+
+        t1.stats.played++;
+        t2.stats.played++;
+
+        if (match.winnerName === "Tie") {
+            t1.stats.pts += 1;
+            t2.stats.pts += 1;
+        } else if (match.winnerName === t1.name) {
+            t1.stats.won++;
+            t1.stats.pts += 2;
+            t2.stats.lost++;
+        } else {
+            t2.stats.won++;
+            t2.stats.pts += 2;
+            t1.stats.lost++;
+        }
+
+        // --- NRR Logic ---
+        // Parse scores: "180/5" -> 180 runs, 5 wkts
+        const [r1, w1] = match.score1.split('/').map(Number);
+        const [r2, w2] = match.score2.split('/').map(Number);
+
+        t1.stats.rs += r1; t1.stats.rc += r2;
+        t2.stats.rs += r2; t2.stats.rc += r1;
+
+        // Overs faced/bowled
+        // Simplified: Assume 20 overs unless all out (simplified version)
+        const o1 = w1 === 10 ? 20 : 20; 
+        const o2 = w2 === 10 ? 20 : 20;
+
+        t1.stats.of += o1; t1.stats.ob += o2;
+        t2.stats.of += o2; t2.stats.ob += o1;
+    }
+
+    // 1. League Stage (Single Round Robin)
+    for (let i = 0; i < tourneyTeams.length; i++) {
+        for (let j = i + 1; j < tourneyTeams.length; j++) {
+            const m = simulateMatch(tourneyTeams[i], tourneyTeams[j], "League");
+            handleLeaguePoints(m);
+            matches.push(m);
+        }
+    }
+
+    // 2. Final Standings
+    tourneyTeams.forEach(t => {
+        const rr = t.stats.of > 0 ? (t.stats.rs / t.stats.of) : 0;
+        const ra = t.stats.ob > 0 ? (t.stats.rc / t.stats.ob) : 0;
+        t.stats.nrr = parseFloat((rr - ra).toFixed(3));
+    });
+
+    const standings = [...tourneyTeams].sort((a,b) => b.stats.pts - a.stats.pts || b.stats.nrr - a.stats.nrr);
+
+    // 3. Playoffs
+    const playoffs = [];
+    let champion = standings[0];
+    let runnerUp = standings[1];
+
+    if (standings.length >= 4) {
+        const q1 = simulateMatch(standings[0], standings[1], "Qualifier 1");
+        const eli = simulateMatch(standings[2], standings[3], "Eliminator");
+        
+        const winnerQ1 = q1.winnerName === standings[0].name ? standings[0] : standings[1];
+        const loserQ1 = q1.winnerName === standings[0].name ? standings[1] : standings[0];
+        const winnerEli = eli.winnerName === standings[2].name ? standings[2] : standings[3];
+        
+        const q2 = simulateMatch(loserQ1, winnerEli, "Qualifier 2");
+        const winnerQ2 = q2.winnerName === loserQ1.name ? loserQ1 : winnerEli;
+        
+        const final = simulateMatch(winnerQ1, winnerQ2, "Final");
+        
+        champion = final.winnerName === winnerQ1.name ? winnerQ1 : winnerQ2;
+        runnerUp = final.winnerName === winnerQ1.name ? winnerQ2 : winnerQ1;
+        
+        playoffs.push(q1, eli, q2, final);
+    }
+
+    // Awards Function
+    const getTop = (key) => {
+        let best = { name: "TBA", val: -1, team: "TBA" };
+        for(let p in allStats) {
+            if(allStats[p][key] > best.val) {
+                best = { name: p, val: allStats[p][key], team: allStats[p].team };
+            }
+        }
+        return best;
+    };
+
+    return {
+        winner: { name: champion.name, playerName: champion.playerName },
+        runnerUp: { name: runnerUp.name, playerName: runnerUp.playerName },
+        standings: standings.map(s => ({
+            name: s.name,
+            playerName: s.playerName,
+            stats: s.stats
+        })),
+        leagueMatches: matches,
+        playoffs: playoffs,
+        orangeCap: getTop('runs'),
+        purpleCap: getTop('wkts'),
+        mvp: getTop('pts'),
+        mostSixes: getTop('sixes'),
+        highestSr: { name: "N/A", val: 0, team: "N/A" },
+        bestEco: { name: "N/A", val: 0, team: "N/A" },
+        tournamentSixes: Object.values(allStats).reduce((sum, p) => sum + (p.sixes || 0), 0)
+    };
+}
+
+
+// =================================================================
+// 🚀 AI ENGINE: GEMINI API INTEGRATION (Gemini 2.0 Flash)
+// =================================================================
+const https = require('https');
+require('dotenv').config(); // Load environment variables
+
+// ✅ SECURE: Using environment variable for API key
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const API_TIMEOUT_MS = 30000; // 30 second timeout for API calls 
+
+async function runFullTournament(tourneyTeams, customPrompt = "") {
+    console.log("🤖 Gemini AI is simulating your tournament...");
+
+    if (!GEMINI_API_KEY || GEMINI_API_KEY.includes("YOUR_")) {
+        console.error("❌ ERROR: Gemini API Key is missing! Falling back to Local Engine.");
+        return runLocalTournament(tourneyTeams);
+    }
+
+    // 1. Prepare data for the prompt
+    const teamData = tourneyTeams.map(t => {
+        const squadInfo = (t.squad && t.squad.length > 5) 
+            ? t.squad.map(p => `${p.name} (${p.roleKey || 'bat'})`).join(", ") 
+            : "Empty squad (AI: Please invent a realistic T20 starting XI for this team name)";
+        return `Team: ${t.name}\nPlayers: ${squadInfo}`;
+    }).join("\n\n");
+
+    const promptText = `
+    Act as a professional Cricket Simulation Engine. Simulate a full T20 Cricket Tournament based on these teams:
+    
+    ${teamData}
+
+    ${customPrompt ? `--- USER CUSTOM DIRECTIVES ---\n${customPrompt}\n------------------------------` : ""}
+
+    REQUIREMENTS:
+    - Simulate a League stage (Single Round Robin).
+    - Simulate Playoffs (Qualifier 1, Eliminator, Qualifier 2, Final).
+    - Provide realistic T20 scores (140-230 range).
+    - Calculate top performer awards (Orange Cap, Purple Cap, MVP, Most Sixes, Highest SR, Best Economy).
+    - IMPORTANT: Ensure "standings" array is fully populated with ALL teams.
+    - IMPORTANT: Ensure "leagueMatches" contains ALL match results.
+
+    OUTPUT JSON STRUCTURE:
+    Return ONLY a raw JSON object matching this structure:
+    {
+      "winner": { "name": "Team Name" },
+      "runnerUp": { "name": "Team Name" },
+      "standings": [
+        { "name": "CSK", "stats": { "played": 14, "won": 8, "lost": 6, "pts": 16, "nrr": 0.12 } },
+        { "name": "MI", "stats": { "played": 14, "won": 7, "lost": 7, "pts": 14, "nrr": -0.05 } }
+      ],
+      "leagueMatches": [
+        { "t1": "CSK", "t2": "MI", "winner": "CSK", "margin": "10 runs", "score1": "180/4", "score2": "170/9", "type": "League" }
+      ],
+      "playoffs": [
+        { "t1": "CSK", "t2": "RCB", "winner": "CSK", "margin": "5 wkts", "score1": "150/5", "score2": "151/5", "type": "Qualifier 1" }
+      ],
+      "orangeCap": { "name": "Player Name", "val": 650, "team": "Team Code" },
+      "purpleCap": { "name": "Player Name", "val": 24, "team": "Team Code" },
+      "mvp": { "name": "Player Name", "val": 350, "team": "Team Code" },
+      "mostSixes": { "name": "Player Name", "val": 35, "team": "Team Code" },
+      "highestSr": { "name": "Player Name", "val": 210.5, "team": "Team Code" },
+      "bestEco": { "name": "Player Name", "val": 6.2, "team": "Team Code" },
+      "tournamentSixes": 450
+    }
+    `;
+
+    // 2. Call the API
+    try {
+        const responseText = await callGeminiAPI(promptText);
+        
+        // Clean markdown backticks if AI adds them
+        let cleanJson = responseText.replace(/```json/g, "").replace(/```/g, "").trim();
+        
+        // Robust Extraction: Find substring between first { and last }
+        const firstParen = cleanJson.indexOf('{');
+        const lastParen = cleanJson.lastIndexOf('}');
+        if(firstParen !== -1 && lastParen !== -1) {
+            cleanJson = cleanJson.substring(firstParen, lastParen + 1);
+        }
+
+        const data = JSON.parse(cleanJson);
+        
+        // Enrich with original team metadata (e.g. Owner Name)
+        if(data.standings && Array.isArray(data.standings)) {
+            data.standings.forEach(s => {
+               const original = tourneyTeams.find(t => t.name === s.name);
+               if(original) {
+                   s.playerName = original.playerName; // Map Owner Name
+                   s.bidKey = original.bidKey; // Map ID if needed
+               }
+            });
+        }
+
+        console.log("✅ Gemini Simulation Complete!");
+        return data;
+
+    } catch (error) {
+        console.error("❌ Tournament Simulation Failed:", error);
+        console.warn("⚠️ Falling back to Local Simulation Engine...");
+        try {
+            return runLocalTournament(tourneyTeams);
+        } catch(localErr) {
+             console.error("❌ Local Simulation also failed:", localErr);
+             return { error: "Both AI and Local Simulation Failed", details: localErr.message };
+        }
+    }
+}
+
+/**
+ * Native Node.js HTTPS request to Gemini API (No SDK required)
+ * Uses Gemini 2.0 Flash for better performance and accuracy
+ * Includes timeout handling to prevent hanging requests
+ */
+function callGeminiAPI(prompt) {
+    return new Promise((resolve, reject) => {
+        const postData = JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+                // Forces the model to output valid JSON
+                response_mime_type: "application/json",
+                temperature: 0.7, // Slightly lower for more consistent realistic results
+                topP: 0.9,
+                topK: 40
+            }
+        });
+
+        const options = {
+            hostname: 'generativelanguage.googleapis.com',
+            // ✅ UPGRADED: Using Gemini 2.0 Flash for better accuracy
+            path: `/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(postData)
+            },
+            timeout: API_TIMEOUT_MS // Request timeout
+        };
+
+        const req = https.request(options, (res) => {
+            let resBody = '';
+            res.on('data', (chunk) => resBody += chunk);
+            res.on('end', () => {
+                try {
+                    const parsed = JSON.parse(resBody);
+                    if (parsed.error) {
+                        console.error("Gemini API Error:", parsed.error);
+                        return reject(parsed.error.message || "Gemini API returned an error");
+                    }
+                    
+                    if (!parsed.candidates || !parsed.candidates[0]) {
+                        return reject("No response candidates from Gemini API");
+                    }
+                    
+                    const text = parsed.candidates[0].content.parts[0].text;
+                    resolve(text);
+                } catch (e) {
+                    console.error("Parse Error:", e.message, "Response:", resBody.substring(0, 500));
+                    reject("Failed to parse Gemini API response: " + e.message);
+                }
+            });
+        });
+
+        // ✅ Timeout handling - prevents hanging indefinitely
+        req.setTimeout(API_TIMEOUT_MS, () => {
+            req.destroy();
+            reject("Gemini API request timed out after " + (API_TIMEOUT_MS/1000) + " seconds");
+        });
+
+        req.on('error', (e) => {
+            console.error("Request Error:", e.message);
+            reject("Network error: " + e.message);
+        });
+        
+        req.write(postData);
+        req.end();
+    });
+}
+
+
+module.exports = { runFullTournament, simulateMatch };

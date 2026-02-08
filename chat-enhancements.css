@@ -1,0 +1,235 @@
+/* Enhanced Chat Styles */
+
+.chat-emoji-picker {
+    position: absolute;
+    bottom: 60px;
+    left: 10px;
+    background: rgba(20, 20, 30, 0.98);
+    border: 2px solid rgba(255, 215, 0, 0.3);
+    border-radius: 12px;
+    padding: 15px;
+    display: none;
+    z-index: 1000;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(10px);
+    max-width: 300px;
+}
+
+.chat-emoji-picker.active {
+    display: block;
+    animation: slideUpFade 0.3s ease-out;
+}
+
+@keyframes slideUpFade {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.emoji-btn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.emoji-btn:hover {
+    background: rgba(255, 215, 0, 0.2);
+    transform: scale(1.2);
+}
+
+.quick-messages {
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding-top: 10px;
+    margin-top: 10px;
+}
+
+.quick-msg-btn {
+    background: rgba(255, 215, 0, 0.1);
+    border: 1px solid rgba(255, 215, 0, 0.3);
+    color: #FFD700;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    margin: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.quick-msg-btn:hover {
+    background: rgba(255, 215, 0, 0.3);
+    transform: translateY(-2px);
+}
+
+.chat-message-reactions {
+    display: flex;
+    gap: 4px;
+    margin-top: 4px;
+    flex-wrap: wrap;
+}
+
+.reaction-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    padding: 2px 8px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.reaction-btn:hover {
+    background: rgba(255, 215, 0, 0.2);
+    border-color: rgba(255, 215, 0, 0.5);
+    transform: scale(1.1);
+}
+
+.reaction-btn.active {
+    background: rgba(255, 215, 0, 0.3);
+    border-color: #FFD700;
+}
+
+.reaction-count {
+    font-size: 0.75rem;
+    color: #FFD700;
+    font-weight: 600;
+}
+
+.chat-input-wrapper {
+    position: relative;
+}
+
+.emoji-toggle-btn {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    font-size: 1.3rem;
+    cursor: pointer;
+    z-index: 10;
+    transition: transform 0.2s;
+}
+
+.emoji-toggle-btn:hover {
+    transform: translateY(-50%) scale(1.2);
+}
+
+#chatInput {
+    padding-left: 45px !important;
+}
+
+.chat-message {
+    position: relative;
+    padding: 8px 12px;
+    margin: 4px 0;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    transition: background 0.2s;
+}
+
+.chat-message:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.chat-message:hover .message-actions {
+    opacity: 1;
+}
+
+.message-actions {
+    position: absolute;
+    right: 8px;
+    top: 8px;
+    opacity: 0;
+    transition: opacity 0.2s;
+    display: flex;
+    gap: 4px;
+}
+
+.message-action-btn {
+    background: rgba(0, 0, 0, 0.5);
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: all 0.2s;
+}
+
+.message-action-btn:hover {
+    background: rgba(255, 215, 0, 0.3);
+    transform: scale(1.1);
+}
+
+.typing-indicator {
+    display: none;
+    padding: 8px;
+    color: #aaa;
+    font-size: 0.85rem;
+    font-style: italic;
+}
+
+.typing-indicator.active {
+    display: block;
+}
+
+.typing-dots {
+    display: inline-block;
+}
+
+.typing-dots span {
+    animation: typingDot 1.4s infinite;
+    opacity: 0;
+}
+
+.typing-dots span:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.typing-dots span:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+@keyframes typingDot {
+    0%, 60%, 100% { opacity: 0; }
+    30% { opacity: 1; }
+}
+
+/* Message types */
+.chat-message.system {
+    background: rgba(74, 144, 226, 0.1);
+    border-left: 3px solid #4A90E2;
+}
+
+.chat-message.achievement {
+    background: rgba(255, 215, 0, 0.1);
+    border-left: 3px solid #FFD700;
+}
+
+.chat-message.mention {
+    background: rgba(255, 107, 107, 0.1);
+    border-left: 3px solid #FF6B6B;
+}

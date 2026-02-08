@@ -128,12 +128,86 @@ router.post('/reset-password', async (req, res) => {
     }
 });
 
-// GET PROFILE (by email)
+// Helper to send Email (Generic)
+async function sendEmail(to, subject, text) {
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS || process.env.EMAIL_PASS === 'your_app_password_here') {
+        console.log(`[MOCK EMAIL] To: ${to}, Subject: ${subject}`);
+        console.log(`Body: ${text}`);
+        console.log("⚠️  To send real emails, please set EMAIL_PASS in your .env file with a Gmail App Password.");
+        return;
+    }
+    const transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
+    });
+    await transporter.sendMail({
+        from: process.env.EMAIL_USER,
+        to: to,
+        subject: subject,
+        text: text
+    });
+}
+
+// SYNC USER (Login/Signup via Clerk)
+router.post('/sync', async (req, res) => {
+    try {
+        const { name, email, avatar } = req.body;
+        let user = await User.findOne({ email });
+        
+        if (!user) {
+            console.log(`🆕 Creating new user from Clerk: ${email}`);
+            user = new User({ 
+                name: name || 'User', 
+                email, 
+                password: 'clerk_auth_login', // Dummy password
+                avatar: avatar || ''
+            });
+            await user.save();
+        }
+
+        // Check/Send Welcome Email
+        if (!user.welcomeEmailSent) {
+            console.log(`📧 Sending Welcome Email to ${email}`);
+            const welcomeSubject = "Welcome to IPL Auction World";
+            const welcomeBody = `Welcome to our world!
+            
+If you have any errors or doubts, please contact: ipl.live.auction@gmail.com`;
+
+            sendEmail(email, welcomeSubject, welcomeBody).catch(err => console.error(err));
+            
+            user.welcomeEmailSent = true;
+            await user.save();
+        }
+        
+        // ✨ IP Tracking
+        const currentIp = req.body.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+        user.lastIp = currentIp;
+        if (!user.ipHistory) user.ipHistory = [];
+        if (!user.ipHistory.includes(currentIp)) {
+            user.ipHistory.push(currentIp);
+        }
+        await user.save();
+        
+        res.json(user);
+    } catch (e) {
+        res.status(500).json({ message: e.message });
+    }
+});
+
+// GET PROFILE (by email) - Restore missing route
 router.get('/profile/:email', async (req, res) => {
     try {
-        const user = await User.findOne({ email: req.params.email }).select('-password -otp');
+        let user = await User.findOne({ email: req.params.email }).select('-password -otp');
         if (!user) {
-            return res.status(404).json({ message: 'User not found' });
+            // Create user on the fly if using Clerk and not in DB
+            console.log(`⚠️ User not found in GET /profile, creating placeholder: ${req.params.email}`);
+            user = new User({ 
+                name: 'Guest User', 
+                email: req.params.email, 
+                password: 'placeholder_password', 
+                avatar: '' 
+            });
+            await user.save();
         }
         res.json(user);
     } catch (e) {
@@ -246,6 +320,47 @@ router.delete('/clear-squad/:email/:roomId', async (req, res) => {
         await user.save();
         
         res.json({ message: 'Squad cleared successfully' });
+    } catch (e) {
+        res.status(500).json({ message: e.message });
+    }
+});
+
+// ✨ AUTH SESSION SYNC (MongoDB storage for LocalStorage data)
+router.get('/session/get/:email', async (req, res) => {
+    try {
+        const user = await User.findOne({ email: req.params.email });
+        if (!user) return res.status(404).json({ message: 'User not found' });
+        res.json(user.session || {});
+    } catch (e) {
+        res.status(500).json({ message: e.message });
+    }
+});
+
+router.post('/session/sync', async (req, res) => {
+    try {
+        const { email, session } = req.body;
+        const user = await User.findOne({ email });
+        if (!user) return res.status(404).json({ message: 'User not found' });
+
+        // Update session fields
+        if (!user.session) user.session = {};
+        
+        // Merge session data
+        if (session.playerId) user.session.playerId = session.playerId;
+        if (session.activeRoomId) user.session.activeRoomId = session.activeRoomId;
+        if (session.activeTeamKey) user.session.activeTeamKey = session.activeTeamKey;
+        if (session.lastRoomId) user.session.lastRoomId = session.lastRoomId;
+        if (session.lastPass) user.session.lastPass = session.lastPass;
+        
+        if (session.teamKeys) {
+            if (!user.session.teamKeys) user.session.teamKeys = new Map();
+            for (const [key, value] of Object.entries(session.teamKeys)) {
+                user.session.teamKeys.set(key, value);
+            }
+        }
+
+        await user.save();
+        res.json({ message: 'Session synced with MongoDB', session: user.session });
     } catch (e) {
         res.status(500).json({ message: e.message });
     }
