@@ -1,31 +1,8 @@
-# Dependencies
 node_modules/
-package-lock.json
-
-# Environment Variables (CRITICAL - Never commit)
-.env
-.env.local
-.env.production
-
-# Logs
 *.log
-db-error.log
-npm-debug.log*
-
-# OS Files
-.DS_Store
-Thumbs.db
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# Build outputs
+.env
+.brain/
+.gemini/
 dist/
 build/
-
-# Temporary files
-*.tmp
-temp/
+.DS_Store
