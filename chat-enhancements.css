@@ -115,6 +115,8 @@
 
 .chat-input-wrapper {
     position: relative;
+    display: flex;
+    align-items: center;
 }
 
 .emoji-toggle-btn {
@@ -128,6 +130,7 @@
     cursor: pointer;
     z-index: 10;
     transition: transform 0.2s;
+    color: #ffd700;
 }
 
 .emoji-toggle-btn:hover {
@@ -141,9 +144,8 @@
 .chat-message {
     position: relative;
     padding: 8px 12px;
-    margin: 4px 0;
+    margin: 6px 0;
     border-radius: 8px;
-    background: rgba(255, 255, 255, 0.05);
     transition: background 0.2s;
 }
 
@@ -219,6 +221,44 @@
 }
 
 /* Message types */
+.chat-message.self {
+    background: rgba(0, 122, 255, 0.15);
+    border-right: 3px solid #007aff;
+    border-left: none;
+    text-align: right;
+    margin-left: 20px;
+}
+
+.chat-message.other {
+    background: rgba(255, 255, 255, 0.05);
+    border-left: 3px solid rgba(255, 255, 255, 0.2);
+    margin-right: 20px;
+}
+
+.chat-name {
+    font-size: 0.75rem;
+    font-weight: bold;
+    color: #ffd700;
+    margin-bottom: 2px;
+}
+
+.self .chat-name {
+    color: #4da6ff;
+}
+
+.chat-text {
+    font-size: 0.95rem;
+    word-wrap: break-word;
+    color: #eee;
+}
+
+.chat-time {
+    font-size: 0.65rem;
+    color: rgba(255, 255, 255, 0.4);
+    margin-top: 4px;
+    text-align: right;
+}
+
 .chat-message.system {
     background: rgba(74, 144, 226, 0.1);
     border-left: 3px solid #4A90E2;

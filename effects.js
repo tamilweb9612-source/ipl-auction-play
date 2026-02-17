@@ -273,3 +273,5 @@ if (typeof socket !== 'undefined') {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = EffectsManager;
 }
+
+

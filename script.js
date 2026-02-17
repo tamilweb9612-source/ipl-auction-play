@@ -1982,7 +1982,7 @@ function updateTeamSidebar(teams) {
   });
 }
 
-document.getElementById("soldBtn").addEventListener("click", () => {
+document.getElementById("soldBtn")?.addEventListener("click", () => {
   if (!isAdmin || saleProcessing) return;
   if (!currentHighestBidderKey) return alert("No active bidder!");
   saleProcessing = true;
@@ -1994,25 +1994,25 @@ document.getElementById("soldBtn").addEventListener("click", () => {
   });
 });
 
-document.getElementById("skipBtn").addEventListener("click", () => {
+document.getElementById("skipBtn")?.addEventListener("click", () => {
   if (!isAdmin || saleProcessing) return;
   saleProcessing = true;
   socket.emit("finalize_sale", { isUnsold: true });
 });
 
-document.getElementById("timerToggleBtn").addEventListener("click", () => {
+document.getElementById("timerToggleBtn")?.addEventListener("click", () => {
   console.log("⏯️ Timer Toggle Clicked. Admin?", isAdmin);
   if (isAdmin) socket.emit("toggle_timer");
 });
 document
   .getElementById("endAuctionBtn")
-  .addEventListener(
+  ?.addEventListener(
     "click",
     () =>
       isAdmin && confirm("End Auction?") && socket.emit("end_auction_trigger"),
   );
 
-document.getElementById("autoWinBtn").addEventListener("click", () => {
+document.getElementById("autoWinBtn")?.addEventListener("click", () => {
   if (!isAdmin || saleProcessing) return;
   if (confirm("⚡ Claim this player for your team instantly?")) {
     saleProcessing = true;
@@ -2020,7 +2020,7 @@ document.getElementById("autoWinBtn").addEventListener("click", () => {
   }
 });
 
-document.getElementById("fastFinishBtn").addEventListener("click", () => {
+document.getElementById("fastFinishBtn")?.addEventListener("click", () => {
   if (!isAdmin) return;
   if (
     confirm(

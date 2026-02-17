@@ -2749,27 +2749,33 @@ async function saveWinRecord(roomId, r, aiResults, tourneyTeams) {
       standings: standings,
       rosters: rosters,
       
-      leagueMatches: (aiResults.leagueMatches || []).map(m => ({
-          t1: m.t1 || m.team1,
-          t2: m.t2 || m.team2,
-          winner: m.winnerName || m.winner,
-          margin: m.margin,
-          score1: m.score1,
-          score2: m.score2,
-          type: m.type || "League",
-          batFirst: m.batFirst
-      })),
+      leagueMatches: (Array.isArray(aiResults.leagueMatches) ? aiResults.leagueMatches : []).map(m => {
+          if (!m || typeof m !== 'object') return null;
+          return {
+              t1: m.t1 || m.team1 || "Unknown",
+              t2: m.t2 || m.team2 || "Unknown",
+              winner: m.winnerName || m.winner || "Draw",
+              margin: m.margin || "N/A",
+              score1: m.score1 || "0/0",
+              score2: m.score2 || "0/0",
+              type: m.type || "League",
+              batFirst: m.batFirst || "Unknown"
+          };
+      }).filter(m => m !== null),
 
-      playoffs: (aiResults.playoffs || []).map(m => ({
-          t1: m.t1 || m.team1,
-          t2: m.t2 || m.team2,
-          winner: m.winnerName || m.winner,
-          margin: m.margin,
-          score1: m.score1,
-          score2: m.score2,
-          type: m.type || "Playoff",
-          batFirst: m.batFirst
-      })),
+      playoffs: (Array.isArray(aiResults.playoffs) ? aiResults.playoffs : []).map(m => {
+          if (!m || typeof m !== 'object') return null;
+          return {
+              t1: m.t1 || m.team1 || "Unknown",
+              t2: m.t2 || m.team2 || "Unknown",
+              winner: m.winnerName || m.winner || "Draw",
+              margin: m.margin || "N/A",
+              score1: m.score1 || "0/0",
+              score2: m.score2 || "0/0",
+              type: m.type || "Playoff",
+              batFirst: m.batFirst || "Unknown"
+          };
+      }).filter(m => m !== null),
 
       metadata: {
         budget: r.config?.budget || 1000000000,
