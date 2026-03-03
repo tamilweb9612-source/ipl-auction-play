@@ -298,7 +298,51 @@
 
 <body class="intro-body">
 
-    <div id="introOverlay" class="intro-overlay"></div>
+    <div id="introOverlay" class="intro-overlay">
+        <!-- Rotating spotlights background -->
+        <div class="spotlight-bg"></div>
+
+        <!-- Main intro content (gavel + text) -->
+        <div id="introContent" class="intro-content" style="flex-direction: column; gap: 0;">
+            <!-- Gavel hammer -->
+            <div class="gavel-wrapper">
+                <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;">
+                    <!-- Handle -->
+                    <rect x="95" y="90" width="18" height="110" rx="6" fill="#8B5E3C" stroke="#5C3D1E"
+                        stroke-width="2" />
+                    <!-- Hammer head -->
+                    <rect x="30" y="30" width="130" height="70" rx="12" fill="#C0C0C0" stroke="#888" stroke-width="3" />
+                    <!-- Highlight on hammer -->
+                    <rect x="34" y="34" width="122" height="20" rx="8" fill="rgba(255,255,255,0.25)" />
+                </svg>
+            </div>
+
+            <!-- Shockwave ring -->
+            <div class="shockwave"></div>
+
+            <!-- Broken / shatter text -->
+            <div class="broken-text">
+                <span style="--tx:-120px;--ty:-80px;--r:-30deg;">I</span>
+                <span style="--tx:-80px;--ty:60px;--r:20deg;">P</span>
+                <span style="--tx:0px;--ty:-100px;--r:-10deg;">L</span>
+                <span style="--tx:20px;--ty:10px;--r:5deg;">&nbsp;</span>
+                <span style="--tx:90px;--ty:-70px;--r:25deg;">A</span>
+                <span style="--tx:-50px;--ty:90px;--r:-20deg;">U</span>
+                <span style="--tx:130px;--ty:50px;--r:15deg;">C</span>
+                <span style="--tx:-100px;--ty:-50px;--r:-35deg;">T</span>
+                <span style="--tx:70px;--ty:-90px;--r:10deg;">I</span>
+                <span style="--tx:-60px;--ty:100px;--r:-25deg;">O</span>
+                <span style="--tx:110px;--ty:80px;--r:30deg;">N</span>
+            </div>
+
+            <!-- SOLD stamp -->
+            <div class="sold-stamp">SOLD!</div>
+
+            <!-- Spark particle container -->
+            <div id="sparkContainer"
+                style="position:absolute;top:50%;left:50%;width:0;height:0;pointer-events:none;z-index:15;"></div>
+        </div>
+    </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script src="auth.js"></script>

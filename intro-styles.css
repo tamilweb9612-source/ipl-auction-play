@@ -1,0 +1,39 @@
+/* =========================================
+   INTRO PAGE BODY STYLES
+   ========================================= */
+
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+.intro-body {
+    background: #050508;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    font-family: 'Teko', sans-serif;
+}
+
+/* Full-screen overlay */
+.intro-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 900;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    background: radial-gradient(circle at center, #1a2342 0%, #050508 100%);
+}

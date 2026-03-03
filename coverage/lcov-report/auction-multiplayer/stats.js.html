@@ -1,0 +1,868 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for auction-multiplayer/stats.js</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../prettify.css" />
+    <link rel="stylesheet" href="../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="../index.html">All files</a> / <a href="index.html">auction-multiplayer</a> stats.js</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>0/11</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>0/6</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>0/2</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">0% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>0/8</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+        <template id="filterTemplate">
+            <div class="quiet">
+                Filter:
+                <input type="search" id="fileSearch">
+            </div>
+        </template>
+    </div>
+    <div class='status-line low'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
+<a name='L2'></a><a href='#L2'>2</a>
+<a name='L3'></a><a href='#L3'>3</a>
+<a name='L4'></a><a href='#L4'>4</a>
+<a name='L5'></a><a href='#L5'>5</a>
+<a name='L6'></a><a href='#L6'>6</a>
+<a name='L7'></a><a href='#L7'>7</a>
+<a name='L8'></a><a href='#L8'>8</a>
+<a name='L9'></a><a href='#L9'>9</a>
+<a name='L10'></a><a href='#L10'>10</a>
+<a name='L11'></a><a href='#L11'>11</a>
+<a name='L12'></a><a href='#L12'>12</a>
+<a name='L13'></a><a href='#L13'>13</a>
+<a name='L14'></a><a href='#L14'>14</a>
+<a name='L15'></a><a href='#L15'>15</a>
+<a name='L16'></a><a href='#L16'>16</a>
+<a name='L17'></a><a href='#L17'>17</a>
+<a name='L18'></a><a href='#L18'>18</a>
+<a name='L19'></a><a href='#L19'>19</a>
+<a name='L20'></a><a href='#L20'>20</a>
+<a name='L21'></a><a href='#L21'>21</a>
+<a name='L22'></a><a href='#L22'>22</a>
+<a name='L23'></a><a href='#L23'>23</a>
+<a name='L24'></a><a href='#L24'>24</a>
+<a name='L25'></a><a href='#L25'>25</a>
+<a name='L26'></a><a href='#L26'>26</a>
+<a name='L27'></a><a href='#L27'>27</a>
+<a name='L28'></a><a href='#L28'>28</a>
+<a name='L29'></a><a href='#L29'>29</a>
+<a name='L30'></a><a href='#L30'>30</a>
+<a name='L31'></a><a href='#L31'>31</a>
+<a name='L32'></a><a href='#L32'>32</a>
+<a name='L33'></a><a href='#L33'>33</a>
+<a name='L34'></a><a href='#L34'>34</a>
+<a name='L35'></a><a href='#L35'>35</a>
+<a name='L36'></a><a href='#L36'>36</a>
+<a name='L37'></a><a href='#L37'>37</a>
+<a name='L38'></a><a href='#L38'>38</a>
+<a name='L39'></a><a href='#L39'>39</a>
+<a name='L40'></a><a href='#L40'>40</a>
+<a name='L41'></a><a href='#L41'>41</a>
+<a name='L42'></a><a href='#L42'>42</a>
+<a name='L43'></a><a href='#L43'>43</a>
+<a name='L44'></a><a href='#L44'>44</a>
+<a name='L45'></a><a href='#L45'>45</a>
+<a name='L46'></a><a href='#L46'>46</a>
+<a name='L47'></a><a href='#L47'>47</a>
+<a name='L48'></a><a href='#L48'>48</a>
+<a name='L49'></a><a href='#L49'>49</a>
+<a name='L50'></a><a href='#L50'>50</a>
+<a name='L51'></a><a href='#L51'>51</a>
+<a name='L52'></a><a href='#L52'>52</a>
+<a name='L53'></a><a href='#L53'>53</a>
+<a name='L54'></a><a href='#L54'>54</a>
+<a name='L55'></a><a href='#L55'>55</a>
+<a name='L56'></a><a href='#L56'>56</a>
+<a name='L57'></a><a href='#L57'>57</a>
+<a name='L58'></a><a href='#L58'>58</a>
+<a name='L59'></a><a href='#L59'>59</a>
+<a name='L60'></a><a href='#L60'>60</a>
+<a name='L61'></a><a href='#L61'>61</a>
+<a name='L62'></a><a href='#L62'>62</a>
+<a name='L63'></a><a href='#L63'>63</a>
+<a name='L64'></a><a href='#L64'>64</a>
+<a name='L65'></a><a href='#L65'>65</a>
+<a name='L66'></a><a href='#L66'>66</a>
+<a name='L67'></a><a href='#L67'>67</a>
+<a name='L68'></a><a href='#L68'>68</a>
+<a name='L69'></a><a href='#L69'>69</a>
+<a name='L70'></a><a href='#L70'>70</a>
+<a name='L71'></a><a href='#L71'>71</a>
+<a name='L72'></a><a href='#L72'>72</a>
+<a name='L73'></a><a href='#L73'>73</a>
+<a name='L74'></a><a href='#L74'>74</a>
+<a name='L75'></a><a href='#L75'>75</a>
+<a name='L76'></a><a href='#L76'>76</a>
+<a name='L77'></a><a href='#L77'>77</a>
+<a name='L78'></a><a href='#L78'>78</a>
+<a name='L79'></a><a href='#L79'>79</a>
+<a name='L80'></a><a href='#L80'>80</a>
+<a name='L81'></a><a href='#L81'>81</a>
+<a name='L82'></a><a href='#L82'>82</a>
+<a name='L83'></a><a href='#L83'>83</a>
+<a name='L84'></a><a href='#L84'>84</a>
+<a name='L85'></a><a href='#L85'>85</a>
+<a name='L86'></a><a href='#L86'>86</a>
+<a name='L87'></a><a href='#L87'>87</a>
+<a name='L88'></a><a href='#L88'>88</a>
+<a name='L89'></a><a href='#L89'>89</a>
+<a name='L90'></a><a href='#L90'>90</a>
+<a name='L91'></a><a href='#L91'>91</a>
+<a name='L92'></a><a href='#L92'>92</a>
+<a name='L93'></a><a href='#L93'>93</a>
+<a name='L94'></a><a href='#L94'>94</a>
+<a name='L95'></a><a href='#L95'>95</a>
+<a name='L96'></a><a href='#L96'>96</a>
+<a name='L97'></a><a href='#L97'>97</a>
+<a name='L98'></a><a href='#L98'>98</a>
+<a name='L99'></a><a href='#L99'>99</a>
+<a name='L100'></a><a href='#L100'>100</a>
+<a name='L101'></a><a href='#L101'>101</a>
+<a name='L102'></a><a href='#L102'>102</a>
+<a name='L103'></a><a href='#L103'>103</a>
+<a name='L104'></a><a href='#L104'>104</a>
+<a name='L105'></a><a href='#L105'>105</a>
+<a name='L106'></a><a href='#L106'>106</a>
+<a name='L107'></a><a href='#L107'>107</a>
+<a name='L108'></a><a href='#L108'>108</a>
+<a name='L109'></a><a href='#L109'>109</a>
+<a name='L110'></a><a href='#L110'>110</a>
+<a name='L111'></a><a href='#L111'>111</a>
+<a name='L112'></a><a href='#L112'>112</a>
+<a name='L113'></a><a href='#L113'>113</a>
+<a name='L114'></a><a href='#L114'>114</a>
+<a name='L115'></a><a href='#L115'>115</a>
+<a name='L116'></a><a href='#L116'>116</a>
+<a name='L117'></a><a href='#L117'>117</a>
+<a name='L118'></a><a href='#L118'>118</a>
+<a name='L119'></a><a href='#L119'>119</a>
+<a name='L120'></a><a href='#L120'>120</a>
+<a name='L121'></a><a href='#L121'>121</a>
+<a name='L122'></a><a href='#L122'>122</a>
+<a name='L123'></a><a href='#L123'>123</a>
+<a name='L124'></a><a href='#L124'>124</a>
+<a name='L125'></a><a href='#L125'>125</a>
+<a name='L126'></a><a href='#L126'>126</a>
+<a name='L127'></a><a href='#L127'>127</a>
+<a name='L128'></a><a href='#L128'>128</a>
+<a name='L129'></a><a href='#L129'>129</a>
+<a name='L130'></a><a href='#L130'>130</a>
+<a name='L131'></a><a href='#L131'>131</a>
+<a name='L132'></a><a href='#L132'>132</a>
+<a name='L133'></a><a href='#L133'>133</a>
+<a name='L134'></a><a href='#L134'>134</a>
+<a name='L135'></a><a href='#L135'>135</a>
+<a name='L136'></a><a href='#L136'>136</a>
+<a name='L137'></a><a href='#L137'>137</a>
+<a name='L138'></a><a href='#L138'>138</a>
+<a name='L139'></a><a href='#L139'>139</a>
+<a name='L140'></a><a href='#L140'>140</a>
+<a name='L141'></a><a href='#L141'>141</a>
+<a name='L142'></a><a href='#L142'>142</a>
+<a name='L143'></a><a href='#L143'>143</a>
+<a name='L144'></a><a href='#L144'>144</a>
+<a name='L145'></a><a href='#L145'>145</a>
+<a name='L146'></a><a href='#L146'>146</a>
+<a name='L147'></a><a href='#L147'>147</a>
+<a name='L148'></a><a href='#L148'>148</a>
+<a name='L149'></a><a href='#L149'>149</a>
+<a name='L150'></a><a href='#L150'>150</a>
+<a name='L151'></a><a href='#L151'>151</a>
+<a name='L152'></a><a href='#L152'>152</a>
+<a name='L153'></a><a href='#L153'>153</a>
+<a name='L154'></a><a href='#L154'>154</a>
+<a name='L155'></a><a href='#L155'>155</a>
+<a name='L156'></a><a href='#L156'>156</a>
+<a name='L157'></a><a href='#L157'>157</a>
+<a name='L158'></a><a href='#L158'>158</a>
+<a name='L159'></a><a href='#L159'>159</a>
+<a name='L160'></a><a href='#L160'>160</a>
+<a name='L161'></a><a href='#L161'>161</a>
+<a name='L162'></a><a href='#L162'>162</a>
+<a name='L163'></a><a href='#L163'>163</a>
+<a name='L164'></a><a href='#L164'>164</a>
+<a name='L165'></a><a href='#L165'>165</a>
+<a name='L166'></a><a href='#L166'>166</a>
+<a name='L167'></a><a href='#L167'>167</a>
+<a name='L168'></a><a href='#L168'>168</a>
+<a name='L169'></a><a href='#L169'>169</a>
+<a name='L170'></a><a href='#L170'>170</a>
+<a name='L171'></a><a href='#L171'>171</a>
+<a name='L172'></a><a href='#L172'>172</a>
+<a name='L173'></a><a href='#L173'>173</a>
+<a name='L174'></a><a href='#L174'>174</a>
+<a name='L175'></a><a href='#L175'>175</a>
+<a name='L176'></a><a href='#L176'>176</a>
+<a name='L177'></a><a href='#L177'>177</a>
+<a name='L178'></a><a href='#L178'>178</a>
+<a name='L179'></a><a href='#L179'>179</a>
+<a name='L180'></a><a href='#L180'>180</a>
+<a name='L181'></a><a href='#L181'>181</a>
+<a name='L182'></a><a href='#L182'>182</a>
+<a name='L183'></a><a href='#L183'>183</a>
+<a name='L184'></a><a href='#L184'>184</a>
+<a name='L185'></a><a href='#L185'>185</a>
+<a name='L186'></a><a href='#L186'>186</a>
+<a name='L187'></a><a href='#L187'>187</a>
+<a name='L188'></a><a href='#L188'>188</a>
+<a name='L189'></a><a href='#L189'>189</a>
+<a name='L190'></a><a href='#L190'>190</a>
+<a name='L191'></a><a href='#L191'>191</a>
+<a name='L192'></a><a href='#L192'>192</a>
+<a name='L193'></a><a href='#L193'>193</a>
+<a name='L194'></a><a href='#L194'>194</a>
+<a name='L195'></a><a href='#L195'>195</a>
+<a name='L196'></a><a href='#L196'>196</a>
+<a name='L197'></a><a href='#L197'>197</a>
+<a name='L198'></a><a href='#L198'>198</a>
+<a name='L199'></a><a href='#L199'>199</a>
+<a name='L200'></a><a href='#L200'>200</a>
+<a name='L201'></a><a href='#L201'>201</a>
+<a name='L202'></a><a href='#L202'>202</a>
+<a name='L203'></a><a href='#L203'>203</a>
+<a name='L204'></a><a href='#L204'>204</a>
+<a name='L205'></a><a href='#L205'>205</a>
+<a name='L206'></a><a href='#L206'>206</a>
+<a name='L207'></a><a href='#L207'>207</a>
+<a name='L208'></a><a href='#L208'>208</a>
+<a name='L209'></a><a href='#L209'>209</a>
+<a name='L210'></a><a href='#L210'>210</a>
+<a name='L211'></a><a href='#L211'>211</a>
+<a name='L212'></a><a href='#L212'>212</a>
+<a name='L213'></a><a href='#L213'>213</a>
+<a name='L214'></a><a href='#L214'>214</a>
+<a name='L215'></a><a href='#L215'>215</a>
+<a name='L216'></a><a href='#L216'>216</a>
+<a name='L217'></a><a href='#L217'>217</a>
+<a name='L218'></a><a href='#L218'>218</a>
+<a name='L219'></a><a href='#L219'>219</a>
+<a name='L220'></a><a href='#L220'>220</a>
+<a name='L221'></a><a href='#L221'>221</a>
+<a name='L222'></a><a href='#L222'>222</a>
+<a name='L223'></a><a href='#L223'>223</a>
+<a name='L224'></a><a href='#L224'>224</a>
+<a name='L225'></a><a href='#L225'>225</a>
+<a name='L226'></a><a href='#L226'>226</a>
+<a name='L227'></a><a href='#L227'>227</a>
+<a name='L228'></a><a href='#L228'>228</a>
+<a name='L229'></a><a href='#L229'>229</a>
+<a name='L230'></a><a href='#L230'>230</a>
+<a name='L231'></a><a href='#L231'>231</a>
+<a name='L232'></a><a href='#L232'>232</a>
+<a name='L233'></a><a href='#L233'>233</a>
+<a name='L234'></a><a href='#L234'>234</a>
+<a name='L235'></a><a href='#L235'>235</a>
+<a name='L236'></a><a href='#L236'>236</a>
+<a name='L237'></a><a href='#L237'>237</a>
+<a name='L238'></a><a href='#L238'>238</a>
+<a name='L239'></a><a href='#L239'>239</a>
+<a name='L240'></a><a href='#L240'>240</a>
+<a name='L241'></a><a href='#L241'>241</a>
+<a name='L242'></a><a href='#L242'>242</a>
+<a name='L243'></a><a href='#L243'>243</a>
+<a name='L244'></a><a href='#L244'>244</a>
+<a name='L245'></a><a href='#L245'>245</a>
+<a name='L246'></a><a href='#L246'>246</a>
+<a name='L247'></a><a href='#L247'>247</a>
+<a name='L248'></a><a href='#L248'>248</a>
+<a name='L249'></a><a href='#L249'>249</a>
+<a name='L250'></a><a href='#L250'>250</a>
+<a name='L251'></a><a href='#L251'>251</a>
+<a name='L252'></a><a href='#L252'>252</a>
+<a name='L253'></a><a href='#L253'>253</a>
+<a name='L254'></a><a href='#L254'>254</a>
+<a name='L255'></a><a href='#L255'>255</a>
+<a name='L256'></a><a href='#L256'>256</a>
+<a name='L257'></a><a href='#L257'>257</a>
+<a name='L258'></a><a href='#L258'>258</a>
+<a name='L259'></a><a href='#L259'>259</a>
+<a name='L260'></a><a href='#L260'>260</a>
+<a name='L261'></a><a href='#L261'>261</a>
+<a name='L262'></a><a href='#L262'>262</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">&nbsp;
+const PLAYER_STATS = <span class="cstat-no" title="statement not covered" >{</span>
+  // MARQUEE BATSMEN
+  "Virat Kohli": { matches: 255, runs: 8200, hs: 113, wickets: 4, best: "2/25" },
+  "Rohit Sharma": { matches: 257, runs: 6800, hs: 109, wickets: 11, best: "4/6" },
+  "Shubman Gill": { matches: 95, runs: 3000, hs: 129, wickets: 0, best: "-" },
+  "Suryakumar Yadav": { matches: 150, runs: 3594, hs: 103, wickets: 0, best: "-" },
+  "Travis Head": { matches: 25, runs: 740, hs: 102, wickets: 2, best: "2/15" },
+  "Yashasvi Jaiswal": { matches: 52, runs: 1607, hs: 124, wickets: 0, best: "-" },
+  "Ruturaj Gaikwad": { matches: 66, runs: 2380, hs: 108, wickets: 0, best: "-" },
+  "Shreyas Iyer": { matches: 115, runs: 3127, hs: 96, wickets: 0, best: "-" },
+  "Abhishek Sharma": { matches: 63, runs: 1376, hs: 100, wickets: 9, best: "3/23" },
+  "Rinku Singh": { matches: 45, runs: 893, hs: 67, wickets: 0, best: "-" },
+  
+  // FOREIGN BATSMEN
+  "David Warner": { matches: 184, runs: 6565, hs: 126, wickets: 0, best: "-" },
+  "Faf du Plessis": { matches: 145, runs: 4571, hs: 96, wickets: 0, best: "-" },
+  "David Miller": { matches: 130, runs: 2850, hs: 101, wickets: 0, best: "-" },
+  "Kane Williamson": { matches: 79, runs: 2128, hs: 89, wickets: 0, best: "-" },
+  "Shimron Hetmyer": { matches: 73, runs: 1263, hs: 75, wickets: 0, best: "-" },
+  "Rovman Powell": { matches: 38, runs: 928, hs: 76, wickets: 0, best: "-" },
+  "Harry Brook": { matches: 12, runs: 337, hs: 65, wickets: 0, best: "-" },
+  "Will Jacks": { matches: 10, runs: 230, hs: 55, wickets: 4, best: "2/18" },
+  "Steve Smith": { matches: 18, runs: 626, hs: 78, wickets: 0, best: "-" },
+  "Devon Conway": { matches: 24, runs: 802, hs: 99, wickets: 0, best: "-" },
+  "Daryl Mitchell": { matches: 28, runs: 774, hs: 88, wickets: 2, best: "1/22" },
+  "Jake Fraser-McGurk": { matches: 9, runs: 247, hs: 70, wickets: 0, best: "-" },
+  "Dewald Brevis": { matches: 15, runs: 337, hs: 46, wickets: 0, best: "-" },
+  "Tim David": { matches: 29, runs: 689, hs: 71, wickets: 0, best: "-" },
+  "Aiden Markram": { matches: 22, runs: 648, hs: 82, wickets: 1, best: "1/25" },
+  "Finn Allen": { matches: 18, runs: 512, hs: 77, wickets: 0, best: "-" },
+  "Rilee Rossouw": { matches: 54, runs: 1496, hs: 100, wickets: 0, best: "-" },
+  "Jason Roy": { matches: 37, runs: 1122, hs: 90, wickets: 0, best: "-" },
+  
+  // INDIAN BATSMEN
+  "Shikhar Dhawan": { matches: 222, runs: 6769, hs: 106, wickets: 4, best: "1/7" },
+  "Sai Sudharsan": { matches: 28, runs: 1126, hs: 103, wickets: 0, best: "-" },
+  "Tilak Varma": { matches: 42, runs: 1281, hs: 108, wickets: 0, best: "-" },
+  "Ajinkya Rahane": { matches: 182, runs: 4683, hs: 105, wickets: 8, best: "2/11" },
+  "Prithvi Shaw": { matches: 31, runs: 953, hs: 82, wickets: 0, best: "-" },
+  "Venkatesh Iyer": { matches: 26, runs: 675, hs: 104, wickets: 6, best: "2/20" },
+  "Rajat Patidar": { matches: 22, runs: 833, hs: 112, wickets: 0, best: "-" },
+  "Nitish Rana": { matches: 79, runs: 2500, hs: 97, wickets: 2, best: "1/15" },
+  "Rahul Tripathi": { matches: 76, runs: 1926, hs: 99, wickets: 0, best: "-" },
+  "Shivam Dube": { matches: 62, runs: 1414, hs: 95, wickets: 2, best: "1/12" },
+  "Manish Pandey": { matches: 114, runs: 2959, hs: 93, wickets: 1, best: "1/18" },
+  "Devdutt Padikkal": { matches: 26, runs: 792, hs: 89, wickets: 0, best: "-" },
+  "Sameer Rizvi": { matches: 8, runs: 165, hs: 58, wickets: 0, best: "-" },
+  "Nehal Wadhera": { matches: 13, runs: 428, hs: 68, wickets: 0, best: "-" },
+  "Ayush Badoni": { matches: 29, runs: 512, hs: 59, wickets: 2, best: "1/6" },
+  
+  // MARQUEE WICKETKEEPERS
+  "MS Dhoni": { matches: 264, runs: 5243, hs: 84, wickets: 0, best: "-" },
+  "Rishabh Pant": { matches: 111, runs: 3100, hs: 128, wickets: 0, best: "-" },
+  "Jos Buttler": { matches: 107, runs: 3582, hs: 124, wickets: 0, best: "-" },
+  "Heinrich Klaasen": { matches: 35, runs: 993, hs: 104, wickets: 0, best: "-" },
+  "Sanju Samson": { matches: 167, runs: 4419, hs: 119, wickets: 0, best: "-" },
+  "KL Rahul": { matches: 132, runs: 4683, hs: 132, wickets: 0, best: "-" },
+  "Nicholas Pooran": { matches: 76, runs: 1769, hs: 77, wickets: 0, best: "-" },
+  "Quinton de Kock": { matches: 107, runs: 3157, hs: 140, wickets: 0, best: "-" },
+  "Ishan Kishan": { matches: 105, runs: 2644, hs: 99, wickets: 0, best: "-" },
+  "Phil Salt": { matches: 25, runs: 678, hs: 89, wickets: 0, best: "-" },
+  
+  // FOREIGN WICKETKEEPERS
+  "Jonny Bairstow": { matches: 38, runs: 1158, hs: 99, wickets: 0, best: "-" },
+  "Rahmanullah Gurbaz": { matches: 22, runs: 634, hs: 89, wickets: 0, best: "-" },
+  "Josh Inglis": { matches: 18, runs: 482, hs: 72, wickets: 0, best: "-" },
+  "Shai Hope": { matches: 15, runs: 412, hs: 78, wickets: 0, best: "-" },
+  "Tristan Stubbs": { matches: 14, runs: 356, hs: 68, wickets: 0, best: "-" },
+  "Ryan Rickelton": { matches: 8, runs: 189, hs: 55, wickets: 0, best: "-" },
+  "Donovan Ferreira": { matches: 7, runs: 167, hs: 54, wickets: 0, best: "-" },
+  
+  // INDIAN WICKETKEEPERS
+  "Dinesh Karthik": { matches: 257, runs: 4842, hs: 97, wickets: 0, best: "-" },
+  "Jitesh Sharma": { matches: 38, runs: 794, hs: 82, wickets: 0, best: "-" },
+  "Dhruv Jurel": { matches: 8, runs: 128, hs: 31, wickets: 0, best: "-" },
+  "Wriddhiman Saha": { matches: 61, runs: 1328, hs: 87, wickets: 0, best: "-" },
+  "Anuj Rawat": { matches: 17, runs: 372, hs: 61, wickets: 0, best: "-" },
+  "Prabhsimran Singh": { matches: 25, runs: 658, hs: 91, wickets: 0, best: "-" },
+  "KS Bharat": { matches: 12, runs: 156, hs: 33, wickets: 0, best: "-" },
+  "Vishnu Vinod": { matches: 18, runs: 234, hs: 45, wickets: 0, best: "-" },
+  "Abishek Porel": { matches: 11, runs: 278, hs: 62, wickets: 0, best: "-" },
+  
+  // MARQUEE ALL-ROUNDERS
+  "Hardik Pandya": { matches: 137, runs: 2525, hs: 91, wickets: 55, best: "3/17" },
+  "Ravindra Jadeja": { matches: 240, runs: 2959, hs: 62, wickets: 155, best: "5/16" },
+  "Andre Russell": { matches: 126, runs: 2484, hs: 88, wickets: 95, best: "5/15" },
+  "Glenn Maxwell": { matches: 134, runs: 2771, hs: 95, wickets: 37, best: "2/15" },
+  "Sunil Narine": { matches: 176, runs: 1534, hs: 109, wickets: 180, best: "5/19" },
+  "Axar Patel": { matches: 150, runs: 1653, hs: 66, wickets: 123, best: "5/21" },
+  "Cameron Green": { matches: 29, runs: 681, hs: 100, wickets: 16, best: "2/14" },
+  "Sam Curran": { matches: 59, runs: 883, hs: 63, wickets: 58, best: "3/19" },
+  "Marcus Stoinis": { matches: 96, runs: 1866, hs: 124, wickets: 43, best: "4/15" },
+  
+  // FOREIGN ALL-ROUNDERS
+  "Liam Livingstone": { matches: 39, runs: 911, hs: 94, wickets: 11, best: "2/25" },
+  "Moeen Ali": { matches: 67, runs: 1162, hs: 93, wickets: 35, best: "4/26" },
+  "Mitchell Marsh": { matches: 22, runs: 638, hs: 96, wickets: 14, best: "3/21" },
+  "Rachin Ravindra": { matches: 15, runs: 412, hs: 68, wickets: 12, best: "3/19" },
+  "Azmatullah Omarzai": { matches: 12, runs: 289, hs: 52, wickets: 15, best: "3/17" },
+  "Romario Shepherd": { matches: 18, runs: 345, hs: 58, wickets: 21, best: "3/24" },
+  "Mohammad Nabi": { matches: 42, runs: 678, hs: 75, wickets: 38, best: "4/21" },
+  "Jason Holder": { matches: 38, runs: 512, hs: 64, wickets: 45, best: "3/27" },
+  "Chris Woakes": { matches: 16, runs: 234, hs: 42, wickets: 18, best: "3/20" },
+  "Daniel Sams": { matches: 22, runs: 312, hs: 48, wickets: 28, best: "3/22" },
+  "Kyle Mayers": { matches: 17, runs: 398, hs: 73, wickets: 15, best: "2/19" },
+  "Sikandar Raza": { matches: 14, runs: 289, hs: 65, wickets: 12, best: "3/15" },
+  
+  // INDIAN ALL-ROUNDERS
+  "Krunal Pandya": { matches: 68, runs: 628, hs: 43, wickets: 72, best: "4/15" },
+  "Deepak Hooda": { matches: 67, runs: 1490, hs: 73, wickets: 25, best: "3/14" },
+  "Rahul Tewatia": { matches: 79, runs: 846, hs: 45, wickets: 76, best: "4/18" },
+  "Vijay Shankar": { matches: 60, runs: 974, hs: 63, wickets: 25, best: "2/12" },
+  "Riyan Parag": { matches: 39, runs: 674, hs: 76, wickets: 3, best: "1/10" },
+  "Shahrukh Khan": { matches: 26, runs: 354, hs: 42, wickets: 4, best: "2/13" },
+  "Shahbaz Ahmed": { matches: 28, runs: 234, hs: 31, wickets: 20, best: "3/22" },
+  "Ramandeep Singh": { matches: 15, runs: 298, hs: 58, wickets: 8, best: "2/18" },
+  "Lalit Yadav": { matches: 21, runs: 412, hs: 48, wickets: 16, best: "2/13" },
+  "Nitish Kumar Reddy": { matches: 9, runs: 178, hs: 45, wickets: 7, best: "2/21" },
+  
+  // MARQUEE BOWLERS
+  "Jasprit Bumrah": { matches: 133, runs: 69, hs: 16, wickets: 165, best: "5/10" },
+  "Mitchell Starc": { matches: 38, runs: 135, hs: 29, wickets: 51, best: "4/15" },
+  "Pat Cummins": { matches: 58, runs: 510, hs: 66, wickets: 63, best: "4/34" },
+  "Mohammed Shami": { matches: 110, runs: 126, hs: 21, wickets: 127, best: "4/11" },
+  "Rashid Khan": { matches: 121, runs: 545, hs: 79, wickets: 149, best: "4/24" },
+  "Trent Boult": { matches: 104, runs: 79, hs: 16, wickets: 121, best: "4/18" },
+  "Kagiso Rabada": { matches: 80, runs: 206, hs: 25, wickets: 117, best: "4/21" },
+  "Yuzvendra Chahal": { matches: 160, runs: 37, hs: 8, wickets: 190, best: "5/40" },
+  "Mohammed Siraj": { matches: 93, runs: 109, hs: 14, wickets: 93, best: "4/21" },
+  "Arshdeep Singh": { matches: 65, runs: 27, hs: 10, wickets: 76, best: "5/32" },
+  "Kuldeep Yadav": { matches: 84, runs: 161, hs: 28, wickets: 88, best: "4/14" },
+  "Matheesha Pathirana": { matches: 18, runs: 12, hs: 5, wickets: 28, best: "4/28" },
+  
+  // FOREIGN FAST BOWLERS
+  "Anrich Nortje": { matches: 28, runs: 67, hs: 12, wickets: 34, best: "3/33" },
+  "Josh Hazlewood": { matches: 32, runs: 89, hs: 18, wickets: 41, best: "4/26" },
+  "Jofra Archer": { matches: 35, runs: 78, hs: 27, wickets: 46, best: "3/15" },
+  "Mark Wood": { matches: 17, runs: 45, hs: 14, wickets: 22, best: "3/23" },
+  "Lockie Ferguson": { matches: 46, runs: 92, hs: 19, wickets: 61, best: "4/28" },
+  "Gerald Coetzee": { matches: 8, runs: 23, hs: 12, wickets: 12, best: "3/32" },
+  "Marco Jansen": { matches: 17, runs: 156, hs: 32, wickets: 19, best: "3/25" },
+  "Spencer Johnson": { matches: 11, runs: 34, hs: 11, wickets: 15, best: "3/29" },
+  "Alzarri Joseph": { matches: 42, runs: 178, hs: 27, wickets: 54, best: "4/12" },
+  "Dilshan Madushanka": { matches: 7, runs: 18, hs: 9, wickets: 10, best: "2/28" },
+  "Nuwan Thushara": { matches: 9, runs: 21, hs: 8, wickets: 13, best: "3/26" },
+  "Mustafizur Rahman": { matches: 44, runs: 56, hs: 12, wickets: 48, best: "3/16" },
+  "Fazalhaq Farooqi": { matches: 14, runs: 34, hs: 11, wickets: 18, best: "3/22" },
+  "Nathan Ellis": { matches: 13, runs: 28, hs: 10, wickets: 17, best: "3/24" },
+  "Naveen-ul-Haq": { matches: 32, runs: 67, hs: 15, wickets: 42, best: "4/19" },
+  "Kwena Maphaka": { matches: 2, runs: 0, hs: 0, wickets: 1, best: "1/66" },
+  
+  // INDIAN FAST BOWLERS
+  "Bhuvneshwar Kumar": { matches: 176, runs: 324, hs: 25, wickets: 181, best: "5/19" },
+  "Deepak Chahar": { matches: 58, runs: 159, hs: 39, wickets: 65, best: "4/13" },
+  "Shardul Thakur": { matches: 85, runs: 751, hs: 45, wickets: 84, best: "3/27" },
+  "T Natarajan": { matches: 61, runs: 3, hs: 1, wickets: 67, best: "4/19" },
+  "Mohit Sharma": { matches: 141, runs: 642, hs: 37, wickets: 166, best: "5/10" },
+  "Umesh Yadav": { matches: 124, runs: 394, hs: 48, wickets: 127, best: "4/24" },
+  "Prasidh Krishna": { matches: 26, runs: 52, hs: 7, wickets: 30, best: "4/30" },
+  "Avesh Khan": { matches: 32, runs: 89, hs: 15, wickets: 38, best: "4/24" },
+  "Harshal Patel": { matches: 105, runs: 298, hs: 36, wickets: 135, best: "5/27" },
+  "Khaleel Ahmed": { matches: 48, runs: 93, hs: 17, wickets: 51, best: "3/22" },
+  "Mukesh Kumar": { matches: 14, runs: 28, hs: 9, wickets: 18, best: "3/21" },
+  "Ishant Sharma": { matches: 15, runs: 45, hs: 12, wickets: 16, best: "2/18" },
+  "Umran Malik": { matches: 20, runs: 23, hs: 6, wickets: 22, best: "2/19" },
+  "Harshit Rana": { matches: 11, runs: 34, hs: 15, wickets: 15, best: "3/26" },
+  "Akash Deep": { matches: 9, runs: 18, hs: 7, wickets: 12, best: "2/24" },
+  "Yash Dayal": { matches: 14, runs: 23, hs: 8, wickets: 17, best: "3/20" },
+  "Mayank Yadav": { matches: 4, runs: 8, hs: 5, wickets: 7, best: "3/27" },
+  
+  // FOREIGN SPINNERS
+  "Wanindu Hasaranga": { matches: 28, runs: 89, hs: 22, wickets: 32, best: "3/18" },
+  "Maheesh Theekshana": { matches: 21, runs: 45, hs: 13, wickets: 28, best: "4/27" },
+  "Adam Zampa": { matches: 38, runs: 67, hs: 15, wickets: 48, best: "3/20" },
+  "Mujeeb Ur Rahman": { matches: 32, runs: 34, hs: 11, wickets: 42, best: "4/21" },
+  "Noor Ahmad": { matches: 16, runs: 28, hs: 9, wickets: 22, best: "3/19" },
+  "Mitchell Santner": { matches: 26, runs: 178, hs: 34, wickets: 28, best: "3/16" },
+  "Keshav Maharaj": { matches: 18, runs: 89, hs: 21, wickets: 24, best: "3/25" },
+  "Adil Rashid": { matches: 14, runs: 45, hs: 12, wickets: 18, best: "2/22" },
+  "Tabraiz Shamsi": { matches: 22, runs: 34, hs: 10, wickets: 28, best: "3/15" },
+  "Allah Ghazanfar": { matches: 6, runs: 12, hs: 7, wickets: 9, best: "2/18" },
+  
+  // INDIAN SPINNERS
+  "Ravichandran Ashwin": { matches: 23, runs: 92, hs: 20, wickets: 15, best: "2/19" },
+  "Ravi Bishnoi": { matches: 40, runs: 28, hs: 8, wickets: 46, best: "3/22" },
+  "Varun Chakravarthy": { matches: 70, runs: 26, hs: 10, wickets: 83, best: "5/20" },
+  "Washington Sundar": { matches: 35, runs: 178, hs: 35, wickets: 29, best: "2/14" },
+  "Rahul Chahar": { matches: 35, runs: 23, hs: 8, wickets: 37, best: "4/27" },
+  "Amit Mishra": { matches: 154, runs: 421, hs: 36, wickets: 172, best: "5/17" },
+  "Piyush Chawla": { matches: 194, runs: 671, hs: 32, wickets: 192, best: "4/17" },
+  "Karn Sharma": { matches: 38, runs: 89, hs: 22, wickets: 42, best: "3/19" },
+  "Mayank Markande": { matches: 18, runs: 34, hs: 12, wickets: 24, best: "3/23" },
+  "R Sai Kishore": { matches: 9, runs: 18, hs: 9, wickets: 12, best: "2/21" },
+  "Suyash Sharma": { matches: 7, runs: 12, hs: 6, wickets: 9, best: "2/28" },
+  
+  // DOMESTIC BATSMEN
+  "Vaibhav Suryavanshi": { matches: 5, runs: 156, hs: 67, wickets: 0, best: "-" },
+  "Priyansh Arya": { matches: 7, runs: 234, hs: 81, wickets: 0, best: "-" },
+  "Angkrish Raghuvanshi": { matches: 6, runs: 189, hs: 72, wickets: 0, best: "-" },
+  "Ashutosh Sharma": { matches: 12, runs: 367, hs: 61, wickets: 0, best: "-" },
+  "Naman Dhir": { matches: 9, runs: 245, hs: 52, wickets: 1, best: "1/15" },
+  "Ayush Mhatre": { matches: 4, runs: 112, hs: 48, wickets: 0, best: "-" },
+  "Yash Dhull": { matches: 8, runs: 289, hs: 88, wickets: 0, best: "-" },
+  "Sarfaraz Khan": { matches: 15, runs: 512, hs: 94, wickets: 0, best: "-" },
+  "Musheer Khan": { matches: 6, runs: 178, hs: 65, wickets: 0, best: "-" },
+  "Shashank Singh": { matches: 14, runs: 423, hs: 69, wickets: 0, best: "-" },
+  "Abdul Samad": { matches: 56, runs: 978, hs: 75, wickets: 0, best: "-" },
+  "Swastik Chikara": { matches: 5, runs: 98, hs: 34, wickets: 0, best: "-" },
+  "Andre Siddarth": { matches: 6, runs: 134, hs: 42, wickets: 0, best: "-" },
+  "Aniket Verma": { matches: 7, runs: 156, hs: 51, wickets: 0, best: "-" },
+  
+  // DOMESTIC BOWLERS
+  "Akash Madhwal": { matches: 11, runs: 34, hs: 12, wickets: 18, best: "3/21" },
+  "Vidwath Kaverappa": { matches: 8, runs: 21, hs: 9, wickets: 11, best: "2/26" },
+  "Tushar Deshpande": { matches: 22, runs: 89, hs: 24, wickets: 29, best: "4/28" },
+  "Vaibhav Arora": { matches: 16, runs: 45, hs: 13, wickets: 21, best: "3/24" },
+  "Yash Thakur": { matches: 12, runs: 28, hs: 11, wickets: 16, best: "3/27" },
+  "Kartik Tyagi": { matches: 14, runs: 23, hs: 8, wickets: 18, best: "3/20" },
+  "Chetan Sakariya": { matches: 15, runs: 34, hs: 12, wickets: 19, best: "3/15" },
+  "Simarjeet Singh": { matches: 9, runs: 18, hs: 7, wickets: 12, best: "2/22" },
+  "Manimaran Siddharth": { matches: 11, runs: 23, hs: 10, wickets: 14, best: "3/18" },
+  "Arjun Tendulkar": { matches: 7, runs: 34, hs: 15, wickets: 8, best: "2/21" },
+  "Rasikh Salam": { matches: 8, runs: 21, hs: 9, wickets: 11, best: "2/25" },
+  "Mohsin Khan": { matches: 14, runs: 28, hs: 10, wickets: 18, best: "3/23" },
+  "Digvesh Rathi": { matches: 6, runs: 15, hs: 8, wickets: 8, best: "2/19" },
+  "Ashwani Kumar": { matches: 7, runs: 18, hs: 9, wickets: 9, best: "2/24" },
+  
+  // DOMESTIC WICKETKEEPERS
+  "Robin Minz": { matches: 7, runs: 198, hs: 55, wickets: 0, best: "-" },
+  "Urvil Patel": { matches: 11, runs: 312, hs: 78, wickets: 0, best: "-" },
+  "Kumar Kushagra": { matches: 9, runs: 245, hs: 67, wickets: 0, best: "-" },
+  "Avanish Aravelly": { matches: 6, runs: 156, hs: 52, wickets: 0, best: "-" },
+  "Luvnith Sisodia": { matches: 8, runs: 189, hs: 58, wickets: 0, best: "-" },
+  
+  // DOMESTIC ALL-ROUNDERS
+  "Suryansh Shedge": { matches: 5, runs: 123, hs: 48, wickets: 3, best: "2/19" },
+  "Vipraj Nigam": { matches: 6, runs: 145, hs: 52, wickets: 5, best: "2/21" },
+  "Prashant Veer": { matches: 7, runs: 167, hs: 45, wickets: 6, best: "2/18" },
+  "Tanush Kotian": { matches: 9, runs: 198, hs: 58, wickets: 11, best: "3/20" },
+  "Arshin Kulkarni": { matches: 8, runs: 234, hs: 61, wickets: 7, best: "2/23" },
+};
+&nbsp;
+<span class="cstat-no" title="statement not covered" >if (typeof module !== "undefined") {</span>
+<span class="cstat-no" title="statement not covered" >  module.exports = { PLAYER_STATS, getPlayerCareerStats };</span>
+}
+&nbsp;
+// HELPER: To ensure your simulation never crashes if a player is missing
+function <span class="fstat-no" title="function not covered" >getPlayerCareerStats(</span>playerName) {
+    // 1. Try exact match
+<span class="cstat-no" title="statement not covered" >    if (PLAYER_STATS[playerName]) <span class="cstat-no" title="statement not covered" >return PLAYER_STATS[playerName];</span></span>
+&nbsp;
+    // 2. Try case-insensitive match
+    const lowerName = <span class="cstat-no" title="statement not covered" >playerName.toLowerCase();</span>
+    const key = <span class="cstat-no" title="statement not covered" >Object.keys(PLAYER_STATS).find(<span class="fstat-no" title="function not covered" >k </span>=&gt; <span class="cstat-no" title="statement not covered" >k.toLowerCase() === lowerName)</span>;</span>
+<span class="cstat-no" title="statement not covered" >    if (key) <span class="cstat-no" title="statement not covered" >return PLAYER_STATS[key];</span></span>
+&nbsp;
+    // 3. Fallback
+<span class="cstat-no" title="statement not covered" >    return { </span>
+        matches: 0, runs: 0, hs: 0, wickets: 0, best: "-", note: "Generic Stats" 
+    };
+}</pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+                at 2026-03-03T17:20:06.357Z
+            </div>
+        <script src="../prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="../sorter.js"></script>
+        <script src="../block-navigation.js"></script>
+    </body>
+</html>
+    

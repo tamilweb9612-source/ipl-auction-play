@@ -461,7 +461,7 @@
                         <input type="password" id="createPass" style="color: white;" class="form-control lobby-input"
                             maxlength="4" placeholder="****">
                     </div>
-                   
+
                     <button id="doCreateBtn" class="btn btn-gold w-100 btn-custom mt-2">CREATE ROOM</button>
                 </div>
                 <div class="tab-pane fade" id="joinTab">
@@ -847,9 +847,9 @@
                     <i class="bi bi-mic-mute-fill"></i>
                 </button>
                 <span id="adminHeaderControls" class="admin-only d-flex gap-2">
-                    <!-- <button id="autoTestBtn" class="btn btn-sm btn-outline-danger" style="border-style:dashed;">
+                    <button id="autoTestBtn" class="btn btn-sm btn-outline-danger" style="border-style:dashed;">
                         <i class="bi bi-robot"></i> AUTO
-                    </button> -->
+                    </button>
                     <button id="endAuctionBtn" class="btn-custom btn-action btn-end-auction">END</button>
                     <button id="timerToggleBtn" class="btn-custom btn-action"><i class="bi bi-pause-fill"></i></button>
                 </span>
@@ -939,8 +939,7 @@
                         <h4 class="text-white display-font" id="waitingTeamName">YOUR TEAM: ---</h4>
                         <p class="text-info mb-0">Successfully joined! Please wait for the host to start the auction.
                         </p>
-                        <button class="btn btn-sm btn-outline-danger mt-3"
-                            onclick="requestReclaim(mySelectedTeamKey)">Leave Team / Change</button>
+
                     </div>
 
                     <div class="mt-4">

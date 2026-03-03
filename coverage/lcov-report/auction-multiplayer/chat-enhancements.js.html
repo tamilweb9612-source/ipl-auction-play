@@ -25,14 +25,14 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/149</span>
+                <span class='fraction'>0/153</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>0/55</span>
+                <span class='fraction'>0/61</span>
             </div>
         
             
@@ -46,7 +46,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/139</span>
+                <span class='fraction'>0/144</span>
             </div>
         
             
@@ -333,7 +333,14 @@
 <a name='L268'></a><a href='#L268'>268</a>
 <a name='L269'></a><a href='#L269'>269</a>
 <a name='L270'></a><a href='#L270'>270</a>
-<a name='L271'></a><a href='#L271'>271</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L271'></a><a href='#L271'>271</a>
+<a name='L272'></a><a href='#L272'>272</a>
+<a name='L273'></a><a href='#L273'>273</a>
+<a name='L274'></a><a href='#L274'>274</a>
+<a name='L275'></a><a href='#L275'>275</a>
+<a name='L276'></a><a href='#L276'>276</a>
+<a name='L277'></a><a href='#L277'>277</a>
+<a name='L278'></a><a href='#L278'>278</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -410,6 +417,11 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -417,6 +429,8 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -677,8 +691,13 @@ class EnhancedChatManager {
         // Add emoji toggle button
         const emojiBtn = <span class="cstat-no" title="statement not covered" >document.createElement('button');</span>
 <span class="cstat-no" title="statement not covered" >        emojiBtn.className = 'emoji-toggle-btn';</span>
-<span class="cstat-no" title="statement not covered" >        emojiBtn.innerHTML = '😀';</span>
-<span class="cstat-no" title="statement not covered" >        emojiBtn.onclick = <span class="fstat-no" title="function not covered" >()</span> =&gt; <span class="cstat-no" title="statement not covered" >this.toggleEmojiPicker();</span></span>
+<span class="cstat-no" title="statement not covered" >        emojiBtn.innerHTML = '✨';</span>
+<span class="cstat-no" title="statement not covered" >        emojiBtn.title = 'Emojis &amp; Quick Chat';</span>
+<span class="cstat-no" title="statement not covered" >        emojiBtn.dataset.bsToggle = "tooltip";</span>
+<span class="cstat-no" title="statement not covered" >        emojiBtn.onclick = <span class="fstat-no" title="function not covered" >(e</span>) =&gt; {</span>
+<span class="cstat-no" title="statement not covered" >            e.stopPropagation();</span>
+<span class="cstat-no" title="statement not covered" >            this.toggleEmojiPicker();</span>
+        };
 <span class="cstat-no" title="statement not covered" >        wrapper.insertBefore(emojiBtn, chatInput);</span>
         
         // Add typing indicator
@@ -687,20 +706,22 @@ class EnhancedChatManager {
 <span class="cstat-no" title="statement not covered" >        typingIndicator.className = 'typing-indicator';</span>
 <span class="cstat-no" title="statement not covered" >        typingIndicator.innerHTML = '&lt;span class="typing-dots"&gt;&lt;span&gt;.&lt;/span&gt;&lt;span&gt;.&lt;/span&gt;&lt;span&gt;.&lt;/span&gt;&lt;/span&gt; Someone is typing...';</span>
         
-        const chatMessages = <span class="cstat-no" title="statement not covered" >document.getElementById('chatMessages');</span>
-<span class="cstat-no" title="statement not covered" >        if (chatMessages) {</span>
-<span class="cstat-no" title="statement not covered" >            chatMessages.parentNode.insertBefore(typingIndicator, chatMessages.nextSibling);</span>
+        // Find chat panel and insert typing indicator above the input area
+        const chatPanel = <span class="cstat-no" title="statement not covered" >document.querySelector('.chat-panel');</span>
+        const inputContainer = <span class="cstat-no" title="statement not covered" >document.querySelector('.chat-input-container');</span>
+<span class="cstat-no" title="statement not covered" >        if (chatPanel &amp;&amp; inputContainer) {</span>
+<span class="cstat-no" title="statement not covered" >            chatPanel.insertBefore(typingIndicator, inputContainer);</span>
         }
         
         // Typing detection
         let typingTimeout;
 <span class="cstat-no" title="statement not covered" >        chatInput.addEventListener('input', <span class="fstat-no" title="function not covered" >()</span> =&gt; {</span>
-<span class="cstat-no" title="statement not covered" >            if (typeof socket !== 'undefined') {</span>
-<span class="cstat-no" title="statement not covered" >                socket.emit('typing_start');</span>
+<span class="cstat-no" title="statement not covered" >            if (typeof socket !== 'undefined' &amp;&amp; socket.connected) {</span>
+<span class="cstat-no" title="statement not covered" >                socket.emit('typing_start', { userName: typeof myPlayerName !== 'undefined' ? myPlayerName : 'Someone' });</span>
 <span class="cstat-no" title="statement not covered" >                clearTimeout(typingTimeout);</span>
 <span class="cstat-no" title="statement not covered" >                typingTimeout = setTimeout(<span class="fstat-no" title="function not covered" >()</span> =&gt; {</span>
 <span class="cstat-no" title="statement not covered" >                    socket.emit('typing_stop');</span>
-                }, 1000);
+                }, 2000);
             }
         });
     }
@@ -880,7 +901,7 @@ let enhancedChat = <span class="cstat-no" title="statement not covered" >null;</
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-02-15T11:43:35.554Z
+                at 2026-03-03T17:20:06.357Z
             </div>
         <script src="../prettify.js"></script>
         <script>

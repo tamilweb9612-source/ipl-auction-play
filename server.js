@@ -7,6 +7,7 @@ const { Server } = require("socket.io");
 const path = require("path");
 const cors = require("cors");
 const mongoose = require("mongoose");
+const { DocumentArray } = mongoose.Types;
 
 const authRoutes = require("./routes/auth");
 const Room = require("./models/Room");
@@ -25,7 +26,8 @@ if (PLAYER_DATABASE) {
 function getPlayerFromDB(name) {
   if (!name) return { name: "Unknown" };
   return (
-    PLAYER_DATABASE[name] || NORMALIZED_PLAYER_DB[name.toLowerCase()] || { name }
+    PLAYER_DATABASE[name] ||
+    NORMALIZED_PLAYER_DB[name.toLowerCase()] || { name }
   );
 }
 const liveMatchModule = require("./live-match");
@@ -62,24 +64,26 @@ app.get("/health", (req, res) => {
 });
 
 // NEW: API Route to fetch Match Details
-app.get('/api/matches/:roomId', async (req, res) => {
-    const rid = req.params.roomId;
-    console.log(`📡 [API] Fetching Match Details for Room: ${rid}`);
-    try {
-        // Find most recent win record for this roomId
-        const winRecord = await Win.findOne({ roomId: rid }).sort({ playedAt: -1 });
-        
-        if (!winRecord) {
-            console.warn(`⚠️  [API] No Win record found for Room: ${rid}`);
-            return res.status(404).json({ message: 'Match details not found' });
-        }
-        
-        console.log(`✅ [API] Found Win record for ${rid} (Played: ${winRecord.playedAt})`);
-        res.json(winRecord);
-    } catch (err) {
-        console.error(`❌ [API] Error fetching match details for ${rid}:`, err);
-        res.status(500).json({ message: 'Server error' });
+app.get("/api/matches/:roomId", async (req, res) => {
+  const rid = req.params.roomId;
+  console.log(`📡 [API] Fetching Match Details for Room: ${rid}`);
+  try {
+    // Find most recent win record for this roomId
+    const winRecord = await Win.findOne({ roomId: rid }).sort({ playedAt: -1 });
+
+    if (!winRecord) {
+      console.warn(`⚠️  [API] No Win record found for Room: ${rid}`);
+      return res.status(404).json({ message: "Match details not found" });
     }
+
+    console.log(
+      `✅ [API] Found Win record for ${rid} (Played: ${winRecord.playedAt})`,
+    );
+    res.json(winRecord);
+  } catch (err) {
+    console.error(`❌ [API] Error fetching match details for ${rid}:`, err);
+    res.status(500).json({ message: "Server error" });
+  }
 });
 
 // Endpoint removed (Test residue)
@@ -150,12 +154,12 @@ const server = http.createServer(app);
 // Method Change: Socket.io setup for production environment
 const io = new Server(server, {
   cors: {
-    origin: "*", 
+    origin: "*",
     methods: ["GET", "POST"],
   },
   pingTimeout: 60000,
   allowEIO3: true, // Support older clients
-  transports: ["polling", "websocket"] // Explicitly support both
+  transports: ["polling", "websocket"], // Explicitly support both
 });
 
 const AUCTION_TIMER_SECONDS = 10;
@@ -195,7 +199,9 @@ let rooms = {};
 
 // Initialize features
 
-const tradeSystem = featureIntegration.setupTradeSystem(io, rooms, (roomId) => saveRoomToDB(roomId, true)); // Initialize Trade System
+const tradeSystem = featureIntegration.setupTradeSystem(io, rooms, (roomId) =>
+  saveRoomToDB(roomId, true),
+); // Initialize Trade System
 const achievements = featureIntegration.setupAchievementSystem(io);
 const analytics = featureIntegration.setupAnalytics(io, rooms);
 const liveMatch = liveMatchModule.setupLiveMatch(io, rooms);
@@ -206,39 +212,59 @@ function deepSanitizePlayers(input) {
   let data = input;
   // If it's a string, try to parse it
   if (typeof data === "string") {
-    try { data = JSON.parse(data); } catch (e) { return []; }
+    try {
+      data = JSON.parse(data);
+    } catch (e) {
+      return [];
+    }
   }
   // Now it must be an array
   if (!Array.isArray(data)) return [];
-  
+
   // Recursively sanitize each element (Mongoose CastError prevention)
-  return data.map(item => {
-    if (typeof item === "string") {
-       try { return JSON.parse(item); } catch (e) { return null; }
-    }
-    return item;
-  }).filter(Boolean);
+  return data
+    .map((item) => {
+      if (typeof item === "string") {
+        try {
+          return JSON.parse(item);
+        } catch (e) {
+          return null;
+        }
+      }
+      return item;
+    })
+    .filter(Boolean);
 }
 
 function deepSanitizeTeams(input) {
   if (!input) return [];
   let data = input;
   if (typeof data === "string") {
-    try { data = JSON.parse(data); } catch (e) { return []; }
+    try {
+      data = JSON.parse(data);
+    } catch (e) {
+      return [];
+    }
   }
   if (!Array.isArray(data)) return [];
 
-  return data.map(team => {
-    let t = team;
-    if (typeof t === "string") {
-       try { t = JSON.parse(t); } catch (e) { return null; }
-    }
-    if (!t) return null;
-    
-    // Sanitize Roster inside team
-    if (t.roster) t.roster = deepSanitizePlayers(t.roster);
-    return t;
-  }).filter(Boolean);
+  return data
+    .map((team) => {
+      let t = team;
+      if (typeof t === "string") {
+        try {
+          t = JSON.parse(t);
+        } catch (e) {
+          return null;
+        }
+      }
+      if (!t) return null;
+
+      // Sanitize Roster inside team
+      if (t.roster) t.roster = deepSanitizePlayers(t.roster);
+      return t;
+    })
+    .filter(Boolean);
 }
 
 // Load rooms from DB on startup (Persistence)
@@ -255,17 +281,22 @@ async function loadRoomsFromDB() {
       // PRO-TIP: Don't overwrite rooms that are CURRENTLY ACTIVE in memory
       // This prevents crashes if DB connects/reconnects while a game is running
       if (rooms[dr.roomId]) {
-          console.log(`ℹ️ [DATABASE] skipping restoration for active room ${dr.roomId}`);
-          return;
+        console.log(
+          `ℹ️ [DATABASE] skipping restoration for active room ${dr.roomId}`,
+        );
+        return;
       }
 
       // Need to convert Mongoose Doc to Plain JS Object fully
       const roomObj = dr.toObject();
 
       // Fix: Deep sanitize fields to prevent Mongoose CastErrors
-      if (roomObj.players) roomObj.players = deepSanitizePlayers(roomObj.players);
-      if (roomObj.teams) roomObj.teams = deepSanitizeTeams(roomObj.teams);
-      if (roomObj.auctionQueue) roomObj.auctionQueue = deepSanitizePlayers(roomObj.auctionQueue);
+      if (roomObj.players)
+        roomObj.players = new DocumentArray(deepSanitizePlayers(roomObj.players));
+      if (roomObj.teams)
+        roomObj.teams = new DocumentArray(deepSanitizeTeams(roomObj.teams));
+      if (roomObj.auctionQueue)
+        roomObj.auctionQueue = new DocumentArray(deepSanitizePlayers(roomObj.auctionQueue));
 
       // Restore runtime properties that aren't in DB Schema
       rooms[dr.roomId] = {
@@ -284,26 +315,31 @@ async function loadRoomsFromDB() {
         auctionState: roomObj.auctionState || "LOBBY",
         // Mark as active if auction is ongoing
         state: {
-          isActive: roomObj.auctionState === "AUCTION" || roomObj.auctionState === "BLIND_AUCTION",
+          isActive:
+            roomObj.auctionState === "AUCTION" ||
+            roomObj.auctionState === "BLIND_AUCTION",
         },
         playerNames: roomObj.playerNames || {},
         squads: roomObj.squads || {},
         chatHistory: roomObj.chatHistory || [],
         tradeRequests: roomObj.tradeRequests || [],
         tradeHistory: roomObj.tradeHistory || [],
-        
+
         // Initialize blind auction state if it's a blind room
-        blindAuction: roomObj.gameType === 'blind' ? {
-          exchangeEnabled: true,
-          bidTimer: 12,
-          exchangeTimer: 10,
-          currentBids: {},
-          currentPlayer: null,
-          timerInterval: null,
-          requests: {},
-          isContestActive: false,
-          contestBids: {},
-        } : undefined
+        blindAuction:
+          roomObj.gameType === "blind"
+            ? {
+                exchangeEnabled: true,
+                bidTimer: 12,
+                exchangeTimer: 10,
+                currentBids: {},
+                currentPlayer: null,
+                timerInterval: null,
+                requests: {},
+                isContestActive: false,
+                contestBids: {},
+              }
+            : undefined,
       };
     });
     console.log(`✅ Restored ${dbRooms.length} rooms from database.`);
@@ -369,47 +405,52 @@ async function saveRoomToDB(roomId, delayed = false) {
 }
 
 // 🧹 AUTO-CLEANUP INACTIVE ROOMS (Store for 5 days)
-setInterval(async () => {
+setInterval(
+  async () => {
     const FIVE_DAYS = 5 * 24 * 60 * 60 * 1000;
-    const now = new Date();
-    
+    const now = Date.now();
+
     // 1. Clean Memory (Unload from RAM if inactive for 4 hours, but keep in DB)
     for (const roomId in rooms) {
-        const r = rooms[roomId];
-        const lastActive = r.lastActivity || r.createdAt || now;
-        if (now - lastActive > 4 * 60 * 60 * 1000) {
-            console.log(`🧹 Unloading inactive room from memory: ${roomId}`);
-            await saveRoomToDB(roomId);
-            delete rooms[roomId];
-        }
+      const r = rooms[roomId];
+      const lastActive = new Date(r.lastActive).getTime();
+      if (typeof now === "number" && typeof lastActive === "number" && now - lastActive > 4 * 60 * 60 * 1000) {
+        console.log(`🧹 Unloading inactive room from memory: ${roomId}`);
+        await saveRoomToDB(roomId);
+        delete rooms[roomId];
+      }
     }
-    
+
     // 2. Archive DB (Mark as completed if sitting in DB for > 5 days without activity)
     try {
-        const cutoff = new Date(Date.now() - FIVE_DAYS);
-        const result = await Room.updateMany(
-            { 
-                lastActivity: { $lt: cutoff },
-                completedAt: { $exists: false }
-            },
-            { 
-                $set: { 
-                    completedAt: new Date(),
-                    auctionState: "CLOSED"
-                }
-            }
-        );
-        if (result.modifiedCount > 0) {
-            console.log(`📦 Archived ${result.modifiedCount} old rooms.`);
-        }
+      const cutoff = new Date(Date.now() - FIVE_DAYS);
+      const result = await Room.updateMany(
+        {
+          lastActivity: { $lt: cutoff },
+          completedAt: { $exists: false },
+        },
+        {
+          $set: {
+            completedAt: new Date(),
+            auctionState: "CLOSED",
+          },
+        },
+      );
+      if (result.modifiedCount > 0) {
+        console.log(`📦 Archived ${result.modifiedCount} old rooms.`);
+      }
     } catch (e) {
-        console.error("Error in DB cleanup:", e);
+      console.error("Error in DB cleanup:", e);
     }
-}, 60 * 60 * 1000); // Run every hour
+  },
+  60 * 60 * 1000,
+); // Run every hour
 
 // Function kept for backward compatibility but modified to NOT delete
 function scheduleRoomCleanup(roomId) {
-  console.log(`ℹ️ Room ${roomId} finished. It will be stored in MongoDB for 5 days.`);
+  console.log(
+    `ℹ️ Room ${roomId} finished. It will be stored in MongoDB for 5 days.`,
+  );
   // We no longer delete immediately. MongoDB TTL will handle it after 5 days.
 }
 
@@ -553,7 +594,7 @@ function startNextLot(roomId) {
 // --- AUTH MIDDLEWARE ---
 io.use((socket, next) => {
   const playerId = socket.handshake.auth.playerId;
-  socket.playerId = playerId || "guest_" + socket.id;
+  socket.playerId = playerId || `guest_${socket.id}`;
   next();
 });
 
@@ -587,7 +628,7 @@ io.on("connection", (socket) => {
     try {
       // Allow searching by email or playerId (for guests or different auth methods)
       const userEmail = userData.email;
-      const playerId = userData.id || socket.playerId;
+      const playerId = userData.id || socket.playerId || "unknown";
 
       if (!userEmail && !playerId) {
         socket.emit("active_games_list", []);
@@ -596,7 +637,9 @@ io.on("connection", (socket) => {
 
       // 🛡️ Guard: Ensure DB is connected
       if (mongoose.connection.readyState !== 1) {
-        console.warn(`⏳ DB not ready for get_my_active_games (readyState: ${mongoose.connection.readyState})`);
+        console.warn(
+          `⏳ DB not ready for get_my_active_games (readyState: ${mongoose.connection.readyState})`,
+        );
         socket.emit("active_games_list", []);
         return;
       }
@@ -654,7 +697,7 @@ io.on("connection", (socket) => {
   socket.on("get_my_completed_games", async (userData) => {
     try {
       const userEmail = userData.email;
-      const playerId = userData.id || socket.playerId;
+      const playerId = userData.id || socket.playerId || "unknown";
 
       if (!userEmail && !playerId) {
         socket.emit("completed_games_list", []);
@@ -663,12 +706,16 @@ io.on("connection", (socket) => {
 
       // 🛡️ Guard: Ensure DB is connected
       if (mongoose.connection.readyState !== 1) {
-        console.warn(`⏳ DB not ready for get_my_completed_games (readyState: ${mongoose.connection.readyState})`);
+        console.warn(
+          `⏳ DB not ready for get_my_completed_games (readyState: ${mongoose.connection.readyState})`,
+        );
         socket.emit("completed_games_list", []);
         return;
       }
 
-      console.log(`📜 Searching COMPLETED games for: ${userEmail} / ${playerId}`);
+      console.log(
+        `📜 Searching COMPLETED games for: ${userEmail} / ${playerId}`,
+      );
 
       const query = {
         $or: [
@@ -680,15 +727,18 @@ io.on("connection", (socket) => {
       };
 
       const completedRooms = await Room.find(query)
-        .select("roomId gameType auctionState teams createdAt completedAt lastActivity")
+        .select(
+          "roomId gameType auctionState teams createdAt completedAt lastActivity",
+        )
         .sort({ completedAt: -1 })
         .limit(10); // More history for completed ones
 
       const gamesList = completedRooms.map((r) => {
         const team = r.teams.find(
           (t) =>
-            (userEmail && (t.ownerEmail === userEmail || t.playerEmail === userEmail)) ||
-            (playerId && t.ownerPlayerId === playerId)
+            (userEmail &&
+              (t.ownerEmail === userEmail || t.playerEmail === userEmail)) ||
+            (playerId && t.ownerPlayerId === playerId),
         );
 
         return {
@@ -708,21 +758,23 @@ io.on("connection", (socket) => {
     }
   });
 
-
   // �🗑️ DISMISS ACTIVE GAME (Remove from list/MongoDB)
   socket.on("dismiss_active_game", async (data) => {
     try {
       const { roomId, email, playerId } = data;
       const r = rooms[roomId];
-      
-      console.log(`🗑️ Dismiss request for room ${roomId} by ${email || playerId}`);
+
+      console.log(
+        `🗑️ Dismiss request for room ${roomId} by ${email || playerId}`,
+      );
 
       if (r) {
         // Find team owned by user
-        const team = r.teams.find(t => 
-          (email && t.ownerEmail === email) || 
-          (playerId && t.ownerPlayerId === playerId) ||
-          (email && t.playerEmail === email)
+        const team = r.teams.find(
+          (t) =>
+            (email && t.ownerEmail === email) ||
+            (playerId && t.ownerPlayerId === playerId) ||
+            (email && t.playerEmail === email),
         );
 
         if (team) {
@@ -732,36 +784,42 @@ io.on("connection", (socket) => {
           team.ownerEmail = null; // Clear ownership
           team.ownerPlayerId = null;
           team.playerEmail = null;
-          team.playerName = null; 
-          
+          team.playerName = null;
+
           saveRoomToDB(roomId);
-          io.to(roomId).emit("lobby_update", { teams: r.teams, userCount: r.users.length });
+          io.to(roomId).emit("lobby_update", {
+            teams: r.teams,
+            userCount: r.users.length,
+          });
         }
-      } 
-      
+      }
+
       // Also update MongoDB directly
       const roomDoc = await Room.findOne({ roomId: roomId });
       if (roomDoc) {
-          let updated = false;
-          roomDoc.teams.forEach(t => {
-              if ((email && t.ownerEmail === email) || (playerId && t.ownerPlayerId === playerId) || (email && t.playerEmail === email)) {
-                  t.isTaken = false;
-                  t.ownerSocketId = null;
-                  t.ownerEmail = null;
-                  t.ownerPlayerId = null;
-                  t.playerEmail = null;
-                  t.playerName = null;
-                  updated = true;
-              }
-          });
-          if (updated) {
-               await roomDoc.save();
-               console.log("   ✅ Dismissed in MongoDB.");
+        let updated = false;
+        roomDoc.teams.forEach((t) => {
+          if (
+            (email && t.ownerEmail === email) ||
+            (playerId && t.ownerPlayerId === playerId) ||
+            (email && t.playerEmail === email)
+          ) {
+            t.isTaken = false;
+            t.ownerSocketId = null;
+            t.ownerEmail = null;
+            t.ownerPlayerId = null;
+            t.playerEmail = null;
+            t.playerName = null;
+            updated = true;
           }
+        });
+        if (updated) {
+          await roomDoc.save();
+          console.log("   ✅ Dismissed in MongoDB.");
+        }
       }
 
       socket.emit("game_dismissed_success", roomId);
-
     } catch (e) {
       console.error("❌ Error dismissing game:", e);
     }
@@ -769,86 +827,85 @@ io.on("connection", (socket) => {
 
   // 🚀 RESUME GAME (Direct Join Bypass)
   socket.on("resume_game", ({ roomId, email, playerId }) => {
-      console.log(`🚀 RESUME REQUEST: ${roomId} for ${email || playerId}`);
-      
-      const r = rooms[roomId];
-      if (!r) {
-          console.log("   ⚠️ Room not in memory. Failing resume.");
-          socket.emit("resume_failed", "Room inactive.");
-          return;
+    console.log(`🚀 RESUME REQUEST: ${roomId} for ${email || playerId}`);
+
+    const r = rooms[roomId];
+    if (!r) {
+      console.log("   ⚠️ Room not in memory. Failing resume.");
+      socket.emit("resume_failed", "Room inactive.");
+      return;
+    }
+
+    // Verify User is Owner/Player
+    const team = r.teams.find(
+      (t) =>
+        (email && t.ownerEmail === email) ||
+        (playerId && t.ownerPlayerId === playerId) ||
+        (email && t.playerEmail === email),
+    );
+
+    let isAdminUser = r.adminPlayerId === playerId;
+
+    if (team || isAdminUser) {
+      console.log(`   ✅ User verified. Joining room directly.`);
+      socket.join(roomId);
+      if (!r.users.includes(socket.id)) r.users.push(socket.id);
+
+      // ✨ Update Admin if re-joining
+      if (r.adminPlayerId === playerId) {
+        r.adminSocketId = socket.id;
+        isAdminUser = true; // Ensure consistency
       }
 
-      // Verify User is Owner/Player
-      const team = r.teams.find(t => 
-          (email && t.ownerEmail === email) || 
-          (playerId && t.ownerPlayerId === playerId) ||
-          (email && t.playerEmail === email)
-      );
-      
-      let isAdminUser = (r.adminPlayerId === playerId);
+      // Reclaim logic
+      if (team) {
+        team.ownerSocketId = socket.id;
 
-      if (team || isAdminUser) {
-          console.log(`   ✅ User verified. Joining room directly.`);
-          socket.join(roomId);
-          if (!r.users.includes(socket.id)) r.users.push(socket.id);
-          
-          // ✨ Update Admin if re-joining
-          if (r.adminPlayerId === playerId) {
-              r.adminSocketId = socket.id;
-              isAdminUser = true; // Ensure consistency
-          }
-          
-          // Reclaim logic
-          if (team) {
-              team.ownerSocketId = socket.id; 
-              
-              // Set essential socket properties for chat/trade center
-              socket.teamId = team.bidKey;
-              socket.teamName = team.name;
-              socket.userId = playerId;
-              
-              socket.emit("team_claim_success", team.bidKey);
-          } else if (isAdminUser) {
-              socket.userId = playerId; // Admin has no team but needs userId
-          }
+        // Set essential socket properties for chat/trade center
+        socket.teamId = team.bidKey;
+        socket.teamName = team.name;
+        socket.userId = playerId;
 
-          saveRoomToDB(roomId); // Update lastActive
-          
-          io.to(roomId).emit("lobby_update", {
-            teams: r.teams,
-            userCount: r.users.length,
-          });
-
-          socket.emit("room_joined", {
-            roomId: roomId,
-            isAdmin: isAdminUser,
-            playerId: playerId,
-            state: {
-                isActive: r.state.isActive,
-                teams: r.teams,
-                queue: r.auctionQueue
-            },
-            lobbyState: {
-              teams: r.teams,
-              userCount: r.users.length,
-            },
-            config: r.config,
-            chatHistory: r.chatHistory || [],
-          });
-
-          // Handle mid-tournament states
-          if (r.auctionState === "SQUAD_SELECTION") {
-              socket.emit("open_squad_selection", { teams: r.teams });
-          } else if (r.auctionState === "RESULTS" && r.lastTournamentResults) {
-              socket.emit("tournamentComplete", r.lastTournamentResults);
-          }
-          
-      } else {
-          console.log("   ❌ User is not part of this room.");
-          socket.emit("resume_failed", "Not a participant.");
+        socket.emit("team_claim_success", team.bidKey);
+      } else if (isAdminUser) {
+        socket.userId = playerId; // Admin has no team but needs userId
       }
+
+      saveRoomToDB(roomId); // Update lastActive
+
+      io.to(roomId).emit("lobby_update", {
+        teams: r.teams,
+        userCount: r.users.length,
+      });
+
+      socket.emit("room_joined", {
+        roomId: roomId,
+        isAdmin: isAdminUser,
+        playerId: playerId,
+        state: {
+          isActive: r.state.isActive,
+          teams: r.teams,
+          queue: r.auctionQueue,
+        },
+        lobbyState: {
+          teams: r.teams,
+          userCount: r.users.length,
+        },
+        config: r.config,
+        chatHistory: r.chatHistory || [],
+      });
+
+      // Handle mid-tournament states
+      if (r.auctionState === "SQUAD_SELECTION") {
+        socket.emit("open_squad_selection", { teams: r.teams });
+      } else if (r.auctionState === "RESULTS" && r.lastTournamentResults) {
+        socket.emit("tournamentComplete", r.lastTournamentResults);
+      }
+    } else {
+      console.log("   ❌ User is not part of this room.");
+      socket.emit("resume_failed", "Not a participant.");
+    }
   });
-
 
   // Trade System Handlers
   socket.on("create_trade_request", (data) => {
@@ -967,29 +1024,29 @@ io.on("connection", (socket) => {
 
   // --- LIVE MATCH SYSTEM ---
   socket.on("send_match_challenge", (data) => {
-      const roomId = getRoomId(socket);
-      if (roomId) liveMatch.handleMatchChallenge(socket, { ...data, roomId });
+    const roomId = getRoomId(socket);
+    if (roomId) liveMatch.handleMatchChallenge(socket, { ...data, roomId });
   });
 
   socket.on("respond_match_challenge", (data) => {
-      const roomId = getRoomId(socket);
-      if (roomId) liveMatch.handleChallengeResponse(socket, { ...data, roomId });
+    const roomId = getRoomId(socket);
+    if (roomId) liveMatch.handleChallengeResponse(socket, { ...data, roomId });
   });
 
   socket.on("match_toss_select", (data) => {
-      liveMatch.handleTossSelection(socket, data);
+    liveMatch.handleTossSelection(socket, data);
   });
 
   socket.on("match_toss_decision", (data) => {
-      liveMatch.handleTossDecision(socket, data);
+    liveMatch.handleTossDecision(socket, data);
   });
 
   socket.on("match_player_select", (data) => {
-      liveMatch.handlePlayerSelection(socket, data);
+    liveMatch.handlePlayerSelection(socket, data);
   });
 
   socket.on("match_next_ball", (data) => {
-      liveMatch.simulateBall(socket, data);
+    liveMatch.simulateBall(socket, data);
   });
 
   // Placeholder for any other specific simulation-related emissions if needed
@@ -999,22 +1056,34 @@ io.on("connection", (socket) => {
   socket.on("create_room", async ({ roomId, password, config, playerName }) => {
     // Check if room exists in memory
     if (rooms[roomId]) {
-        console.log(`❌ Create Room failed: Room ${roomId} already active in memory.`);
-        return socket.emit("error_message", "Room already exists! Please use a different ID.");
+      console.log(
+        `❌ Create Room failed: Room ${roomId} already active in memory.`,
+      );
+      return socket.emit(
+        "error_message",
+        "Room already exists! Please use a different ID.",
+      );
     }
 
     // CHECK DATABASE: Ensure room ID is not taken globally
     try {
       const dbExists = await Room.exists({ roomId });
       if (dbExists) {
-         console.log(`❌ Create Room failed: Room ${roomId} exists in database.`);
-         return socket.emit("error_message", "Room ID already taken! Please use a different ID.");
+        console.log(
+          `❌ Create Room failed: Room ${roomId} exists in database.`,
+        );
+        return socket.emit(
+          "error_message",
+          "Room ID already taken! Please use a different ID.",
+        );
       }
     } catch (dbErr) {
-       console.error("DB Check failed in create_room:", dbErr);
+      console.error("DB Check failed in create_room:", dbErr);
     }
 
-    console.log(`🏠 Creating new room: ${roomId} (PID: ${socket.playerId}, Name: ${playerName})`);
+    console.log(
+      `🏠 Creating new room: ${roomId} (PID: ${socket.playerId}, Name: ${playerName})`,
+    );
 
     rooms[roomId] = {
       roomId, // Ensure roomId is stored
@@ -1064,7 +1133,7 @@ io.on("connection", (socket) => {
     }
 
     console.log(
-      `📡 Player ${socket.playerId} (${playerName || 'Unknown'}) attempting to join room ${roomId}`,
+      `📡 Player ${socket.playerId} (${playerName || "Unknown"}) attempting to join room ${roomId}`,
     );
 
     // Standard password check (No reconnection logic)
@@ -1092,16 +1161,16 @@ io.on("connection", (socket) => {
     }
 
     // --- NEW: Persistent Identity for Teams (Hidden Bug Fix) ---
-    const myTeam = r.teams.find(t => t.ownerPlayerId === socket.playerId);
+    const myTeam = r.teams.find((t) => t.ownerPlayerId === socket.playerId);
     if (myTeam) {
-       myTeam.ownerSocketId = socket.id;
-       socket.teamId = myTeam.bidKey;
-       socket.teamName = myTeam.name;
-       socket.userId = socket.playerId;
-       console.log(`📡 Linked team ${myTeam.name} to reconnected socket ${socket.id}`);
+      myTeam.ownerSocketId = socket.id;
+      socket.teamId = myTeam.bidKey;
+      socket.teamName = myTeam.name;
+      socket.userId = socket.playerId;
+      console.log(
+        `📡 Linked team ${myTeam.name} to reconnected socket ${socket.id}`,
+      );
     }
-
-
 
     socket.emit("room_joined", {
       roomId,
@@ -1133,32 +1202,33 @@ io.on("connection", (socket) => {
     const roomId = getRoomId(socket);
     const r = rooms[roomId];
     if (r) {
-      if (r.gameType === 'blind') {
+      if (r.gameType === "blind") {
         // Blind Auction Sync
         let remaining = r.blindAuction.timer || 0;
         if (!r.timerPaused && r.blindAuction.timerEndTime) {
-           remaining = Math.ceil((r.blindAuction.timerEndTime - Date.now()) / 1000);
-           if (remaining < 0) remaining = 0;
+          remaining = Math.ceil(
+            (r.blindAuction.timerEndTime - Date.now()) / 1000,
+          );
+          if (remaining < 0) remaining = 0;
         }
-        
-        socket.emit("sync_data", {
-           teams: r.teams,
-           queue: r.auctionQueue,
-           auctionIndex: r.auctionIndex,
-           currentLot: r.blindAuction.currentPlayer, // Use blind auction player
-           currentBid: 0, // Hidden
-           currentBidder: null,
-           timer: remaining,
-           timerPaused: r.timerPaused,
-           isActive: r.state.isActive,
-           gameType: 'blind',
-           // Add extra state info if needed
-           blindState: {
-             exchangeActive: r.blindAuction.isContestActive,
-             winner: r.blindAuction.winner
-           }
-        });
 
+        socket.emit("sync_data", {
+          teams: r.teams,
+          queue: r.auctionQueue,
+          auctionIndex: r.auctionIndex,
+          currentLot: r.blindAuction.currentPlayer, // Use blind auction player
+          currentBid: 0, // Hidden
+          currentBidder: null,
+          timer: remaining,
+          timerPaused: r.timerPaused,
+          isActive: r.state.isActive,
+          gameType: "blind",
+          // Add extra state info if needed
+          blindState: {
+            exchangeActive: r.blindAuction.isContestActive,
+            winner: r.blindAuction.winner,
+          },
+        });
       } else {
         // Normal Auction Sync
         let remaining = r.timer;
@@ -1177,7 +1247,7 @@ io.on("connection", (socket) => {
           timer: remaining,
           timerPaused: r.timerPaused,
           isActive: r.state.isActive,
-          gameType: 'normal'
+          gameType: "normal",
         });
       }
     }
@@ -1199,8 +1269,6 @@ io.on("connection", (socket) => {
     const roomId = getRoomId(socket);
     const r = rooms[roomId];
     if (!r) return;
-
-    // Check if user already owns ANY team
     const existingTeam = r.teams.find(
       (t) => t.ownerPlayerId === socket.playerId,
     );
@@ -1275,22 +1343,20 @@ io.on("connection", (socket) => {
 
   // ✨ RECLAIM TEAM (Auto-Join Logic)
   socket.on("reclaim_team", (key) => {
-      const roomId = getRoomId(socket);
-      const r = rooms[roomId];
-      if (!r) return;
+    const roomId = getRoomId(socket);
+    const r = rooms[roomId];
+    if (!r) return;
 
-      const t = r.teams.find(x => x.bidKey === key);
-      if (t && t.ownerPlayerId === socket.playerId) {
-          t.ownerSocketId = socket.id;
-          socket.teamId = t.bidKey;
-          socket.teamName = t.name;
-          socket.userId = socket.playerId;
-          socket.emit("team_claim_success", key);
-          console.log(`✅ ${socket.playerId} reclaimed ${t.name} in ${roomId}`);
-      }
+    const t = r.teams.find((x) => x.bidKey === key);
+    if (t && t.ownerPlayerId === socket.playerId) {
+      t.ownerSocketId = socket.id;
+      socket.teamId = t.bidKey;
+      socket.teamName = t.name;
+      socket.userId = socket.playerId;
+      socket.emit("team_claim_success", key);
+      console.log(`✅ ${socket.playerId} reclaimed ${t.name} in ${roomId}`);
+    }
   });
-
-
 
   socket.on("request_reclaim_manual", ({ teamKey }) => {
     const roomId = getRoomId(socket);
@@ -1367,7 +1433,9 @@ io.on("connection", (socket) => {
       const spent = rcb.reduce((sum, p) => sum + (p.price || 0), 0);
       takenTeams[0].totalSpent = spent;
       takenTeams[0].budget = (r.config?.budget || 1000000000) - spent;
-      console.log(`Auto-assigned RCB roster to ${takenTeams[0].name}. Spent: ${spent}`);
+      console.log(
+        `Auto-assigned RCB roster to ${takenTeams[0].name}. Spent: ${spent}`,
+      );
     }
 
     if (takenTeams[1]) {
@@ -1376,7 +1444,9 @@ io.on("connection", (socket) => {
       const spent = csk.reduce((sum, p) => sum + (p.price || 0), 0);
       takenTeams[1].totalSpent = spent;
       takenTeams[1].budget = (r.config?.budget || 1000000000) - spent;
-      console.log(`Auto-assigned CSK roster to ${takenTeams[1].name}. Spent: ${spent}`);
+      console.log(
+        `Auto-assigned CSK roster to ${takenTeams[1].name}. Spent: ${spent}`,
+      );
     }
 
     // 2. Ensure they are marked as valid for simulation
@@ -1470,24 +1540,28 @@ io.on("connection", (socket) => {
 
   // 🪄 AUTO WIN (Admin Instant Claim)
   socket.on("auto_win_bid", () => {
-      const roomId = getRoomId(socket);
-      const r = rooms[roomId];
-      if (!r || !isAdmin(socket) || !r.currentPlayer) return;
+    const roomId = getRoomId(socket);
+    const r = rooms[roomId];
+    if (!r || !isAdmin(socket) || !r.currentPlayer) return;
 
-      // Find admin's team
-      const adminTeam = r.teams.find(t => t.ownerPlayerId === socket.playerId);
-      if (!adminTeam) return socket.emit("error_message", "You need to join a team first!");
+    // Find admin's team
+    const adminTeam = r.teams.find((t) => t.ownerPlayerId === socket.playerId);
+    if (!adminTeam)
+      return socket.emit("error_message", "You need to join a team first!");
 
-      // Force bid
-      const nextBid = (r.currentBidder) ? r.currentBid + (r.config.increment || 2500000) : r.currentPlayer.basePrice;
-      
-      if (adminTeam.budget < nextBid) return socket.emit("error_message", "Insufficient Budget!");
+    // Force bid
+    const nextBid = r.currentBidder
+      ? r.currentBid + (r.config.increment || 2500000)
+      : r.currentPlayer.basePrice;
 
-      r.currentBid = nextBid;
-      r.currentBidder = adminTeam.bidKey;
-      
-      // Instantly process sale
-      processSale(roomId, "AUTO_WIN");
+    if (adminTeam.budget < nextBid)
+      return socket.emit("error_message", "Insufficient Budget!");
+
+    r.currentBid = nextBid;
+    r.currentBidder = adminTeam.bidKey;
+
+    // Instantly process sale
+    processSale(roomId, "AUTO_WIN");
   });
 
   socket.on("end_auction_trigger", () => {
@@ -1504,48 +1578,48 @@ io.on("connection", (socket) => {
 
   // ⚡ FAST FINISH (Skip to Scorecard)
   socket.on("force_fast_finish", () => {
-      const roomId = getRoomId(socket);
-      const r = rooms[roomId];
-      if (isAdmin(socket) && r) {
-          console.log(`⚡ Fast Finishing Room ${roomId}`);
-          stopTimer(roomId);
-          r.state.isActive = false;
-          r.auctionState = "SIMULATING";
-          
-          // Auto-fill squads for all active teams if empty
-          const activeTeams = r.teams.filter(t => t.isTaken);
-          activeTeams.forEach(t => {
-              if (!r.squads[t.bidKey]) {
-                  // Fallback: use first 11 players from roster or just the roster
-                  const squad = t.roster.slice(0, 11).map(p => p.name);
-                  r.squads[t.bidKey] = {
-                      squad: squad,
-                      batImpact: squad[0] || null,
-                      bowlImpact: squad[1] || null,
-                      captain: squad[0] || null
-                  };
-              }
-          });
+    const roomId = getRoomId(socket);
+    const r = rooms[roomId];
+    if (isAdmin(socket) && r) {
+      console.log(`⚡ Fast Finishing Room ${roomId}`);
+      stopTimer(roomId);
+      r.state.isActive = false;
+      r.auctionState = "SIMULATING";
 
-          saveRoomToDB(roomId);
-          runSimulationLogic(roomId, r);
-      }
+      // Auto-fill squads for all active teams if empty
+      const activeTeams = r.teams.filter((t) => t.isTaken);
+      activeTeams.forEach((t) => {
+        if (!r.squads[t.bidKey]) {
+          // Fallback: use first 11 players from roster or just the roster
+          const squad = t.roster.slice(0, 11).map((p) => p.name);
+          r.squads[t.bidKey] = {
+            squad: squad,
+            batImpact: squad[0] || null,
+            bowlImpact: squad[1] || null,
+            captain: squad[0] || null,
+          };
+        }
+      });
+
+      saveRoomToDB(roomId);
+      runSimulationLogic(roomId, r);
+    }
   });
 
   // ⛔ CLOSE ROOM (Manual End / Archive)
   socket.on("close_room", () => {
-      const roomId = getRoomId(socket);
-      const r = rooms[roomId];
-      if (isAdmin(socket) && r) {
-          console.log(`⛔ Manually Closing Room ${roomId}`);
-          r.state.isActive = false;
-          r.auctionState = "CLOSED"; 
-          r.completedAt = new Date(); // This removes it from Active Sessions list
-          
-          saveRoomToDB(roomId);
-          io.to(roomId).emit("room_closed");
-          io.to(roomId).emit("force_redirect", "dashboard.html"); // Send everyone back
-      }
+    const roomId = getRoomId(socket);
+    const r = rooms[roomId];
+    if (isAdmin(socket) && r) {
+      console.log(`⛔ Manually Closing Room ${roomId}`);
+      r.state.isActive = false;
+      r.auctionState = "CLOSED";
+      r.completedAt = new Date(); // This removes it from Active Sessions list
+
+      saveRoomToDB(roomId);
+      io.to(roomId).emit("room_closed");
+      io.to(roomId).emit("force_redirect", "dashboard.html"); // Send everyone back
+    }
   });
 
   socket.on(
@@ -1573,11 +1647,16 @@ io.on("connection", (socket) => {
     const roomId = getRoomId(socket);
     const r = rooms[roomId];
     if (r) {
-      console.log(`🏏 Tournament start requested by ${socket.playerId} in room ${roomId}`);
+      console.log(
+        `🏏 Tournament start requested by ${socket.playerId} in room ${roomId}`,
+      );
       runSimulationLogic(roomId, r);
     } else {
       console.log(`⚠️ Cannot start tournament - room ${roomId} not found`);
-      socket.emit("simulation_error", "Room not found or not properly initialized");
+      socket.emit(
+        "simulation_error",
+        "Room not found or not properly initialized",
+      );
     }
   });
 
@@ -1603,11 +1682,11 @@ io.on("connection", (socket) => {
 
     // Otherwise, trigger simulation (if matches or squads exist)
     try {
-        console.log(`🚀 Triggering simulation for room ${rId}...`);
-        await runSimulationLogic(rId, r);
+      console.log(`🚀 Triggering simulation for room ${rId}...`);
+      await runSimulationLogic(rId, r);
     } catch (e) {
-        console.error("Simulation failed:", e);
-        socket.emit("simulation_error", "Failed to generate simulation results.");
+      console.error("Simulation failed:", e);
+      socket.emit("simulation_error", "Failed to generate simulation results.");
     }
   });
 
@@ -1707,7 +1786,6 @@ io.on("connection", (socket) => {
 
   // Check for active room for auto-reconnect
 
-
   // ===================================================================
   // 🎭 BLIND AUCTION HANDLERS
   // ===================================================================
@@ -1726,14 +1804,22 @@ io.on("connection", (socket) => {
       let finalRoomId = roomId;
 
       // Ensure ID is truly unique (Memory + DB)
-      let roomCollision = !!rooms[finalRoomId] || (await Room.exists({ roomId: finalRoomId }));
+      let roomCollision =
+        !!rooms[finalRoomId] || (await Room.exists({ roomId: finalRoomId }));
 
       if (roomCollision) {
-          console.log(`❌ Create Room failed: Room ${finalRoomId} already exists.`);
-          return socket.emit("error_message", "Room already exists! Please use a different ID.");
+        console.log(
+          `❌ Create Room failed: Room ${finalRoomId} already exists.`,
+        );
+        return socket.emit(
+          "error_message",
+          "Room already exists! Please use a different ID.",
+        );
       }
 
-      console.log(`✅ Creating new blind auction room: ${finalRoomId} for player: ${playerName}`);
+      console.log(
+        `✅ Creating new blind auction room: ${finalRoomId} for player: ${playerName}`,
+      );
 
       rooms[finalRoomId] = {
         roomId: finalRoomId,
@@ -1768,18 +1854,24 @@ io.on("connection", (socket) => {
 
       if (playerName) {
         rooms[finalRoomId].playerNames[socket.playerId] = playerName;
-        console.log(`   [LOG] Stored admin name: ${playerName} for PID: ${socket.playerId}`);
+        console.log(
+          `   [LOG] Stored admin name: ${playerName} for PID: ${socket.playerId}`,
+        );
       }
 
       saveRoomToDB(finalRoomId);
-      console.log(`✅ Room ${finalRoomId} created successfully. Emitting 'roomcreated'.`);
+      console.log(
+        `✅ Room ${finalRoomId} created successfully. Emitting 'roomcreated'.`,
+      );
       socket.emit("roomcreated", finalRoomId);
     },
   );
 
   // Join blind auction room
   socket.on("join_blind_room", ({ roomId, password, playerName }) => {
-    console.log(`🎭 JOIN_BLIND_ROOM request: Room=${roomId}, Player=${playerName}, PID=${socket.playerId}`);
+    console.log(
+      `🎭 JOIN_BLIND_ROOM request: Room=${roomId}, Player=${playerName}, PID=${socket.playerId}`,
+    );
 
     const r = rooms[roomId];
 
@@ -1801,10 +1893,10 @@ io.on("connection", (socket) => {
     if (playerName) {
       if (!r.playerNames) r.playerNames = {};
       r.playerNames[socket.playerId] = playerName;
-      console.log(`   [LOG] Stored player name: ${playerName} for PID: ${socket.playerId}`);
+      console.log(
+        `   [LOG] Stored player name: ${playerName} for PID: ${socket.playerId}`,
+      );
     }
-
-
 
     const isAdminReconnected = r.adminPlayerId === socket.playerId;
     if (isAdminReconnected) {
@@ -1813,13 +1905,15 @@ io.on("connection", (socket) => {
     }
 
     // --- NEW: Persistent Identity for Teams (Hidden Bug Fix) ---
-    const myTeam = r.teams.find(t => t.ownerPlayerId === socket.playerId);
+    const myTeam = r.teams.find((t) => t.ownerPlayerId === socket.playerId);
     if (myTeam) {
-       myTeam.ownerSocketId = socket.id;
-       socket.teamId = myTeam.bidKey;
-       socket.teamName = myTeam.name;
-       socket.userId = socket.playerId;
-       console.log(`📡 Linked team ${myTeam.name} to reconnected socket ${socket.id} (BLIND)`);
+      myTeam.ownerSocketId = socket.id;
+      socket.teamId = myTeam.bidKey;
+      socket.teamName = myTeam.name;
+      socket.userId = socket.playerId;
+      console.log(
+        `📡 Linked team ${myTeam.name} to reconnected socket ${socket.id} (BLIND)`,
+      );
     }
 
     console.log("✅ Emitting room_joined event");
@@ -2040,8 +2134,7 @@ io.on("connection", (socket) => {
     io.to(roomId).emit("exchange_requests_updated", {
       requestors: Object.keys(r.blindAuction.requests),
     });
-    });
-
+  });
 
   // 🛑 ADMIN CLOSE ROOM IMMEDIATELY
   socket.on("admin_close_room", () => {
@@ -2051,11 +2144,13 @@ io.on("connection", (socket) => {
     if (rooms[roomId]) {
       // Notify all clients to leave
       io.to(roomId).emit("room_closed_by_admin");
-      
+
       // Delete from DB immediately
-      Room.deleteOne({ roomId: roomId }).then(() => {
-        console.log(`🛑 Room ${roomId} CLOSED and DELETED by Admin.`);
-      }).catch(err => console.error("Error deleting room:", err));
+      Room.deleteOne({ roomId: roomId })
+        .then(() => {
+          console.log(`🛑 Room ${roomId} CLOSED and DELETED by Admin.`);
+        })
+        .catch((err) => console.error("Error deleting room:", err));
 
       // Remove from memory
       delete rooms[roomId];
@@ -2108,12 +2203,11 @@ io.on("connection", (socket) => {
         requestors: requestorKeys,
         basePrice: r.blindAuction.winner.amount,
         player: r.blindAuction.currentPlayer,
-        timer: 15 // 15 seconds for contest
+        timer: 15, // 15 seconds for contest
       });
 
       // Start Contest Timer (Fix for hanging auction)
-      startExchangeTimer(roomId, 15); 
-
+      startExchangeTimer(roomId, 15);
     }
   });
 
@@ -2348,10 +2442,10 @@ async function runSimulationLogic(roomId, r) {
   // Prepare teams for the AI - use default teams if no teams are taken
   // Prepare teams for the AI - only include teams that have been taken
   let tourneyTeams = r.teams
-    .filter(t => t.isTaken)
+    .filter((t) => t.isTaken)
     .map((t) => {
       const squadData = r.squads[t.bidKey];
-      
+
       // Hydrate squad players
       const hydratedSquad = (squadData?.squad || []).map((entry) => {
         const playerName =
@@ -2359,15 +2453,15 @@ async function runSimulationLogic(roomId, r) {
         const dbPlayer = getPlayerFromDB(playerName);
         return {
           name: playerName,
-              role: dbPlayer.role || "Normal",
-              type: dbPlayer.type || "bat",
-              stats: {
-                  bat: dbPlayer.bat || 70,
-                  bowl: dbPlayer.bowl || 60,
-                  luck: dbPlayer.luck || 70
-              },
-              trait: dbPlayer.trait || "normal"
-          };
+          role: dbPlayer.role || "Normal",
+          type: dbPlayer.type || "bat",
+          stats: {
+            bat: dbPlayer.bat || 70,
+            bowl: dbPlayer.bowl || 60,
+            luck: dbPlayer.luck || 70,
+          },
+          trait: dbPlayer.trait || "normal",
+        };
       });
 
       return {
@@ -2381,29 +2475,37 @@ async function runSimulationLogic(roomId, r) {
 
   // If too few teams are taken, fill with default AI teams to make a competitive 4-team tournament
   if (tourneyTeams.length < 2) {
-    console.log(`Too few teams (${tourneyTeams.length}) in room ${roomId}, adding default AI teams.`);
+    console.log(
+      `Too few teams (${tourneyTeams.length}) in room ${roomId}, adding default AI teams.`,
+    );
     const defaultTeams = [
       { name: "CSK", bidKey: "csk", playerName: "AI Bot", isTaken: true },
       { name: "MI", bidKey: "mi", playerName: "AI Bot", isTaken: true },
       { name: "RCB", bidKey: "rcb", playerName: "AI Bot", isTaken: true },
-      { name: "KKR", bidKey: "kkr", playerName: "AI Bot", isTaken: true }
-    ].filter(dt => !tourneyTeams.find(tt => tt.name === dt.name)).slice(0, 4 - tourneyTeams.length);
+      { name: "KKR", bidKey: "kkr", playerName: "AI Bot", isTaken: true },
+    ]
+      .filter((dt) => !tourneyTeams.find((tt) => tt.name === dt.name))
+      .slice(0, 4 - tourneyTeams.length);
 
     // Hydrate AI teams with realistic squads from database
-    const hydratedAI = defaultTeams.map(team => {
-        // Select some players from DB based on team name (very basic heuristic)
-        const players = Object.keys(PLAYER_DATABASE).slice(0, 15); // Just grab some top players
-        const squad = players.slice(0, 11).map(pName => {
-            const dbP = getPlayerFromDB(pName);
-            return {
-                name: pName,
-                role: dbP.role || "Normal",
-                type: dbP.type || "bat",
-                stats: { bat: dbP.bat || 70, bowl: dbP.bowl || 60, luck: dbP.luck || 70 },
-                trait: dbP.trait || "normal"
-            };
-        });
-        return { ...team, squad, roster: squad };
+    const hydratedAI = defaultTeams.map((team) => {
+      // Select some players from DB based on team name (very basic heuristic)
+      const players = Object.keys(PLAYER_DATABASE).slice(0, 15); // Just grab some top players
+      const squad = players.slice(0, 11).map((pName) => {
+        const dbP = getPlayerFromDB(pName);
+        return {
+          name: pName,
+          role: dbP.role || "Normal",
+          type: dbP.type || "bat",
+          stats: {
+            bat: dbP.bat || 70,
+            bowl: dbP.bowl || 60,
+            luck: dbP.luck || 70,
+          },
+          trait: dbP.trait || "normal",
+        };
+      });
+      return { ...team, squad, roster: squad };
     });
 
     tourneyTeams = [...tourneyTeams, ...hydratedAI];
@@ -2494,12 +2596,12 @@ async function updateUserProfiles(roomId, r, aiResults) {
       // Determine result (Fuzzy match)
       let result = "participated";
       let won = false;
-      
+
       const teamMatch = (tName, compareName) => {
-          if (!tName || !compareName) return false;
-          const t = tName.toLowerCase().replace(/\s/g, '');
-          const c = compareName.toLowerCase().replace(/\s/g, '');
-          return t === c || t.includes(c) || c.includes(t);
+        if (!tName || !compareName) return false;
+        const t = tName.toLowerCase().replace(/\s/g, "");
+        const c = compareName.toLowerCase().replace(/\s/g, "");
+        return t === c || t.includes(c) || c.includes(t);
       };
 
       if (winnerName && teamMatch(team.name, winnerName)) {
@@ -2631,7 +2733,9 @@ async function saveWinRecord(roomId, r, aiResults, tourneyTeams) {
     const runnerUpName = runnerUp?.name || runnerUp?.teamName || "FINALISTS";
 
     if (!winner && !aiResults.standings) {
-      console.log("⚠️  AI Results missing winner & standings, skipping saveWinRecord");
+      console.log(
+        "⚠️  AI Results missing winner & standings, skipping saveWinRecord",
+      );
       return;
     }
 
@@ -2663,29 +2767,32 @@ async function saveWinRecord(roomId, r, aiResults, tourneyTeams) {
           won: team.stats?.w || team.stats?.won || 0,
           lost: team.stats?.l || team.stats?.lost || 0,
           points: team.stats?.pts || team.stats?.points || 0,
-          nrr: typeof team.stats?.nrr === 'number' ? team.stats.nrr : parseFloat(team.stats?.nrr || 0),
+          nrr:
+            typeof team.stats?.nrr === "number"
+              ? team.stats.nrr
+              : parseFloat(team.stats?.nrr || 0),
         }))
       : [];
 
     // Build rosters list using FULL tourneyTeams (includes AI)
     // If tourneyTeams is provided, use it. Otherwise fallback to r.teams logic.
-    let rostersSource = tourneyTeams || r.teams.filter(t => t.isTaken);
-    
+    let rostersSource = tourneyTeams || r.teams.filter((t) => t.isTaken);
+
     const rosters = rostersSource.map((team) => {
-        // Map squad to expected format
-        const squadList = team.squad || team.roster || [];
-        return {
-          teamName: team.name,
-          teamKey: team.bidKey,
-          playerName: team.playerName || "AI Bot",
-          players: squadList.map((p) => ({
-             name: p.name,
-             role: p.role || p.roleKey || "Player",
-             price: Number(p.price) || 0,
-             type: p.type || "bat"
-          }))
-        };
-      });
+      // Map squad to expected format
+      const squadList = team.squad || team.roster || [];
+      return {
+        teamName: team.name,
+        teamKey: team.bidKey,
+        playerName: team.playerName || "AI Bot",
+        players: squadList.map((p) => ({
+          name: p.name,
+          role: p.role || p.roleKey || "Player",
+          price: Number(p.price) || 0,
+          type: p.type || "bat",
+        })),
+      };
+    });
 
     // Create win record
     const winRecord = new Win({
@@ -2698,7 +2805,8 @@ async function saveWinRecord(roomId, r, aiResults, tourneyTeams) {
       winner: {
         teamName: winnerName,
         teamKey: winnerTeam?.bidKey || "winner",
-        playerName: winnerTeam?.playerName || winner?.playerName || "Unknown Player",
+        playerName:
+          winnerTeam?.playerName || winner?.playerName || "Unknown Player",
         playerEmail: winnerTeam?.playerEmail || winnerTeam?.ownerEmail,
         playerId: winnerTeam?.ownerPlayerId,
         totalPoints: winner.stats?.pts || winner.stats?.points || 0,
@@ -2711,7 +2819,10 @@ async function saveWinRecord(roomId, r, aiResults, tourneyTeams) {
         ? {
             teamName: runnerUpName,
             teamKey: runnerUpTeam?.bidKey || "runnerup",
-            playerName: runnerUpTeam?.playerName || runnerUp?.playerName || "Unknown Player",
+            playerName:
+              runnerUpTeam?.playerName ||
+              runnerUp?.playerName ||
+              "Unknown Player",
             playerEmail: runnerUpTeam?.playerEmail || runnerUpTeam?.ownerEmail,
             playerId: runnerUpTeam?.ownerPlayerId,
             totalPoints: runnerUp.stats?.pts || runnerUp.stats?.points || 0,
@@ -2733,14 +2844,18 @@ async function saveWinRecord(roomId, r, aiResults, tourneyTeams) {
         purpleCap: aiResults.purpleCap
           ? {
               playerName: aiResults.purpleCap.name,
-              wickets: aiResults.purpleCap.val || aiResults.purpleCap.wkts || aiResults.purpleCap.wickets,
+              wickets:
+                aiResults.purpleCap.val ||
+                aiResults.purpleCap.wkts ||
+                aiResults.purpleCap.wickets,
               team: aiResults.purpleCap.team,
             }
           : undefined,
         mvp: aiResults.mvp
           ? {
               playerName: aiResults.mvp.name,
-              points: aiResults.mvp.val || aiResults.mvp.pts || aiResults.mvp.points,
+              points:
+                aiResults.mvp.val || aiResults.mvp.pts || aiResults.mvp.points,
               team: aiResults.mvp.team,
             }
           : undefined,
@@ -2748,34 +2863,41 @@ async function saveWinRecord(roomId, r, aiResults, tourneyTeams) {
 
       standings: standings,
       rosters: rosters,
-      
-      leagueMatches: (Array.isArray(aiResults.leagueMatches) ? aiResults.leagueMatches : []).map(m => {
-          if (!m || typeof m !== 'object') return null;
-          return {
-              t1: m.t1 || m.team1 || "Unknown",
-              t2: m.t2 || m.team2 || "Unknown",
-              winner: m.winnerName || m.winner || "Draw",
-              margin: m.margin || "N/A",
-              score1: m.score1 || "0/0",
-              score2: m.score2 || "0/0",
-              type: m.type || "League",
-              batFirst: m.batFirst || "Unknown"
-          };
-      }).filter(m => m !== null),
 
-      playoffs: (Array.isArray(aiResults.playoffs) ? aiResults.playoffs : []).map(m => {
-          if (!m || typeof m !== 'object') return null;
+      leagueMatches: (Array.isArray(aiResults.leagueMatches)
+        ? aiResults.leagueMatches
+        : []
+      )
+        .map((m) => {
+          if (!m || typeof m !== "object") return null;
           return {
-              t1: m.t1 || m.team1 || "Unknown",
-              t2: m.t2 || m.team2 || "Unknown",
-              winner: m.winnerName || m.winner || "Draw",
-              margin: m.margin || "N/A",
-              score1: m.score1 || "0/0",
-              score2: m.score2 || "0/0",
-              type: m.type || "Playoff",
-              batFirst: m.batFirst || "Unknown"
+            t1: m.t1 || m.team1 || "Unknown",
+            t2: m.t2 || m.team2 || "Unknown",
+            winner: m.winnerName || m.winner || "Draw",
+            margin: m.margin || "N/A",
+            score1: m.score1 || "0/0",
+            score2: m.score2 || "0/0",
+            type: m.type || "League",
+            batFirst: m.batFirst || "Unknown",
           };
-      }).filter(m => m !== null),
+        })
+        .filter((m) => m !== null),
+
+      playoffs: (Array.isArray(aiResults.playoffs) ? aiResults.playoffs : [])
+        .map((m) => {
+          if (!m || typeof m !== "object") return null;
+          return {
+            t1: m.t1 || m.team1 || "Unknown",
+            t2: m.t2 || m.team2 || "Unknown",
+            winner: m.winnerName || m.winner || "Draw",
+            margin: m.margin || "N/A",
+            score1: m.score1 || "0/0",
+            score2: m.score2 || "0/0",
+            type: m.type || "Playoff",
+            batFirst: m.batFirst || "Unknown",
+          };
+        })
+        .filter((m) => m !== null),
 
       metadata: {
         budget: r.config?.budget || 1000000000,
@@ -2890,7 +3012,7 @@ function startBlindBidTimer(roomId) {
   if (!r || !r.blindAuction) return;
 
   let timeLeft = r.blindAuction.bidTimer;
-  r.blindAuction.timer = timeLeft; 
+  r.blindAuction.timer = timeLeft;
   r.blindAuction.timerEndTime = Date.now() + timeLeft * 1000; // Sync Fix
 
   // Clear existing timer
@@ -2908,8 +3030,8 @@ function startBlindBidTimer(roomId) {
   r.blindAuction.timerInterval = setInterval(() => {
     // Check global pause state
     if (r.timerPaused) {
-       r.blindAuction.timerEndTime = Date.now() + r.blindAuction.timer * 1000;
-       return;
+      r.blindAuction.timerEndTime = Date.now() + r.blindAuction.timer * 1000;
+      return;
     }
 
     timeLeft--;
@@ -3044,7 +3166,9 @@ function revealBids(roomId) {
 
     // Update status in auctionQueue
     if (r.auctionQueue) {
-      const qPlayer = r.auctionQueue.find(p => p.name === r.blindAuction.currentPlayer.name);
+      const qPlayer = r.auctionQueue.find(
+        (p) => p.name === r.blindAuction.currentPlayer.name,
+      );
       if (qPlayer) {
         qPlayer.status = "UNSOLD";
       }
@@ -3112,8 +3236,8 @@ function startExchangeTimer(roomId, explicitDuration = null) {
   r.blindAuction.exchangeInterval = setInterval(() => {
     // Check global pause state
     if (r.timerPaused) {
-       r.blindAuction.timerEndTime = Date.now() + r.blindAuction.timer * 1000;
-       return;
+      r.blindAuction.timerEndTime = Date.now() + r.blindAuction.timer * 1000;
+      return;
     }
 
     timeLeft--;
@@ -3124,14 +3248,14 @@ function startExchangeTimer(roomId, explicitDuration = null) {
     if (timeLeft <= 0) {
       clearInterval(r.blindAuction.exchangeInterval);
       r.blindAuction.exchangeInterval = null;
-      
+
       // Check if we are in contest mode
       if (r.blindAuction.isContestActive) {
-          console.log(`⏰ Contest Time Up! Finalizing contest for ${roomId}`);
-          finalizeContest(roomId);
+        console.log(`⏰ Contest Time Up! Finalizing contest for ${roomId}`);
+        finalizeContest(roomId);
       } else {
-          // Auto-finalize if time runs out (standard exchange)
-          finalizeSale(roomId);
+        // Auto-finalize if time runs out (standard exchange)
+        finalizeSale(roomId);
       }
     }
   }, 1000);
@@ -3179,7 +3303,9 @@ function finalizeSale(roomId) {
 
   // Update status in auctionQueue
   if (r.auctionQueue) {
-    const qPlayer = r.auctionQueue.find(p => p.name === r.blindAuction.currentPlayer.name);
+    const qPlayer = r.auctionQueue.find(
+      (p) => p.name === r.blindAuction.currentPlayer.name,
+    );
     if (qPlayer) {
       qPlayer.status = "SOLD";
       qPlayer.soldPrice = winner.amount;
